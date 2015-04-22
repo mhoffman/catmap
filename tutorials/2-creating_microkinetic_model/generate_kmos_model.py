@@ -8,8 +8,15 @@ import numpy as np
 # TODO : write function which generates n-nearest sites of certain type
 # TODO : write function which finds nearest neighbors shell for adsorbate interaction
 
-def find_n_nearest_site(coords, n):
-    pass
+def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
+    distance_dict = {}
+    neighbor_sites = []
+
+    for site in
+        if site.name == neighbor_site:
+            distance_list.append(np.linalg.norm(
+            CONTINUE HERE
+
 
 def catmap2kmos(cm_model,
     unit_cell=None,
@@ -75,38 +82,45 @@ def catmap2kmos(cm_model,
 
 
         print(surface_intermediates)
-        if step['A'] and step['B']:
-            # add reversible step between A and B
-            surface_intermediates['A'] = []
-            surface_intermediates['B'] = []
+        for reversible, (X, Y) in [[True, ('A', 'B')],
+                                   [False, ['B' , 'C']]]:
+            if step[X] and step[Y]:
+                # add reversible step between A and B
+                surface_intermediates[X] = []
+                surface_intermediates[Y] = []
 
-            for x in ['A', 'B']:
-                print(x)
-                for intermediate in step[x]:
-                    if '_' in intermediate:
-                        species, site = intermediate.split('_')
-                        if site in site_names :
-                            surface_intermediates[x].append([species, site])
-                    elif intermediate in site_names:
-                        surface_intermediates[x].append([EMPTY_SPECIES, intermediate])
-            print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(**locals()))
+                for x in [X, Y]:
+                    print(x)
+                    for intermediate in step[x]:
+                        if '_' in intermediate:
+                            species, site = intermediate.split('_')
+                            if site in site_names :
+                                surface_intermediates[x].append([species, site])
+                        elif intermediate in site_names:
+                            surface_intermediates[x].append([EMPTY_SPECIES, intermediate])
+                print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(**locals()))
 
-            conditions = []
-            actions = []
-            for i, (species, site) in enumerate(surface_intermediates['A']):
-                conditions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
-            for i, (species, site) in enumerate(surface_intermediates['B']):
-                actions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
+                conditions = []
+                actions = []
+                for i, (species, site) in enumerate(surface_intermediates[X]):
+                    conditions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
+                for i, (species, site) in enumerate(surface_intermediates[Y]):
+                    actions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
 
-            pt.add_process(name='process_{ri}'.format(**locals()),
-                           conditions=conditions,
-                           actions=actions,
-                           rate_constant='1.')
+                if reversible :
+                    prefix = 'reversible'
+                else:
+                    prefix = 'irreversible'
+                pt.add_process(name='{prefix}_process_{ri}'.format(**locals()),
+                               conditions=conditions,
+                               actions=actions,
+                               rate_constant='1.')
 
-            pt.add_process(name='process_{ri}_back'.format(**locals()),
-                           conditions=actions,
-                           actions=conditions,
-                           rate_constant='1.')
+                if reversible:
+                    pt.add_process(name='{prefix}_process_{ri}_back'.format(**locals()),
+                                   conditions=actions,
+                                   actions=conditions,
+                                   rate_constant='1.')
 
 
 
