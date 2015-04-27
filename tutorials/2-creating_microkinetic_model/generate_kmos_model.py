@@ -8,14 +8,15 @@ import numpy as np
 # TODO : write function which generates n-nearest sites of certain type
 # TODO : write function which finds nearest neighbors shell for adsorbate interaction
 
-def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
-    distance_dict = {}
-    neighbor_sites = []
-
-    for site in
-        if site.name == neighbor_site:
-            distance_list.append(np.linalg.norm(
-            CONTINUE HERE
+#def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
+    #distance_dict = {}
+    #neighbor_sites = []
+#
+    #for site in:
+        #if site.name == neighbor_site:
+            #print(site)
+            ##distance_list.append(np.linalg.norm(
+            ##CONTINUE HERE
 
 
 def catmap2kmos(cm_model,
@@ -40,7 +41,7 @@ def catmap2kmos(cm_model,
                 model_dimension='2',   # default ...
                 debug=0,  # let's be pessimistic
                 )
-    
+
     # add unit cell
     layer = pt.add_layer(name='default')
     pt.layer_list.cell = unit_cell
@@ -55,16 +56,24 @@ def catmap2kmos(cm_model,
 
 
     # add species
-    pt.add_species(name=EMPTY_SPECIES)
+
+    # for generating random colors
+    import random
+
+    pt.add_species(name=EMPTY_SPECIES, color='#ffffff')
     for species_definition in cm_model.species_definitions.keys():
+        color = '#%02X%02X%02X' % (random.randint(0, 255),
+                                   random.randint(0, 255),
+                                   random.randint(0, 255))
+
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
             if not species_name == '*' \
                 and not species_name == 's' \
                 and not species_name in [x.name for x in pt.species_list]:
                 species_name = species_name.replace('-', '_')
-                pt.add_species(name=species_name)
-            
+                pt.add_species(name=species_name, color=color)
+
 
     # add parameters
 
@@ -127,8 +136,6 @@ def catmap2kmos(cm_model,
         if step['B'] and step['C']:
             pass
             # add irreversible from B to C
-                
-
 
 
     return pt
