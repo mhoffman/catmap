@@ -9,8 +9,10 @@ from catmap import ReactionModel
 import numpy as np
 
 
-# TODO : write function which generates n-nearest sites of certain type
 # TODO : write function which finds nearest neighbors shell for adsorbate interaction
+# test for more than one site per unit cell
+# test for more more than one identical site per unit cell (e.g. bridge in Pd(1000) cell)
+
 
 #def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
     #distance_dict = {}
