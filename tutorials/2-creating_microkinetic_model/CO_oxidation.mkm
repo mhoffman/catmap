@@ -30,6 +30,21 @@ species_definitions['s'] = {'site_names': ['111'], 'total':1} #define the sites
 
 data_file = 'CO_oxidation.pkl'
 
+
+#
+### kMC specific model parameters
+#
+import numpy as np
+unit_cell = np.diag([  2.75064538,   2.75064538,  33.835     ])
+#site_definitions = {'b': [[0, .5, 0], [0.5, 0, 0]],
+                    #'h': [[0., 0., 0]]
+                   #}
+
+# diffusion steps will have to be added as an elementary reaction step
+# unless otherwise specified diffusion steps will be assumed
+# to be 1-3 orders of magnitude faster than other reaction steps
+
+
 #
 #Parser parameters
 #
