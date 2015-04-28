@@ -11,27 +11,28 @@ import numpy as np
 
 # TODO : write function which finds nearest neighbors shell for adsorbate interaction
 # test for more than one site per unit cell
-# test for more more than one identical site per unit cell (e.g. bridge in Pd(1000) cell)
+# test for more more than one identical site per unit cell (e.g. bridge in
+# Pd(1000) cell)
 
 
-#def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
-    #distance_dict = {}
-    #neighbor_sites = []
+# def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
+#distance_dict = {}
+#neighbor_sites = []
 #
-    #for site in:
-        #if site.name == neighbor_site:
-            #print(site)
-            ##distance_list.append(np.linalg.norm(
-            ##CONTINUE HERE
+# for site in:
+# if site.name == neighbor_site:
+# print(site)
+# distance_list.append(np.linalg.norm(
+# CONTINUE HERE
 
 
 def catmap2kmos(cm_model,
-    unit_cell=None,
-    site_positions=None,
-    diffusion_barriers=None,
-    species_representations=None,
-    surface_representation=None,
-    ):
+                unit_cell=None,
+                site_positions=None,
+                diffusion_barriers=None,
+                species_representations=None,
+                surface_representation=None,
+                ):
 
     EMPTY_SPECIES = 'empty'
 
@@ -55,11 +56,10 @@ def catmap2kmos(cm_model,
     # add site positions
     for site_name in cm_model.site_names:
         if not site_name == 'g':
-            layer.sites.append(Site(name=site_name, pos=site_positions[site_name]))
+            layer.sites.append(
+                Site(name=site_name, pos=site_positions[site_name]))
 
     Coord = pt.layer_list.generate_coord
-
-
 
     # add species
 
@@ -75,14 +75,14 @@ def catmap2kmos(cm_model,
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
             if not species_name == '*' \
-                and not species_name == 's' \
-                and not species_name in [x.name for x in pt.species_list]:
+                    and not species_name == 's' \
+                    and not species_name in [x.name for x in pt.species_list]:
                 species_name = species_name.replace('-', '_')
                 pt.add_species(name=species_name, color=color)
 
-
     # add parameters
-    # TODO : let's avoid this for now and just accept rate constants from catmap
+    # TODO : let's avoid this for now and just accept rate constants from
+    # catmap
 
     # add processes
     site_names = [x.name for x in pt.layer_list[0].sites]
@@ -100,12 +100,12 @@ def catmap2kmos(cm_model,
         print('\n\n\nSteps {step}'.format(**locals()))
 
         print(surface_intermediates)
-        #for reversible, (X, Y) in [[True, ('A', 'B')],
-                                   #[False, ['B' , 'C']]]:
+        # for reversible, (X, Y) in [[True, ('A', 'B')],
+        #[False, ['B' , 'C']]]:
         # DEBUGGING: make everything reversible for now
         #            since we want a non-crashing model first
         for reversible, (X, Y) in [[True, ('A', 'B')],
-                                   [True, ['B' , 'C']]]:
+                                   [True, ['B', 'C']]]:
             if step[X] and step[Y]:
                 # add reversible step between A and B
                 surface_intermediates[X] = []
@@ -115,92 +115,112 @@ def catmap2kmos(cm_model,
                     for intermediate in step[x]:
                         if '_' in intermediate:
                             species, site = intermediate.split('_')
-                            if site in site_names :
-                                surface_intermediates[x].append([species, site])
+                            if site in site_names:
+                                surface_intermediates[
+                                    x].append([species, site])
                         elif intermediate in site_names:
-                            surface_intermediates[x].append([EMPTY_SPECIES, intermediate])
+                            surface_intermediates[x].append(
+                                [EMPTY_SPECIES, intermediate])
 
-                print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(**locals()))
-
+                print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(
+                    **locals()))
 
                 # some validation checks to raise better error messages
                 for letter_step, surface_intermediate in surface_intermediates.items():
-                    if len (surface_intermediate) > 2 :
-                        raise UserWarning("Elementary reaction steps with more than two intermediates cannot be automatically translated into a kMC model: '{surface_intermediate}".format(**locals()))
+                    if len(surface_intermediate) > 2:
+                        raise UserWarning(
+                            "Elementary reaction steps with more than two intermediates cannot be automatically translated into a kMC model: '{surface_intermediate}".format(**locals()))
                 if len(surface_intermediates[X]) != len(surface_intermediates[Y]):
-                    raise UserWarning("Number of surface different for elementary reaction: {surface_intermediates}".format(**locals()))
+                    raise UserWarning(
+                        "Number of surface different for elementary reaction: {surface_intermediates}".format(**locals()))
 
                 for _, siteX in surface_intermediates[X]:
                     sitesY = [s for _, s in surface_intermediates[Y]]
                     if not siteX in sitesY:
-                        raise UserWarning('Site {siteX} is mentioned on one side of the equation but not on the other: {surface_intermediates}'.format(**locals()))
+                        raise UserWarning(
+                            'Site {siteX} is mentioned on one side of the equation but not on the other: {surface_intermediates}'.format(**locals()))
 
                 # first populate conditions and actions with one site
                 condition_species, condition_site = surface_intermediates[X][0]
-                condition_coord = pt.layer_list.generate_coord('{condition_site}.(0, 0, 0)'.format(**locals()))
-                conditions = [Condition(species=condition_species.replace('-', '_').replace('-', '_'), coord=condition_coord)]
+                condition_coord = pt.layer_list.generate_coord(
+                    '{condition_site}.(0, 0, 0)'.format(**locals()))
+                conditions = [Condition(species=condition_species.replace(
+                    '-', '_').replace('-', '_'), coord=condition_coord)]
 
                 action_species, action_site = surface_intermediates[Y][0]
-                action_coord = pt.layer_list.generate_coord('{action_site}.(0, 0, 0)'.format(**locals()))
-                actions = [Action(species=action_species.replace('-', '_'), coord=action_coord)]
+                action_coord = pt.layer_list.generate_coord(
+                    '{action_site}.(0, 0, 0)'.format(**locals()))
+                actions = [
+                    Action(species=action_species.replace('-', '_'), coord=action_coord)]
 
-                if not action_site == condition_site :
-                    raise UserWarning('Positions of sites seems to have changed: {surface_intermediates}.'.format(**locals()))
+                if not action_site == condition_site:
+                    raise UserWarning(
+                        'Positions of sites seems to have changed: {surface_intermediates}.'.format(**locals()))
 
-                condition_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in surface_intermediates[X] ])
-                action_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
-
+                condition_string = '_n_'.join([species.replace(
+                    '-', '_') + '_' + site for (species, site) in surface_intermediates[X]])
+                action_string = '_n_'.join([species.replace(
+                    '-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
 
                 # then create all second (auxiliary) sites which have
                 # the same nearest distance
 
-                dist_tol = 1.e-3 # this is the cut-off with which positional equality is tested
+                # this is the cut-off with which positional equality is tested
+                dist_tol = 1.e-3
                 # if a process is geometrically degenerate (more than one direction)
                 # it is important that distance a identical within this cut-off
                 # geometrically complex case: two-sites
-                if len(surface_intermediates[X]) == 2 :
-                    other_condition_species, other_condition_site = surface_intermediates[X][1]
-                    other_action_species, other_action_site = surface_intermediates[Y][1]
+                if len(surface_intermediates[X]) == 2:
+                    other_condition_species, other_condition_site = surface_intermediates[
+                        X][1]
+                    other_action_species, other_action_site = surface_intermediates[
+                        Y][1]
 
                     if not other_condition_site == other_action_site:
-                        raise UserWarning('Positions of sites seem to have changed {surface_intermediates}'.format(**locals()))
+                        raise UserWarning(
+                            'Positions of sites seem to have changed {surface_intermediates}'.format(**locals()))
 
-                    auxiliary_coords = set(pt.layer_list.generate_coord_set([2, 2, 2]))
+                    auxiliary_coords = set(
+                        pt.layer_list.generate_coord_set([2, 2, 2]))
                     # first drop the initial site and sites with other labels
                     for auxiliary_site in copy.copy(auxiliary_coords):
-                        if np.linalg.norm(action_coord.pos - auxiliary_site.pos) < dist_tol :
+                        if np.linalg.norm(action_coord.pos - auxiliary_site.pos) < dist_tol:
                             auxiliary_coords.discard(auxiliary_site)
 
-                        if not auxiliary_site.name == other_condition_site :
+                        if not auxiliary_site.name == other_condition_site:
                             auxiliary_coords.discard(auxiliary_site)
-
 
                     # find the shortest distance to one of the remaining sites
                     min_dist = min([
                         np.linalg.norm(aux_site.pos - condition_coord.pos)
                         for aux_site in auxiliary_coords
-                        ])
-
-
+                    ])
 
                     # produce reaction steps with all auxiliary sites with-in dist_tol of that
                     # minimum distance
                     aux_counter = 0
-                    for auxiliary_coord in auxiliary_coords :
-                        aux_dist = np.linalg.norm(auxiliary_coord.pos - condition_coord.pos)
+                    for auxiliary_coord in auxiliary_coords:
+                        aux_dist = np.linalg.norm(
+                            auxiliary_coord.pos - condition_coord.pos)
                         close = abs(aux_dist - min_dist) < dist_tol
                         if close:
-                            aux_conditions = conditions + [Condition(species=other_condition_species.replace('-', '_'), coord=auxiliary_coord)]
-                            aux_actions = actions + [Action(species=other_action_species.replace('-', '_'), coord=auxiliary_coord)]
+                            aux_conditions = conditions + \
+                                [Condition(
+                                    species=other_condition_species.replace('-', '_'), coord=auxiliary_coord)]
+                            aux_actions = actions + \
+                                [Action(
+                                    species=other_action_species.replace('-', '_'), coord=auxiliary_coord)]
 
-                            process_name = '{condition_string}_2_{action_string}_{aux_counter}'.format(**locals())
+                            process_name = '{condition_string}_2_{action_string}_{aux_counter}'.format(
+                                **locals())
                             pt.add_process(name=process_name,
                                            conditions=aux_conditions,
                                            actions=aux_actions,
                                            rate_constant='1.')
 
-                            if reversible:# swap conditions and actions
-                                process_name = '{action_string}_2_{condition_string}_{aux_counter}_rev'.format(**locals())
+                            if reversible:  # swap conditions and actions
+                                process_name = '{action_string}_2_{condition_string}_{aux_counter}_rev'.format(
+                                    **locals())
                                 pt.add_process(name=process_name,
                                                conditions=aux_actions,
                                                actions=aux_conditions,
@@ -208,9 +228,9 @@ def catmap2kmos(cm_model,
 
                             aux_counter += 1
 
-
-                else: # trivial case: single-site processes
-                    process_name = '{condition_string}_2_{action_string}'.format(**locals())
+                else:  # trivial case: single-site processes
+                    process_name = '{condition_string}_2_{action_string}'.format(
+                        **locals())
                     pt.add_process(name=process_name,
                                    conditions=conditions,
                                    actions=actions,
@@ -218,12 +238,12 @@ def catmap2kmos(cm_model,
 
                     if reversible:
                         # swap conditions and actions
-                        process_name = '{action_string}_2_{condition_string}_rev'.format(**locals())
+                        process_name = '{action_string}_2_{condition_string}_rev'.format(
+                            **locals())
                         pt.add_process(name=process_name,
                                        conditions=actions,
                                        actions=conditions,
                                        rate_constant='1.')
-
 
     return pt
 
@@ -247,7 +267,7 @@ if __name__ == '__main__':
                              site_positions=site_positions,
                              )
 
-    #print(kmos_model)
+    # print(kmos_model)
     kmos_model.print_statistics()
     for suffix in ['xml']:
         kmos_model.save('translated_{seed}.{suffix}'.format(**locals()))
