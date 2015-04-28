@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
+import os.path
+import copy
+
 from kmos.types import Project, Site, Condition, Action
+
 from catmap import ReactionModel
 import numpy as np
 
@@ -76,30 +80,36 @@ def catmap2kmos(cm_model,
 
 
     # add parameters
+    # TODO : let's avoid this for now and just accept rate constants from catmap
 
     # add processes
     site_names = [x.name for x in pt.layer_list[0].sites]
     for ri, elementary_rxn in enumerate(cm_model.elementary_rxns):
         step = {}
         surface_intermediates = {}
+        # N.B: The general form of an elementary reaction in CatMAP is
+        #      A <-> B -> C
+        #      where A maybe be skipped
         if len(elementary_rxn) == 2:
             step['A'] = None
             step['B'], step['C'] = elementary_rxn
         elif len(elementary_rxn) == 3:
             step['A'], step['B'], step['C'] = elementary_rxn
-        print('Steps {step}'.format(**locals()))
-
+        print('\n\n\nSteps {step}'.format(**locals()))
 
         print(surface_intermediates)
+        #for reversible, (X, Y) in [[True, ('A', 'B')],
+                                   #[False, ['B' , 'C']]]:
+        # DEBUGGING: make everything reversible for now
+        #            since we want a non-crashing model first
         for reversible, (X, Y) in [[True, ('A', 'B')],
-                                   [False, ['B' , 'C']]]:
+                                   [True, ['B' , 'C']]]:
             if step[X] and step[Y]:
                 # add reversible step between A and B
                 surface_intermediates[X] = []
                 surface_intermediates[Y] = []
 
                 for x in [X, Y]:
-                    print(x)
                     for intermediate in step[x]:
                         if '_' in intermediate:
                             species, site = intermediate.split('_')
@@ -107,46 +117,125 @@ def catmap2kmos(cm_model,
                                 surface_intermediates[x].append([species, site])
                         elif intermediate in site_names:
                             surface_intermediates[x].append([EMPTY_SPECIES, intermediate])
+
                 print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(**locals()))
 
-                conditions = []
-                actions = []
-                for i, (species, site) in enumerate(surface_intermediates[X]):
-                    conditions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
-                for i, (species, site) in enumerate(surface_intermediates[Y]):
-                    actions.append(Condition(species=species.replace('-', '_'), coord=Coord('{site}.(0, 0, {i})'.format(**locals()))))
 
-                if reversible :
-                    prefix = 'reversible'
-                else:
-                    prefix = 'irreversible'
-                pt.add_process(name='{prefix}_process_{ri}'.format(**locals()),
-                               conditions=conditions,
-                               actions=actions,
-                               rate_constant='1.')
+                # some validation checks to raise better error messages
+                for letter_step, surface_intermediate in surface_intermediates.items():
+                    if len (surface_intermediate) > 2 :
+                        raise UserWarning("Elementary reaction steps with more than two intermediates cannot be automatically translated into a kMC model: '{surface_intermediate}".format(**locals()))
+                if len(surface_intermediates[X]) != len(surface_intermediates[Y]):
+                    raise UserWarning("Number of surface different for elementary reaction: {surface_intermediates}".format(**locals()))
 
-                if reversible:
-                    pt.add_process(name='{prefix}_process_{ri}_back'.format(**locals()),
-                                   conditions=actions,
-                                   actions=conditions,
+                for _, siteX in surface_intermediates[X]:
+                    sitesY = [s for _, s in surface_intermediates[Y]]
+                    if not siteX in sitesY:
+                        raise UserWarning('Site {siteX} is mentioned on one side of the equation but not on the other: {surface_intermediates}'.format(**locals()))
+
+                # first populate conditions and actions with one site
+                condition_species, condition_site = surface_intermediates[X][0]
+                condition_coord = pt.layer_list.generate_coord('{condition_site}.(0, 0, 0)'.format(**locals()))
+                conditions = [Condition(species=condition_species.replace('-', '_').replace('-', '_'), coord=condition_coord)]
+
+                action_species, action_site = surface_intermediates[Y][0]
+                action_coord = pt.layer_list.generate_coord('{action_site}.(0, 0, 0)'.format(**locals()))
+                actions = [Action(species=action_species.replace('-', '_'), coord=action_coord)]
+
+                if not action_site == condition_site :
+                    raise UserWarning('Positions of sites seems to have changed: {surface_intermediates}.'.format(**locals()))
+
+                condition_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in surface_intermediates[X] ])
+                action_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
+
+
+                # then create all second (auxiliary) sites which have
+                # the same nearest distance
+
+                dist_tol = 1.e-3 # this is the cut-off with which positional equality is tested
+                # if a process is geometrically degenerate (more than one direction)
+                # it is important that distance a identical within this cut-off
+                # geometrically complex case: two-sites
+                if len(surface_intermediates[X]) == 2 :
+                    other_condition_species, other_condition_site = surface_intermediates[X][1]
+                    other_action_species, other_action_site = surface_intermediates[Y][1]
+
+                    if not other_condition_site == other_action_site:
+                        raise UserWarning('Positions of sites seem to have changed {surface_intermediates}'.format(**locals()))
+
+                    auxiliary_coords = set(pt.layer_list.generate_coord_set([2, 2, 2]))
+                    # first drop the initial site and sites with other labels
+                    for auxiliary_site in copy.copy(auxiliary_coords):
+                        if np.linalg.norm(action_coord.pos - auxiliary_site.pos) < dist_tol :
+                            auxiliary_coords.discard(auxiliary_site)
+
+                        if not auxiliary_site.name == other_condition_site :
+                            auxiliary_coords.discard(auxiliary_site)
+
+
+                    # find the shortest distance to one of the remaining sites
+                    min_dist = min([
+                        np.linalg.norm(aux_site.pos - condition_coord.pos)
+                        for aux_site in auxiliary_coords
+                        ])
+
+
+
+                    # produce reaction steps with all auxiliary sites with-in dist_tol of that
+                    # minimum distance
+                    aux_counter = 0
+                    for auxiliary_coord in auxiliary_coords :
+                        aux_dist = np.linalg.norm(auxiliary_coord.pos - condition_coord.pos)
+                        close = abs(aux_dist - min_dist) < dist_tol
+                        if close:
+                            aux_conditions = conditions + [Condition(species=other_condition_species.replace('-', '_'), coord=auxiliary_coord)]
+                            aux_actions = actions + [Action(species=other_action_species.replace('-', '_'), coord=auxiliary_coord)]
+
+                            process_name = '{condition_string}_2_{action_string}_{aux_counter}'.format(**locals())
+                            pt.add_process(name=process_name,
+                                           conditions=aux_conditions,
+                                           actions=aux_actions,
+                                           rate_constant='1.')
+
+                            if reversible:# swap conditions and actions
+                                process_name = '{action_string}_2_{condition_string}_{aux_counter}_rev'.format(**locals())
+                                pt.add_process(name=process_name,
+                                               conditions=aux_actions,
+                                               actions=aux_conditions,
+                                               rate_constant='1.')
+
+                            aux_counter += 1
+
+
+                else: # trivial case: single-site processes
+                    process_name = '{condition_string}_2_{action_string}'.format(**locals())
+                    pt.add_process(name=process_name,
+                                   conditions=conditions,
+                                   actions=actions,
                                    rate_constant='1.')
 
-
-
-        if step['B'] and step['C']:
-            pass
-            # add irreversible from B to C
+                    if reversible:
+                        # swap conditions and actions
+                        process_name = '{action_string}_2_{condition_string}_rev'.format(**locals())
+                        pt.add_process(name=process_name,
+                                       conditions=actions,
+                                       actions=conditions,
+                                       rate_constant='1.')
 
 
     return pt
 
 if __name__ == '__main__':
-    catmap_model = ReactionModel(setup_file='CO_oxidation.mkm')
+    model_filename = 'CO_oxidation.mkm'
+
+    seed, _ = os.path.splitext(model_filename)
+
+    catmap_model = ReactionModel(setup_file=model_filename)
     catmap_model.run()
 
     # additional information needed for CatMAP/kMOS translation
+    # consider putting this into model definition file
     unit_cell = np.diag([3.1, 3.1, 18.])
-
     site_positions = {
         's': [0, 0, 0],
     }
@@ -158,5 +247,5 @@ if __name__ == '__main__':
 
     #print(kmos_model)
     kmos_model.print_statistics()
-    for suffix in ['ini', 'xml']:
-        kmos_model.save('translated_CatMAP_model.{suffix}'.format(**locals()))
+    for suffix in ['xml']:
+        kmos_model.save('translated_{seed}.{suffix}'.format(**locals()))
