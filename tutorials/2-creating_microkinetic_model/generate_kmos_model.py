@@ -4,6 +4,9 @@ import os.path
 import copy
 
 from kmos.types import Project, Site, Condition, Action
+import kmos.utils
+import ase.atoms
+from ase.atoms import Atoms
 
 from catmap import ReactionModel
 import numpy as np
@@ -52,6 +55,12 @@ def catmap2kmos(cm_model,
     # add unit cell
     layer = pt.add_layer(name='default')
     pt.layer_list.cell = cm_model.unit_cell
+    cell = cm_model.unit_cell.tolist()
+
+    # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
+    # down
+    pt.layer_list.representation = '[Atoms("H", cell={cell})]'.format(
+        **locals())
 
     # add site positions
     for site_name in cm_model.site_names:
@@ -69,17 +78,20 @@ def catmap2kmos(cm_model,
     import random
 
     pt.add_species(name=EMPTY_SPECIES, color='#ffffff')
+    species_names = set()
     for species_definition in cm_model.species_definitions.keys():
         color = '#%02X%02X%02X' % (random.randint(0, 255),
                                    random.randint(0, 255),
                                    random.randint(0, 255))
 
+        print('SPECIES DEFINITION {species_definition}'.format(**locals()))
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
+            species_name = species_name.replace('-', '_')
             if not species_name == '*' \
                     and not species_name == 's' \
+                    and not '_' in species_name \
                     and not species_name in [x.name for x in pt.species_list]:
-                species_name = species_name.replace('-', '_')
                 pt.add_species(name=species_name, color=color)
 
     # add parameters
@@ -124,12 +136,15 @@ def catmap2kmos(cm_model,
                 for x in [X, Y]:
                     print('x = {x}'.format(**locals()))
                     for intermediate in step[x]:
-                        print('intermediate = {intermediate}'.format(**locals()))
+                        print(
+                            'intermediate = {intermediate}'.format(**locals()))
                         if '_' in intermediate:
                             species, site = intermediate.split('_')
-                            print('SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
-                            print([s.startswith('{site}_'.format(**locals())) for s in site_names])
-                            if any([s.startswith('{site}_'.format(**locals())) for s in site_names ]) :
+                            print(
+                                'SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
+                            print(
+                                [s.startswith('{site}_'.format(**locals())) for s in site_names])
+                            if any([s.startswith('{site}_'.format(**locals())) for s in site_names]):
                                 surface_intermediates[
                                     x].append([species, site])
                         elif any([s.startswith('{intermediate}_'.format(**locals())) for s in site_names]):
@@ -158,7 +173,8 @@ def catmap2kmos(cm_model,
 
                 # first populate conditions and actions with one site
                 print(surface_intermediates, X)
-                condition_species, condition_site_name = surface_intermediates[X][0]
+                condition_species, condition_site_name = surface_intermediates[
+                    X][0]
                 for cs_i, condition_site in enumerate([cs for cs in site_names if cs.startswith('{condition_site_name}_'.format(**locals()))]):
                     condition_coord = pt.layer_list.generate_coord(
                         '{condition_site}.(0, 0, 0)'.format(**locals()))
@@ -169,13 +185,12 @@ def catmap2kmos(cm_model,
                     action_coord = pt.layer_list.generate_coord(
                         '{condition_site}.(0, 0, 0)'.format(**locals()))
 
-
                     actions = [
                         Action(species=action_species.replace('-', '_'), coord=action_coord)]
 
-                    #if not action_site == condition_site:
-                        #raise UserWarning(
-                            #'Positions of sites seems to have changed: {surface_intermediates}.'.format(**locals()))
+                    # if not action_site == condition_site:
+                    # raise UserWarning(
+                    #'Positions of sites seems to have changed: {surface_intermediates}.'.format(**locals()))
 
                     condition_string = '_n_'.join([species.replace(
                         '-', '_') + '_' + site for (species, site) in surface_intermediates[X]])
@@ -185,7 +200,8 @@ def catmap2kmos(cm_model,
                     # then create all second (auxiliary) sites which have
                     # the same nearest distance
 
-                    # this is the cut-off with which positional equality is tested
+                    # this is the cut-off with which positional equality is
+                    # tested
                     dist_tol = 1.e-3
                     # if a process is geometrically degenerate (more than one direction)
                     # it is important that distance a identical within this cut-off
@@ -202,7 +218,8 @@ def catmap2kmos(cm_model,
 
                         auxiliary_coords = set(
                             pt.layer_list.generate_coord_set([2, 2, 2]))
-                        # first drop the initial site and sites with other labels
+                        # first drop the initial site and sites with other
+                        # labels
                         for auxiliary_site in copy.copy(auxiliary_coords):
                             if np.linalg.norm(action_coord.pos - auxiliary_site.pos) < dist_tol:
                                 auxiliary_coords.discard(auxiliary_site)
@@ -210,7 +227,8 @@ def catmap2kmos(cm_model,
                             if not auxiliary_site.name.startswith('{other_condition_site}_'.format(**locals())):
                                 auxiliary_coords.discard(auxiliary_site)
 
-                        # find the shortest distance to one of the remaining sites
+                        # find the shortest distance to one of the remaining
+                        # sites
                         min_dist = min([
                             np.linalg.norm(aux_site.pos - condition_coord.pos)
                             for aux_site in auxiliary_coords
@@ -245,7 +263,6 @@ def catmap2kmos(cm_model,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
                                                    rate_constant='reverse_{ri}'.format(**locals()))
-
 
                                 aux_counter += 1
 
