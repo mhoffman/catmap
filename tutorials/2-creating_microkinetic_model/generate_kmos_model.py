@@ -197,14 +197,21 @@ def catmap2kmos(cm_model,
                     action_string = '_n_'.join([species.replace(
                         '-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
 
+                    forward_name_root = '{condition_string}_2_{action_string}_{cs_i}'.format(
+                        **locals())
+                    reverse_name_root = '{action_string}_2_{condition_string}_{cs_i}'.format(
+                        **locals())
+
                     # then create all second (auxiliary) sites which have
                     # the same nearest distance
 
                     # this is the cut-off with which positional equality is
                     # tested
-                    dist_tol = 1.e-3
                     # if a process is geometrically degenerate (more than one direction)
-                    # it is important that distance a identical within this cut-off
+                    # it is important that distance is identical within the
+                    # cut-off
+                    dist_tol = 1.e-3
+
                     # geometrically complex case: two-sites
                     if len(surface_intermediates[X]) == 2:
                         other_condition_species, other_condition_site = surface_intermediates[
@@ -249,38 +256,43 @@ def catmap2kmos(cm_model,
                                     [Action(
                                         species=other_action_species.replace('-', '_'), coord=auxiliary_coord)]
 
-                                process_name = '{condition_string}_2_{action_string}_{cs_i}_{aux_counter}'.format(
+                                process_name = '{forward_name_root}_{aux_counter}'.format(
                                     **locals())
+
                                 pt.add_process(name=process_name,
                                                conditions=aux_conditions,
                                                actions=aux_actions,
-                                               rate_constant='forward_{ri}'.format(**locals()))
+                                               rate_constant='forward_{ri}'.format(
+                                                   **locals()),
+                                               tof_count={forward_name_root: 1})
 
                                 if reversible:  # swap conditions and actions
-                                    process_name = '{action_string}_2_{condition_string}_{cs_i}_{aux_counter}'.format(
+                                    process_name = '{reverse_name_root}_{aux_counter}'.format(
                                         **locals())
                                     pt.add_process(name=process_name,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
-                                                   rate_constant='reverse_{ri}'.format(**locals()))
+                                                   rate_constant='reverse_{ri}'.format(
+                                                       **locals()),
+                                                   tof_count={forward_name_root: -1})
 
                                 aux_counter += 1
 
                     else:  # trivial case: single-site processes
-                        process_name = '{condition_string}_2_{action_string}_{cs_i}'.format(
-                            **locals())
+                        process_name = forward_name_root
                         pt.add_process(name=process_name,
                                        conditions=conditions,
                                        actions=actions,
+                                       tof_count={forward_name_root: 1},
                                        rate_constant='forward_{ri}'.format(**locals()))
 
                         if reversible:
                             # swap conditions and actions
-                            process_name = '{action_string}_2_{condition_string}_{cs_i}'.format(
-                                **locals())
+                            process_name = reverse_name_root
                             pt.add_process(name=process_name,
                                            conditions=actions,
                                            actions=conditions,
+                                           tof_count={forward_name_root: -1},
                                            rate_constant='reverse_{ri}'.format(**locals()))
 
     return pt
