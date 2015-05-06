@@ -16,7 +16,7 @@ vm.unique_only = False
 vm.plot(save='all_rates.pdf')
 vm.unique_only = True
 
-model.output_variables += ['production_rate']
+model.output_variables += ['production_rate', 'rate_constant']
 model.run()
 vm.production_rate_map = model.production_rate_map #attach map
 vm.threshold = 1e-30 #do not plot rates below this
@@ -32,9 +32,11 @@ vm.log_scale = False
 vm.min = 0
 vm.max = 1
 vm.plot(save='coverage.pdf')
-
 vm.include_labels = ['CO_s']
 vm.plot(save='CO_coverage.pdf')
+
+vm.include_labels = ['O_s']
+vm.plot(save='O_coverage.pdf')
 
 sa = analyze.ScalingAnalysis(model)
 sa.plot(save='scaling.pdf')

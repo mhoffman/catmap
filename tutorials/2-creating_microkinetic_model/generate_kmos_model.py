@@ -59,7 +59,7 @@ def catmap2kmos(cm_model,
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
-    pt.layer_list.representation = '[Atoms("H", cell={cell})]'.format(
+    pt.layer_list.representation = '[Atoms("H", [[0., 0., -0.1]], cell={cell})]'.format(
         **locals())
 
     # add site positions
@@ -92,7 +92,10 @@ def catmap2kmos(cm_model,
                     and not species_name == 's' \
                     and not '_' in species_name \
                     and not species_name in [x.name for x in pt.species_list]:
-                pt.add_species(name=species_name, color=color)
+                pt.add_species(name=species_name,
+                               representation=cm_model.species_representation.get(species_name, "Atoms()"),
+                               color=color,
+                              )
 
     # add parameters
     # TODO : let's avoid this for now and just accept rate constants from

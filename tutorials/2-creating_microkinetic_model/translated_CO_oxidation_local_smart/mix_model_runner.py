@@ -12,8 +12,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-INIT_STEPS = int(1e7)
-SAMPLE_STEPS = int(1e7)
+INIT_STEPS = int(1e8)
+SAMPLE_STEPS = INIT_STEPS
+
 SEED = 'CO_oxidation'
 
 from matplotlib.mlab import griddata
@@ -71,6 +72,7 @@ def run_model(seed, init_steps, sample_steps):
                 continue
         with open(lock_filename, 'a') as lockfile:
             lockfile.write('{descriptor_string}'.format(**locals()))
+            lockfile.flush()
 
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             set_rate_constants(kmos_model, catmap_data, data_point)
@@ -82,6 +84,12 @@ def run_model(seed, init_steps, sample_steps):
             # run model (hopefully) to steady state and evaluate
             kmos_model.do_steps(init_steps)
             data = kmos_model.get_std_sampled_data(1, sample_steps, verbose=True, tof_method='integ')
+
+            with open('procstat_{data_point}.log'.format(**locals()), 'w') as outfile:
+                outfile.write(kmos_model.print_procstat(False))
+
+            with open('rateconstants_{data_point}.log'.format(**locals()), 'w') as outfile:
+                outfile.write(kmos_model.rate_constants())
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
@@ -142,7 +150,7 @@ if __name__ == '__main__':
              sample_steps=SAMPLE_STEPS)
 
     if options.plot:
-        data = np.recfromtxt('{seed}_kMC_output.log', names=True)
+        data = np.recfromtxt('{SEED}_kMC_output.log'.format(**locals()), names=True)
 
         for name in data.dtype.names:
             print(name)
@@ -151,10 +159,13 @@ if __name__ == '__main__':
             if '_2_' in name:
                 plot_data = np.log10(data[name])
                 #plot_data = data[name]
-                minimum = np.nanmin(plot_data[np.isfinite(plot_data)])
-                print('MINIMUM {minimum}'.format(**locals()))
-                plot_data[np.logical_or(np.isnan(plot_data),
-                                        np.isinf(plot_data))] = minimum
+                if not np.isfinite(plot_data).any():
+                    plot_data[:] = 0.
+                else:
+                    minimum = np.nanmin(plot_data[np.isfinite(plot_data)])
+                    print('MINIMUM {minimum}'.format(**locals()))
+                    plot_data[np.logical_or(np.isnan(plot_data),
+                                            np.isinf(plot_data))] = minimum
             else:
                 plot_data = data[name]
             contour_plot_data(data['descriptor0'],
