@@ -12,9 +12,11 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-INIT_STEPS = int(1e6)
+INIT_STEPS = int(1e7)
 SAMPLE_STEPS = int(1e7)
 SEED = 'CO_oxidation'
+
+from matplotlib.mlab import griddata
 
 
 def set_rate_constants(kmos_model, catmap_data, data_point):
@@ -27,7 +29,7 @@ def set_rate_constants(kmos_model, catmap_data, data_point):
 
 
 def run_model(seed, init_steps, sample_steps):
-    data_filename = '{seed}_DATA.log'.format(**locals())
+    data_filename = '{seed}_kMC_output.log'.format(**locals())
     lock_filename = '{seed}.lock'.format(**locals())
 
     catmap_model = catmap.ReactionModel(
@@ -79,35 +81,46 @@ def run_model(seed, init_steps, sample_steps):
 
             # run model (hopefully) to steady state and evaluate
             kmos_model.do_steps(init_steps)
-            data = kmos_model.get_std_sampled_data(1, sample_steps, verbose=True, tof_method='procrates')
+            data = kmos_model.get_std_sampled_data(1, sample_steps, verbose=True, tof_method='integ')
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
                     '{descriptors[0]} {descriptors[1]} {data}'.format(**locals()))
 
 
-def contour_plot_data(x, y, z, filename, n_gp=15, title='', seed=None):
+def contour_plot_data(x, y, z, filename, n_gp=101, m_gp=20, title='', seed=None, normalized=False):
     import numpy
     import scipy.interpolate
     fig = plt.figure()
 
+
+    #x, y = np.linspace(x.min(), x.max(), m_gp), np.linspace(y.min(), y.max(), m_gp)
+
     xi, yi = np.linspace(x.min(), x.max(), n_gp), np.linspace(y.min(), y.max(), n_gp)
     xi, yi = np.meshgrid(xi, yi)
 
-    print(z)
-    rbf = scipy.interpolate.Rbf(x, y, z, function='thin_plate', )
+    #print(z)
+    rbf = scipy.interpolate.Rbf(x, y, z, function='linear', )
     zi = rbf(xi, yi)
+    #zi = griddata(x, y, z, xi, yi, interp='linear')
 
-    plt.imshow(zi, vmin=z.min(), vmax=z.max(), origin='lower',
-               extent=[x.min(), x.max(), y.min(), y.max()])
+    if normalized:
+        levels = np.linspace(0, 1, 21)
+    else:
+        levels = np.linspace(zi.min(), zi.max(), 21)
+
+    plt.contourf(zi, vmin=z.min(), vmax=z.max(), origin='lower',
+               extent=[x.min(), x.max(), y.min(), y.max()],
+               levels=levels,
+               extend='both')
 
     plt.scatter(x, y, c=z)
     plt.colorbar()
 
     if seed is not None:
         model = catmap.ReactionModel(setup_file='{seed}.mkm'.format(**locals()))
-        plt.xlabel(model.descriptor_names[1])
-        plt.ylabel(model.descriptor_names[0])
+        plt.xlabel(model.descriptor_names[0])
+        plt.ylabel(model.descriptor_names[1])
         plt.title(title)
 
     plt.savefig(filename)
@@ -129,14 +142,14 @@ if __name__ == '__main__':
              sample_steps=SAMPLE_STEPS)
 
     if options.plot:
-        data = np.recfromtxt('CO_oxidation_DATA.log', names=True)
+        data = np.recfromtxt('{seed}_kMC_output.log', names=True)
 
         for name in data.dtype.names:
             print(name)
             if name in ['descriptor1', 'descriptor0']:
                 continue
             if '_2_' in name:
-                plot_data = np.log(data[name])
+                plot_data = np.log10(data[name])
                 #plot_data = data[name]
                 minimum = np.nanmin(plot_data[np.isfinite(plot_data)])
                 print('MINIMUM {minimum}'.format(**locals()))
@@ -148,5 +161,5 @@ if __name__ == '__main__':
                               data['descriptor1'],
                               plot_data,
                               'output_{name}.pdf'.format(**locals()),
-                              seed='CO_oxidation',
+                              seed=SEED,
                               title=name)
