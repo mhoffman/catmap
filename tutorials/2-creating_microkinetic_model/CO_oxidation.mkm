@@ -9,7 +9,6 @@ rxn_expressions = [
                'CO* +  O* <-> O-CO* + * -> CO2_g + 2*',
                'CO* +  * <-> * + CO* ',
                'O* +  * <-> * + O* ',
-
                    ]
 
 
@@ -19,7 +18,7 @@ descriptor_names= ['O_s','CO_s'] #descriptor names
 
 descriptor_ranges = [[-1,3],[-0.5,4]]
 
-resolution = 10
+resolution = 20
 
 temperature = 500 #Temperature of the reaction
 
@@ -86,3 +85,7 @@ max_bisections = 3
 import numpy as np
 unit_cell = np.diag([2.75064538,   2.75064538,  33.835     ])
 site_positions = {'s': [[0, .0, 0]], }
+
+unit_cell = np.array([[  2.68700577,   0.        ,   0.        ],
+                      [  1.34350288,   2.32701526,   0.        ],
+                      [  0.        ,   0.        ,  26.58179307]])
