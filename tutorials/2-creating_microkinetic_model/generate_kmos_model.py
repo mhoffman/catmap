@@ -88,12 +88,14 @@ def catmap2kmos(cm_model,
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
             species_name = species_name.replace('-', '_')
+
+            species_representation = getattr(cm_model, 'species_representation', {}).get(species_name, "Atoms()")
             if not species_name == '*' \
                     and not species_name == 's' \
                     and not '_' in species_name \
                     and not species_name in [x.name for x in pt.species_list]:
                 pt.add_species(name=species_name,
-                               representation=cm_model.species_representation.get(species_name, "Atoms()"),
+                               representation=species_representation,
                                color=color,
                               )
 
