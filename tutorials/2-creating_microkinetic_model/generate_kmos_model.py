@@ -59,8 +59,12 @@ def catmap2kmos(cm_model,
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
-    pt.layer_list.representation = '[Atoms("H", [[0., 0., -0.1]], cell={cell})]'.format(
-        **locals())
+    background_representation = getattr(cm_model,
+                                        'background_representation',
+                                        'Atoms("H", [[0., 0., -0.1]], cell={cell})'.format(**locals())
+    )
+    pt.layer_list.representation = '[{background_representation}]'.format(**locals())
+
 
     # add site positions
     for site_name in cm_model.site_names:
@@ -107,11 +111,6 @@ def catmap2kmos(cm_model,
     site_names = [x.name for x in pt.layer_list[0].sites]
     print('SITE NAMES {site_names}'.format(**locals()))
     for ri, elementary_rxn in enumerate(cm_model.elementary_rxns):
-        # set a parameter for each rate constant
-        # which we can later directly from CatMAP
-        pt.add_parameter(name='forward_{ri}'.format(**locals()), value=1.)
-        pt.add_parameter(name='reverse_{ri}'.format(**locals()), value=1.)
-
         step = {}
         surface_intermediates = {}
         # N.B: The general form of an elementary reaction in CatMAP is
@@ -249,6 +248,21 @@ def catmap2kmos(cm_model,
                         # produce reaction steps with all auxiliary sites with-in dist_tol of that
                         # minimum distance
                         aux_counter = 0
+
+                        # if the process is a diffusion process
+                        # mark it as such in the rate constant
+                        # so that we can later fine tune its rate-constant
+                        # easier
+                        if other_condition_species == EMPTY_SPECIES \
+                           and action_species == EMPTY_SPECIES \
+                           and condition_species == other_action_species:
+                            diff_prefix = 'diff_'
+                        else:
+                            diff_prefix = ''
+
+                        pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
+                        pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
+
                         for auxiliary_coord in auxiliary_coords:
                             aux_dist = np.linalg.norm(
                                 auxiliary_coord.pos - condition_coord.pos)
@@ -267,7 +281,7 @@ def catmap2kmos(cm_model,
                                 pt.add_process(name=process_name,
                                                conditions=aux_conditions,
                                                actions=aux_actions,
-                                               rate_constant='forward_{ri}'.format(
+                                               rate_constant='{diff_prefix}forward_{ri}'.format(
                                                    **locals()),
                                                tof_count={forward_name_root: 1})
 
@@ -277,13 +291,17 @@ def catmap2kmos(cm_model,
                                     pt.add_process(name=process_name,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
-                                                   rate_constant='reverse_{ri}'.format(
+                                                   rate_constant='{diff_prefix}reverse_{ri}'.format(
                                                        **locals()),
                                                    tof_count={forward_name_root: -1})
 
                                 aux_counter += 1
 
                     else:  # trivial case: single-site processes
+
+                        pt.add_parameter(name='forward_{ri}'.format(**locals()), value=1.)
+                        pt.add_parameter(name='reverse_{ri}'.format(**locals()), value=1.)
+
                         process_name = forward_name_root
                         pt.add_process(name=process_name,
                                        conditions=conditions,
