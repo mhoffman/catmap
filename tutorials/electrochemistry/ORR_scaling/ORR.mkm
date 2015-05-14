@@ -68,3 +68,14 @@ decimal_precision = 200
 tolerance = 1e-50
 max_rootfinding_iterations = 1000
 max_bisections = 5
+
+# kmc parameters
+
+import numpy as np
+site_positions = {'a': [[0, .0, 0]],
+                  'b': [[0., .5, 0.]],
+                  'dl':[[0, 0, .5]],
+                  }
+unit_cell = np.array([[  2.68700577,   0.        ,   0.        ],
+                      [  1.34350288,   2.32701526,   0.        ],
+                      [  0.        ,   0.        ,  26.58179307]])
