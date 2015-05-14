@@ -1179,3 +1179,20 @@ Run several consistency check on the model, such as :
 
         # add echem TSs to regular TSes - this might be more trouble than it's worth
         self.transition_state_names += tuple(self.echem_transition_state_names)
+
+    def get_rate_constants(self, descriptor_values, coverages=None):
+        """
+            Return the list of rate constants for a given tuple of descriptor_values.
+            If no coverages are supplied an empty surface is assumed which results
+            in no adsorbate-adsorbate interaction.
+
+            :param descriptor_values: Sequence of descriptor values of length `len(model.descriptor_names)`
+            :type descriptor_values: [float]
+            :params coverages: Sequence of coverages of length `len(model.adsorbate_names)`
+            :type coverages: (optional: [flaot)
+
+        """
+
+        rxn_params = self.scaler.get_rxn_parameters(descriptor_values)
+        rate_constants = self.solver.get_rate_constants(rxn_params, coverages)
+        return rate_constants
