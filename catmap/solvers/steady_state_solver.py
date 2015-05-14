@@ -37,8 +37,14 @@ class SteadyStateSolver(MeanFieldSolver):
                             "found solution at point ${pt}",
                             'rootfinding_status':
                             "converging (residual = ${resid})"}
-    
-    def get_rate_constants(self,rxn_parameters,coverages):
+
+    def get_rate_constants(self,rxn_parameters,coverages=None):
+        # if no coverages are supplied assume limit of zero coverage
+        # which corresponds to no interaction regardless of which interaction
+        # model is used.
+        if coverages is None:
+            coverages = [0.] * len(self.adsorbate_names)
+
         if self.adsorbate_interaction_model not in [None,'ideal']:
             memo = tuple(rxn_parameters) + tuple(coverages) + tuple(self._gas_energies)
         else:
@@ -63,13 +69,13 @@ class SteadyStateSolver(MeanFieldSolver):
         else:
             return self.get_interacting_coverages(rxn_parameters,c0,1.0,findrootArgs)
 
-    def get_steady_state_coverage(self,rxn_parameters,steady_state_fn, jacobian_fn, 
+    def get_steady_state_coverage(self,rxn_parameters,steady_state_fn, jacobian_fn,
             c0=None,findrootArgs={}):
 
         n_tot = len(self.adsorbate_names) + len(self.transition_state_names)
         if c0 is None:
             raise ValueError("No initial coverage supplied. Mapper must supply initial guess")
-        
+
         c0 = self.constrain_coverages(c0)
         self.steady_state_function = steady_state_fn
         self.steady_state_jacobian = jacobian_fn
@@ -105,7 +111,7 @@ class SteadyStateSolver(MeanFieldSolver):
             solver_kwargs['J'] = J
 
 
-        iterations = solver(f,c0, self._matrix, self._mpfloat, 
+        iterations = solver(f,c0, self._matrix, self._mpfloat,
                             self._Axb_solver, **solver_kwargs)
         old_error = 1e99
         coverages = None
@@ -313,7 +319,7 @@ class SteadyStateSolver(MeanFieldSolver):
             #make steady-state expressions
             ss_eqs = self.rate_equations()
             self._function_substitutions['steady_state_expressions'] = '\n    '.join(ss_eqs)
-            
+
             #make jacobian expressions
             jac_eqs = self.jacobian_equations(adsorbate_interactions=True)
             self._function_substitutions['jacobian_expressions'] = '\n    '.join(jac_eqs)
@@ -324,7 +330,7 @@ class SteadyStateSolver(MeanFieldSolver):
                 lines = string.split('\n')
                 indention = '\n'+'    '*levels
                 return indention.join(lines)
-            
+
             #pre-substitute the interaction function into rate_constants (needed because its nested 2 levels)
             indented = indent_string(templates[self.adsorbate_interaction_model+'_interaction_function'],1)
             indented = Template(indented).substitute(self._function_substitutions)
@@ -442,7 +448,7 @@ class SteadyStateSolver(MeanFieldSolver):
                     ' + ':r'( +\- *\-1\*| +\+ *1\*| +\+ *\+ +)+',
                     ' - ':r'( +\+ *\-1\*| +\- *1\*| +\+ *\- +| +0 +\-|\-1\*|\-1\*1\*)',
                     }
-        
+
         opt_str = '\n'+'    '*indention_level+'subs = [0]*'+str(len(opt_strs))
         for i,op in enumerate(opt_strs):
             opt_str += '\n'+'    '*indention_level+ 'subs['+str(i)+'] = '+op
