@@ -1,5 +1,5 @@
 model_name = 'CatMAP_translated_model'
-simulation_size = 20
+simulation_size = 30
 random_seed = 1
 
 def setup_model(model):
@@ -7,8 +7,8 @@ def setup_model(model):
        e.g. ::
     model.put([0,0,0,model.lattice.default_a], model.proclist.species_a)
     """
-    from setup_model import setup_model
-    setup_model(model)
+    #from setup_model import setup_model
+    #setup_model(model)
 
 # Default history length in graph
 hist_length = 30
@@ -81,7 +81,7 @@ rate_constants = {
 
 site_names = ['default_s_0']
 representations = {
-    "CO":"""Atoms('CO', [[0., 0., 0.], [0., 0., 1.7]])""",
+    "CO":"""Atoms('OC', [[0., 0., 0.], [0., 0., 1.7]])""",
     "CO2":"""Atoms('OCO', [[1., 1., 0.], [0., 0., 0.,], [-1., 1., 0]])""",
     "O":"""Atoms('O')""",
     "O2":"""Atoms()""",
