@@ -34,7 +34,7 @@ def catmap2kmos(cm_model,
                 site_positions=None,
                 diffusion_barriers=None,
                 species_representations=None,
-                surface_representation=None,
+                surface_representation='None',
                 ):
 
     EMPTY_SPECIES = 'empty'
@@ -54,14 +54,17 @@ def catmap2kmos(cm_model,
 
     # add unit cell
     layer = pt.add_layer(name='default')
-    pt.layer_list.cell = cm_model.unit_cell
-    cell = cm_model.unit_cell.tolist()
+
+    if unit_cell is None:
+        unit_cell = np.diag([1., 1., 1.])
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
+    if hasattr(cm_model, 'background_representation') and hasattr(cm_model, 'background_representation'):
+        print("Warning: unit cell in background_representation will override the given background representation")
     background_representation = getattr(cm_model,
                                         'background_representation',
-                                        'Atoms("H", [[0., 0., -0.1]], cell={cell})'.format(**locals())
+                                        'Atoms("H", [[0., 0., -0.1]], cell={unit_cell})'.format(**locals())
     )
     pt.layer_list.representation = '[{background_representation}]'.format(**locals())
 
