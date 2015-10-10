@@ -58,7 +58,7 @@ def catmap2kmos(cm_model,
     layer = pt.add_layer(name='default')
 
     if unit_cell is None:
-        unit_cell = np.diag([1., 1., 1.])
+        unit_cell = np.diag([1., 1., 1.]).tolist()
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
