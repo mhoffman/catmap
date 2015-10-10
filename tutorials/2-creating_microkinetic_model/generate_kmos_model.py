@@ -2,6 +2,7 @@
 
 import os.path
 import copy
+import pprint
 
 from kmos.types import Project, Site, Condition, Action
 import kmos.utils
@@ -35,6 +36,7 @@ def catmap2kmos(cm_model,
                 diffusion_barriers=None,
                 species_representations=None,
                 surface_representation='None',
+                adsorbate_interaction=1,
                 ):
 
     EMPTY_SPECIES = 'empty'
@@ -220,7 +222,10 @@ def catmap2kmos(cm_model,
                     dist_tol = 1.e-3
 
                     # geometrically complex case: two-sites
+
+                    two_site_process = False
                     if len(surface_intermediates[X]) == 2:
+                        two_site_process = True
                         other_condition_species, other_condition_site = surface_intermediates[
                             X][1]
                         other_action_species, other_action_site = surface_intermediates[
@@ -263,8 +268,6 @@ def catmap2kmos(cm_model,
                         else:
                             diff_prefix = ''
 
-                        pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
-                        pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
 
                         for auxiliary_coord in auxiliary_coords:
                             aux_dist = np.linalg.norm(
@@ -281,7 +284,7 @@ def catmap2kmos(cm_model,
                                 process_name = '{forward_name_root}_{aux_counter}'.format(
                                     **locals())
 
-                                pt.add_process(name=process_name,
+                                process = pt.add_process(name=process_name,
                                                conditions=aux_conditions,
                                                actions=aux_actions,
                                                rate_constant='{diff_prefix}forward_{ri}'.format(
@@ -291,7 +294,7 @@ def catmap2kmos(cm_model,
                                 if reversible:  # swap conditions and actions
                                     process_name = '{reverse_name_root}_{aux_counter}'.format(
                                         **locals())
-                                    pt.add_process(name=process_name,
+                                    process_r = pt.add_process(name=process_name,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
                                                    rate_constant='{diff_prefix}reverse_{ri}'.format(
@@ -301,12 +304,9 @@ def catmap2kmos(cm_model,
                                 aux_counter += 1
 
                     else:  # trivial case: single-site processes
-
-                        pt.add_parameter(name='forward_{ri}'.format(**locals()), value=1.)
-                        pt.add_parameter(name='reverse_{ri}'.format(**locals()), value=1.)
-
+                        diff_prefix = ''
                         process_name = forward_name_root
-                        pt.add_process(name=process_name,
+                        process = pt.add_process(name=process_name,
                                        conditions=conditions,
                                        actions=actions,
                                        tof_count={forward_name_root: 1},
@@ -315,11 +315,53 @@ def catmap2kmos(cm_model,
                         if reversible:
                             # swap conditions and actions
                             process_name = reverse_name_root
-                            pt.add_process(name=process_name,
+                            process_r = pt.add_process(name=process_name,
                                            conditions=actions,
                                            actions=conditions,
                                            tof_count={forward_name_root: -1},
                                            rate_constant='reverse_{ri}'.format(**locals()))
+                    if adsorbate_interaction > 0 :
+                        # figure out which adsorbates can be one which site
+                        site_species = {}
+
+
+                        # Collect the nearest-neighbor sites up to a certain cut-off
+                        coordinate_set = pt.layer_list.generate_coord_set([5, 5, 1])
+                        # regenerate all action coordinates via generation string to set the
+                        # absolute position of the coord correctly
+
+                        action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
+                        min_dists = [min(map(lambda x: np.linalg.norm(x.pos-c.pos), action_coords)) for c in coordinate_set]
+
+                        coordinate_set = sorted(zip(min_dists, coordinate_set))
+                        print(min_dists)
+                        print(coordinate_set)
+                        curr_dist = 0.
+                        neighbor_shell = 0
+                        n_neighbors = {}
+                        for dist, coord in coordinate_set:
+                            if abs(curr_dist - dist) > dist_tol:
+                                curr_dist = dist
+                                neighbor_shell += 1
+                            n_neighbors.setdefault((neighbor_shell, curr_dist), []).append(coord)
+                        pprint.pprint(n_neighbors)
+
+
+                        # Remove the original process
+
+
+                        # Add adsorbate interaction processes with all necessary combinations
+                        # or nearest neighbor sites
+
+                        # Add sensible markers to adsorption rates to calculate
+                        # adsorbate interactions from DBMI model
+
+
+                pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
+                pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
+
+
+
 
     return pt
 
