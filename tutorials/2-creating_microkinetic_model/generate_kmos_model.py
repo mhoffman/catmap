@@ -37,7 +37,7 @@ def catmap2kmos(cm_model,
                 diffusion_barriers=None,
                 species_representations=None,
                 surface_representation='None',
-                adsorbate_interaction=2,
+                adsorbate_interaction=1,
                 ):
 
     EMPTY_SPECIES = 'empty'
@@ -313,7 +313,7 @@ def catmap2kmos(cm_model,
                                 if reversible:  # swap conditions and actions
                                     process_name = '{reverse_name_root}_{aux_counter}'.format(
                                         **locals())
-                                    process_r = pt.add_process(name=process_name,
+                                    reverse_process = pt.add_process(name=process_name,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
                                                    rate_constant='{diff_prefix}reverse_{ri}'.format(
@@ -334,7 +334,7 @@ def catmap2kmos(cm_model,
                         if reversible:
                             # swap conditions and actions
                             process_name = reverse_name_root
-                            process_r = pt.add_process(name=process_name,
+                            reverse_process = pt.add_process(name=process_name,
                                            conditions=actions,
                                            actions=conditions,
                                            tof_count={forward_name_root: -1},
@@ -374,14 +374,18 @@ def catmap2kmos(cm_model,
                         print(species_options)
                         species_sets = list(itertools.product(*species_options))
 
-                        pprint.pprint(species_sets)
 
                         for i, species_set in enumerate(species_sets):
+                            print(i, species_set)
                             condition_list = process.condition_list
                             action_list = process.action_list
                             rate_constant = process.rate_constant
                             name = process.name
                             tof_count = process.tof_count
+
+                            reverse_name = reverse_process.name
+                            reverse_rate_constant = reverse_process.rate_constant
+                            reverse_tof_count = reverse_process.tof_count
 
                             aux_conditions = [
                                 kmos.types.ConditionAction(
@@ -395,7 +399,14 @@ def catmap2kmos(cm_model,
                                            rate_constant='{rate_constant}_{i}'.format(**locals()),
                                            tof_count=tof_count)
 
+                            pt.add_process(name='{name}_{i}'.format(**locals()),
+                                           action_list=condition_list,
+                                           condition_list=action_list + aux_conditions,
+                                           rate_constant='{reverse_rate_constant}_{i}'.format(**locals()),
+                                           tof_count=reverse_tof_count,)
+
                         pt.process_list.remove(process)
+                        pt.process_list.remove(reverse_process)
                         # TODO: Add similar extra process for reverse reaction
 
 
@@ -426,6 +437,8 @@ if __name__ == '__main__':
 
     parser = optparse.OptionParser('Usage: %script *.mkm')
 
+    parser.add_option('-v', '--validate', dest='validate', action='store_true', default=False)
+
     options, args = parser.parse_args()
 
     if not len(args) >= 1:
@@ -443,4 +456,4 @@ if __name__ == '__main__':
     # print(kmos_model)
     kmos_model.print_statistics()
     for suffix in ['xml']:
-        kmos_model.save('translated_{seed}.{suffix}'.format(**locals()))
+        kmos_model.save('translated_{seed}.{suffix}'.format(**locals()), validate=options.validate)
