@@ -1,0 +1,104 @@
+
+# M. Hoffmann <mjhoffmann@gmail.com>
+# Recreated from
+# Falsig, Hanne, Juan Shen, Tuhin Suvra Khan, Wei Guo, Glenn Jones, Søren Dahl, and Thomas Bligaard. “On the Structure Sensitivity of Direct NO Decomposition over Low-Index Transition Metal Facets.” Topics in Catalysis 57, no. 1–4 (October 29, 2013): 80–88. doi:10.1007/s11244-013-0164-5.
+
+
+surface = 'Rh'
+
+most_stable_sites = { 'O': {
+            'Ag' : 'fcc',
+            'Au' : 'fcc',
+            'Co' : 'fcc',
+            'Cu' : 'fcc',
+            'Ni' : 'fcc',
+            'Pd' : 'fcc',
+            'Pt' : 'fcc',
+            'Re' : 'hcp',
+            'Rh' : 'fcc',
+            'Ru' : 'hcp',
+    }, 'N': {
+            'Ag' : 'fcc',
+            'Au' : 'fcc',
+            'Co' : 'fcc',
+            'Cu' : 'fcc',
+            'Ni' : 'fcc',
+            'Pd' : 'fcc',
+            'Pt' : 'fcc',
+            'Re' : 'hcp',
+            'Rh' : 'hcp',
+            'Ru' : 'hcp',
+
+    }, 'NO': {
+            'Ag' : 'fcc',
+            'Au' : 'top',
+            'Co' : 'hcp',
+            'Cu' : 'fcc',
+            'Ni' : 'fcc',
+            'Pd' : 'fcc',
+            'Pt' : 'fcc',
+            'Re' : 'top',
+            'Rh' : 'hcp',
+            'Ru' : 'hcp',
+    }}
+
+NO_site = most_stable_sites.get('NO', {}).get(surface, None)
+O_site = most_stable_sites.get('O', {}).get(surface, None)
+N_site = most_stable_sites.get('N', {}).get(surface, None)
+
+rxn_expressions = [
+    'NO_g + *_{NO_site} -> NO_{NO_site}'.format(**locals()),
+    'NO_{NO_site} <-> N-O* -> N_{N_site} + O_{O_site}'.format(**locals()),
+    'O_{O_site} + O_{O_site} <-> O-O* -> O2_g + *_{O_site} + *_{O_site}'.format(**locals()),
+    'N_{N_site} + N_{N_site} <-> N-N* -> N2_g + *_{N_site} + *_{N_site}'.format(**locals()),
+]
+
+surface_names = ['Re', 'Ru', 'Ni', 'Pt', 'Pd', 'Au', 'Ag', 'Cu', 'Co']
+
+descriptor_names = ['E_O2_diss', 'E_N2_diss']
+
+
+
+species_definitions = {}
+species_definitions['NO_g'] = {'pressure': 0.001}
+species_definitions['O2_g'] = {pressure': 0.1}
+species_definitions['N2_g'] = {pressure': 0.7}
+
+# species_definitions, site definitions ?
+
+data_file = 'NO_decomposition.pkl'
+input_file = 'energies.txt'
+
+gas_thermo_mode = 'shomate_gas'
+
+adsorbate_thermo_mode = 'frozen_adsorbate'
+
+scaling_constraing_dict = {}
+
+decimal_precision = 100
+
+tolerance = 1e-50
+max_rootfinding_iterations = 100
+max_bisections = 3
+
+
+
+#
+### kMC model specific model parameters
+#
+
+import numpy as np
+import ase.lattice.surface
+import kmos.utils
+
+slab = ase.lattice.surface.fcc111(surface, [1, 1, 4], vacuum=10)
+max_z = max(slab.positions[:, 2]) + 1.5
+
+unit_cell = slab.cell
+background_represenation = kmos.utils.get_ase_constructor(slab)
+
+site_positions = {
+    'fcc': [[1./3, 1./3, max_z ]],
+    'hcp': [[2./3, 2./3, max_z ]],
+    'top': [[0., 0., max_z + .5]],
+}
