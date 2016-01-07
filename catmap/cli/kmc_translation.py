@@ -7,7 +7,8 @@ def translate_model_file(mkm_filename, options):
     seed, _ = os.path.splitext(mkm_filename)
     catmap_model = catmap.ReactionModel(setup_file=mkm_filename)
     catmap_model.run() # Running the model once is needed to initialize all model values
-    kmos_model = catmap2kmos(catmap_model, )
+    kmos_model = catmap2kmos(catmap_model,
+                 adsorbate_interaction=options.interaction)
     kmos_model.print_statistics()
     kmos_model.save('translated_{seed}.xml'.format(**locals()))
 
@@ -38,6 +39,7 @@ def catmap2kmos(cm_model,
     # CONTINUE HERE
 
     import copy
+    import pprint
 
     import numpy as np
 
