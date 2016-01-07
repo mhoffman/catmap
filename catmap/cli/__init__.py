@@ -3,9 +3,29 @@ import shutil
 
 usage = {}
 
-usage['import'] = """catmap import <mkm-file>
+SCRIPT = 'catmap'
+
+usage['all'] = """{SCRIPT} help all
+    Display documentation for all commands.
+                """.format(**locals())
+
+usage['help'] = """{SCRIPT} help <command>
+    Print usage information for the given command.
+                """.format(**locals())
+usage['import'] = """{SCRIPT} import <mkm-file>
     Open a *.mkm project file and work with it interactively.
-"""
+""".format(**locals())
+
+usage['to_kmc'] = """{SCRIPT} to_kmc <mkm-file> -i <N>
+    Translate a given *.mkm to a kmos kMC model.
+    Options :
+      -i, --interaction N (default: 0)
+            How many shells of nearest neighbor interactions are considered.
+            Default is 0, beware of computational effort of increasing
+            interaction range. Usually 1 or 2 should be sufficient
+     -l, --validate (default: True)
+            Validate the kmos kMC model before writing it to XML 
+""".format(**locals())
 
 
 def get_options(args=None, get_parser=False):
@@ -19,6 +39,9 @@ def get_options(args=None, get_parser=False):
         + '|'.join(sorted(usage.keys()))
         + ') [options]',
         version=catmap.__version__)
+
+    parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
+    parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True)
 
     if args is not None:
         options, args = parser.parse_args(args.split())
@@ -65,6 +88,19 @@ def main(args=None):
 
     if not args[0] in usage.keys():
         args[0] = match_keys(args[0], usage, parser)
+        print(args)
+
+    elif args[0] == 'help':
+        if len(args) < 2:
+            parser.error('Which help do you  want?')
+        if args[1] == 'all':
+            for command in sorted(usage):
+                print(usage[command])
+        elif args[1] in usage:
+            print('Usage: %s\n' % usage[args[1]])
+        else:
+            arg = match_keys(args[1], usage, parser)
+            print('Usage: %s\n' % usage[arg])
 
     elif args[0] == 'import':
         if len(args) < 2:
@@ -76,6 +112,19 @@ def main(args=None):
         model = ReactionModel(setup_file=mkm_file)
         sh(banner='Note: model = catmap.ReactionModel(setup_file=\'%s\')\n# do model.run()\nfor a fully initialized model.' %
            args[1])
+
+    elif args[0] == 'to_kmc':
+        import catmap.cli.kmc_translation
+        mkm_file = args[1]
+        catmap.cli.kmc_translation.translate_model_file(mkm_file, options)
+
+    elif args[0] == 'version':
+        import catmap
+        print(catmap.__version__)
+    else:
+        parser.error('Command "%s" not understood.' % args[0])
+
+        
 
 
 def sh(banner):
