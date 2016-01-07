@@ -1,15 +1,17 @@
 <?xml version="1.0" ?>
-<kmc version="(0, 2)">
+<kmc version="(0, 3)">
     <meta author="CatMAP USER" debug="0" email="mkm-developers-request@lists.stanford.edu" model_dimension="2" model_name="CatMAP_translated_model"/>
     <species_list default_species="empty">
-        <species color="#AA96A4" name="N" representation="Atoms()" tags=""/>
-        <species color="#547CFF" name="N2" representation="Atoms()" tags=""/>
-        <species color="#0CC6EF" name="NO" representation="Atoms()" tags=""/>
-        <species color="#73D494" name="O" representation="Atoms()" tags=""/>
-        <species color="#894FC9" name="O2" representation="Atoms()" tags=""/>
+        <species color="#D9B904" name="N" representation="Atoms()" tags=""/>
+        <species color="#0F0C66" name="N2" representation="Atoms()" tags=""/>
+        <species color="#1944F1" name="NO" representation="Atoms()" tags=""/>
+        <species color="#9AB660" name="O" representation="Atoms()" tags=""/>
+        <species color="#744A15" name="O2" representation="Atoms()" tags=""/>
         <species color="#ffffff" name="empty" representation="" tags=""/>
     </species_list>
     <parameter_list>
+        <parameter adjustable="False" max="0.0" min="0.0" name="diff_forward_4" scale="linear" value="1.0"/>
+        <parameter adjustable="False" max="0.0" min="0.0" name="diff_reverse_4" scale="linear" value="1.0"/>
         <parameter adjustable="False" max="0.0" min="0.0" name="forward_0" scale="linear" value="1.0"/>
         <parameter adjustable="False" max="0.0" min="0.0" name="forward_1" scale="linear" value="1.0"/>
         <parameter adjustable="False" max="0.0" min="0.0" name="forward_2" scale="linear" value="1.0"/>
@@ -19,23 +21,35 @@
         <parameter adjustable="False" max="0.0" min="0.0" name="reverse_2" scale="linear" value="1.0"/>
         <parameter adjustable="False" max="0.0" min="0.0" name="reverse_3" scale="linear" value="1.0"/>
     </parameter_list>
-    <lattice cell_size="2.68700576851 0.0 0.0 1.34350288425 2.32701525564 0.0 0.0 0.0 26.5817930688" default_layer="default" representation="[Atoms(symbols='H',
-          pbc=np.array([False, False, False], dtype=bool),
+    <lattice cell_size="2.68700577 0.0 0.0 1.34350288 2.32701526 0.0 0.0 0.0 26.58179307" default_layer="default" representation="[Atoms(symbols='Rh4',
+          pbc=np.array([ True,  True, False], dtype=bool),
           cell=np.array(
       [[  2.68700577,   0.        ,   0.        ],
        [  1.34350288,   2.32701526,   0.        ],
        [  0.        ,   0.        ,  26.58179307]]),
           scaled_positions=np.array(
-      [[0.0, 0.0, -0.0037619734583487345]]),
+      [[0.0, 0.0, 0.37619734583487346], [0.33333333333333337, 0.3333333333333333, 0.45873244861162454], [0.6666666666666667, 0.6666666666666666, 0.5412675513883756], [0.0, 0.0, 0.6238026541651265]]),
 ),]" substrate_layer="default">
         <layer color="#ffffff" name="default">
-            <site default_species="default_species" pos="0.0 0.0 18.5817930688" tags="" type="t_0"/>
+            <site default_species="default_species" pos="0.0 0.0 2.62380265417" tags="" type="t_0"/>
         </layer>
     </lattice>
     <process_list>
         <process enabled="True" name="NO_t_2_empty_t_0" rate_constant="reverse_0" tof_count="{'empty_t_2_NO_t_0': -1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="NO"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 1 0" flag="t_0_0_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
         </process>
         <process enabled="True" name="NO_t_n_empty_t_2_N_t_n_O_t_0_0" rate_constant="forward_1" tof_count="{'NO_t_n_empty_t_2_N_t_n_O_t_0': 1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="NO"/>
@@ -72,6 +86,22 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="O"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="N_t_n_N_t_2_empty_t_n_empty_t_0_0" rate_constant="forward_3" tof_count="{'N_t_n_N_t_2_empty_t_n_empty_t_0': 1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
@@ -108,6 +138,22 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="N"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="N_t_n_O_t_2_NO_t_n_empty_t_0_0" rate_constant="reverse_1" tof_count="{'NO_t_n_empty_t_2_N_t_n_O_t_0': -1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
@@ -144,6 +190,74 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="O"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="NO"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_0" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="1 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="1 0 0" species="N"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_1" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" species="N"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_2" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" species="N"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_3" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" species="N"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_4" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" species="N"/>
+        </process>
+        <process enabled="True" name="N_t_n_empty_t_2_empty_t_n_N_t_0_5" rate_constant="diff_forward_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': 1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="N"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="O_t_n_O_t_2_empty_t_n_empty_t_0_0" rate_constant="forward_2" tof_count="{'O_t_n_O_t_2_empty_t_n_empty_t_0': 1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="O"/>
@@ -180,10 +294,90 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="O"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="empty_t_2_NO_t_0" rate_constant="forward_0" tof_count="{'empty_t_2_NO_t_0': 1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="NO"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 1 0" flag="t_0_0_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_0" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="1 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="1 0 0" species="empty"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_1" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" species="empty"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_2" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" species="empty"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_3" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" species="empty"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_4" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" species="empty"/>
+        </process>
+        <process enabled="True" name="empty_t_n_N_t_2_N_t_n_empty_t_0_5" rate_constant="diff_reverse_4" tof_count="{'N_t_n_empty_t_2_empty_t_n_N_t_0': -1}">
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
+            <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
+            <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="empty_t_n_empty_t_2_N_t_n_N_t_0_0" rate_constant="reverse_3" tof_count="{'N_t_n_N_t_2_empty_t_n_empty_t_0': -1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
@@ -220,6 +414,22 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="N"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="N"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
         <process enabled="True" name="empty_t_n_empty_t_2_O_t_n_O_t_0_0" rate_constant="reverse_2" tof_count="{'O_t_n_O_t_2_empty_t_n_empty_t_0': -1}">
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="empty"/>
@@ -256,6 +466,22 @@
             <condition coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="empty"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 0 0" species="O"/>
             <action coord_layer="default" coord_name="t_0" coord_offset="0 1 0" species="O"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 0 0" flag="t_0_m1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 1 0" flag="t_0_m1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 0 0" flag="t_0_1_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 1 0" flag="t_0_1_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 -1 0" flag="t_0_0_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="0 2 0" flag="t_0_0_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 2 0" flag="t_0_m1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -1 0" flag="t_0_1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 -1 0" flag="t_0_m1_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 2 0" flag="t_0_1_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 1 0" flag="t_0_m2_1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-2 2 0" flag="t_0_m2_2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 -1 0" flag="t_0_2_m1"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="2 0 0" flag="t_0_2_0"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="1 -2 0" flag="t_0_1_m2"/>
+            <bystander allowed_species="empty NO N O" coord_layer="default" coord_name="t_0" coord_offset="-1 3 0" flag="t_0_m1_3"/>
         </process>
     </process_list>
     <output_list/>
