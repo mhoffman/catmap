@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 
 import os.path
 import copy
@@ -37,7 +38,7 @@ def catmap2kmos(cm_model,
                 diffusion_barriers=None,
                 species_representations=None,
                 surface_representation='None',
-                adsorbate_interaction=1,
+                adsorbate_interaction=2,
                 ):
 
     EMPTY_SPECIES = 'empty'
@@ -372,49 +373,60 @@ def catmap2kmos(cm_model,
                             site_name = coord.name.split('_')[0]
                             species_options.append(site_species[site_name])
                         print(species_options)
-                        species_sets = list(itertools.product(*species_options))
 
+                        #bystanders = [kmos.types.Bystander(coord=coord,
+                                                           #allowed_species=allowed_species,
+                                                           #flag='
 
-                        for i, species_set in enumerate(species_sets):
-                            print(i, species_set)
-                            condition_list = process.condition_list
-                            action_list = process.action_list
-                            rate_constant = process.rate_constant
-                            name = process.name
-                            tof_count = process.tof_count
+                        bystander_list = []
+                        for allowed_species, interacting_coord in zip(species_options, interacting_coords):
+                            _X, _Y, _ = interacting_coord.offset
+                            flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
+                            flag = flag.replace('-', 'm')
+                            bystander_list.append(kmos.types.Bystander(
+                                coord=interacting_coord,
+                                allowed_species=allowed_species,
+                                flag=flag
+                            ))
 
-                            reverse_name = reverse_process.name
-                            reverse_rate_constant = reverse_process.rate_constant
-                            reverse_tof_count = reverse_process.tof_count
+                        process.bystander_list = bystander_list
+                        reverse_process.bystander_list = bystander_list
 
-                            aux_conditions = [
-                                kmos.types.ConditionAction(
-                                    coord=coord,
-                                    species=species,
-                                ) for (species, coord) in zip(species_set, interacting_coords)
-                            ]
-                            pt.add_process(name='{name}_{i}'.format(**locals()),
-                                           action_list=action_list,
-                                           condition_list=condition_list + aux_conditions,
-                                           rate_constant='{rate_constant}_{i}'.format(**locals()),
-                                           tof_count=tof_count)
+                        #species_sets = list(itertools.product(*species_options))
 
-                            pt.add_process(name='{name}_{i}'.format(**locals()),
-                                           action_list=condition_list,
-                                           condition_list=action_list + aux_conditions,
-                                           rate_constant='{reverse_rate_constant}_{i}'.format(**locals()),
-                                           tof_count=reverse_tof_count,)
+                        #for i, species_set in enumerate(species_sets):
+                            #print(i, species_set)
+                            #condition_list = process.condition_list
+                            #action_list = process.action_list
+                            #rate_constant = process.rate_constant
+                            #name = process.name
+                            #tof_count = process.tof_count
 
-                        pt.process_list.remove(process)
-                        pt.process_list.remove(reverse_process)
-                        # TODO: Add similar extra process for reverse reaction
+                            #reverse_name = reverse_process.name
+                            #reverse_rate_constant = reverse_process.rate_constant
+                            #reverse_tof_count = reverse_process.tof_count
 
+                            #aux_conditions = [
+                                #kmos.types.ConditionAction(
+                                    #coord=coord,
+                                    ##species=species,
+                                #) for (species, coord) in zip(species_set, interacting_coords)
+                            #]
+                            #pt.add_process(name='{name}_{i}'.format(**locals()),
+                                           #action_list=action_list,
+                                           ##condition_list=condition_list + aux_conditions,
+                                           ##rate_constant='{rate_constant}_{i}'.format(**locals()),
+                                           ##tof_count=tof_count)
 
+                            #pt.add_process(name='{name}_{i}'.format(**locals()),
+                                           #action_list=condition_list,
+                                           ##condition_list=action_list + aux_conditions,
+                                           ##rate_constant='{reverse_rate_constant}_{i}'.format(**locals()),
+                                           ##tof_count=reverse_tof_count,)
 
+                        #pt.process_list.remove(process)
+                        #pt.process_list.remove(reverse_process)
 
-
-
-                        # Remove the original process
 
 
                         # Add adsorbate interaction processes with all necessary combinations
@@ -456,4 +468,5 @@ if __name__ == '__main__':
     # print(kmos_model)
     kmos_model.print_statistics()
     for suffix in ['xml']:
-        kmos_model.save('translated_{seed}.{suffix}'.format(**locals()), validate=options.validate)
+        #kmos_model.save('translated_{seed}.{suffix}'.format(**locals()), validate=options.validate)
+        kmos_model.save('translated_{seed}.{suffix}'.format(**locals()))
