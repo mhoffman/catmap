@@ -43,7 +43,7 @@ data_file = 'CO_oxidation.pkl'
 #Parser parameters
 #
 
-input_file = 'energies.txt' #input data
+input_file = 'energies_full.txt' #input data
 
 #
 #Scaler parameters
