@@ -60,6 +60,7 @@ adsorbate_thermo_mode = "frozen_adsorbate"
 #adsorbate_thermo_mode = "zero_point_adsorbate"
 
 scaling_constraint_dict = {
+                           'O-O_h':['+',0,None],
                            'O_s':['+',0,None],
                            'CO_s':[0,'+',None],
                            'O-CO_s':'initial_state',
