@@ -49,4 +49,4 @@ script:
   # run more other tests in ./test folder
   - cd ../../../test
   - cd kmc
-  - python bisection_test.sh
+  - bash bisection_test.sh
