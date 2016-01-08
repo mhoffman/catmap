@@ -3,10 +3,12 @@ from catmap.model import ReactionModel
 from catmap import ReactionModelWrapper
 import numpy as np
 import mpmath as mp
+from ase.atoms import string2symbols
 
 class SolverBase(ReactionModelWrapper):
     def __init__(self,reaction_model=ReactionModel()):
-        """Class for `solving' for equilibrium coverages and rates as a 
+        """
+        Class for `solving' for equilibrium coverages and rates as a 
         function of reaction parameters. This class acts as a base class 
         to be inherited by other solver classes, but is not 
         functional on its own. 
@@ -33,10 +35,13 @@ class SolverBase(ReactionModelWrapper):
         self._compiled = False
 
     def set_output_attrs(self,rxn_parameters):
+        """
+        :param rxn_parameters: Reaction parameters.
+        :type rxn_parameters: list
+        """
         if True in [v in self.mapper._solver_output 
                 for v in self.output_variables]:
-            cvgs = ReactionModelWrapper.__getattr__(self,'_coverage')
-            ##HACK - not sure why the hell cvgs=self._coverage doesnt work
+            cvgs = self._coverage
             self._coverage = list(self.solver.get_coverage( 
                     rxn_parameters,c0=cvgs)) #verify coverage
 
@@ -56,6 +61,16 @@ class SolverBase(ReactionModelWrapper):
             self._selectivity = self.get_selectivity(rxn_parameters)
             self.output_labels['selectivity'] = self.gas_names
 
+        if 'carbon_selectivity' in self.output_variables:
+            weights = []
+            for g in self.gas_names:
+                name,site = g.split('_')
+                weight = string2symbols(name).count('C')
+                weights.append(weight)
+            self._carbon_selectivity = self.get_selectivity(rxn_parameters,weights=weights)
+            self.output_labels['carbon_selectivity'] = self.gas_names
+
+
         if 'rate_control' in self.output_variables:
             self._rate_control = self.get_rate_control(rxn_parameters)
             self.output_labels['rate_control'] = [self.gas_names,self.parameter_names]
@@ -73,8 +88,16 @@ class SolverBase(ReactionModelWrapper):
                 self.output_labels['apparent_activation_energy'] = self.gas_names
 
         if 'interacting_energy' in self.output_variables:
-            self._interacting_energy = self.get_interacting_energies(rxn_parameters)
+            if self.adsorbate_interaction_model in [None,'ideal']:
+                self._interacting_energy = rxn_parameters
+            else:
+                self._interacting_energy = self.get_interacting_energies(rxn_parameters)
             self.output_labels['interacting_energy'] = self.adsorbate_names+self.transition_state_names
+
+        if 'directional_rates' in self.output_variables:
+            self._directional_rates = self.get_directional_rates(rxn_parameters)
+            self.output_labels['directional_rates'] = [str(rxn) + ' forward' for rxn in self.elementary_rxns] + \
+                [str(rxn) + ' reverse' for rxn in self.elementary_rxns]
 
         for out in self.output_variables:
             if out == 'production_rate':
