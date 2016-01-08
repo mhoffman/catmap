@@ -46,3 +46,7 @@ script:
   - cd ../ORR_thermo
   - python make_input.py
   - python mkm_job.py
+  # run more other tests in ./test folder
+  - cd ../../../test
+  - cd kmc
+  - python bisection_test.sh
