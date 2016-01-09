@@ -12,12 +12,11 @@
 
 Evaluation of a CatMAP model using kinetic Monte Carlo
 ==========================================================
-==========================================================
 
 
 
 Short Overview
-==============
+-------------------------------------------
 
 In order to execute a given CatMAP model as a kMC model you have to do the following steps
 
@@ -29,7 +28,7 @@ In order to execute a given CatMAP model as a kMC model you have to do the follo
 
 
 Long Version
-============
+-------------------------------------------
 
 In order to evaluate your CatMAP model as a kMC model we use kmos as dependency. Check out it's
 `documentation <http://kmos.readthedocs.org/en/latest/tutorials/index.html#installation`_ for how
@@ -37,7 +36,7 @@ to install it.
 
 
 Adapt the \*.mkm file
-=====================
+-------------------------------------------
 
 Second we will have to add minimal geometrical information to the *mean-field* CatMAP model in order
 to enable the kMC translation feature figure out what nearest-neighbor site and such means.
@@ -125,7 +124,7 @@ And of course you might have to adapt this to the species in your system. But we
 
 
 Translate to model to kmc
-=========================
+-------------------------------------------
 
 Having such an adapted \*.mkm file we can go on an attempt to translate it into a kMC model. Let's pretend the
 \*.mkm file is called `model.mkm`. You should then run::
@@ -160,7 +159,7 @@ something along the line. The kmc model (settings and source code) are all conta
 within that folder. 
 
 Evaluating the kMC model
-========================
+-------------------------------------------
 
 From now one there are two routes forward: (1) you can either evaluate the model
 for comparison with the mean-field model. To this end it is a good idea
@@ -180,4 +179,3 @@ which should generate more files and finally plots. Or you could directly run ::
     kmos run
 
 Please stay tuned for updates.
-

@@ -2,7 +2,7 @@ Topics
 =======
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
   code_overview
   accessing_reformatting_output
