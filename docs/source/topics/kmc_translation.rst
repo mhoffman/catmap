@@ -6,8 +6,8 @@
 
     Main limitations include but are not limited to:
     
-        - limited support of adsorbate-adsorbate interactions
-        - significantly manual testing for convergence and steady-state required
+        * limited support of adsorbate-adsorbate interactions
+        * significantly manual testing for convergence and steady-state required
 
 
 .. note::
