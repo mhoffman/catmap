@@ -24,7 +24,19 @@ usage['to_kmc'] = """{SCRIPT} to_kmc <mkm-file> -i <N>
             Default is 0, beware of computational effort of increasing
             interaction range. Usually 1 or 2 should be sufficient
      -l, --validate (default: True)
-            Validate the kmos kMC model before writing it to XML 
+            Validate the kmos kMC model before writing it to XML
+""".format(**locals())
+
+usage['run_kmc'] = """{SCRIPT} run_kmc -E <N> -S <N>
+    Options :
+        -E, --equilibration-steps (default: 1e8)
+            number of equilibration steps before sampling
+            CHECK CAREFULLY IF SUFFICIENT
+
+        -S, --sampling-steps (default 1e8)
+           number of sampling steps to calculate rates
+           and coverages.
+           CHECK CAREFULLY IF SUFFICIENT
 """.format(**locals())
 
 
@@ -42,6 +54,11 @@ def get_options(args=None, get_parser=False):
 
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True)
+    parser.add_option('-E', '--equilibration-steps', type='int', default=int(1e8))
+    parser.add_option('-S', '--sampling-steps', type='int', default=int(1e8))
+    parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False)
+    parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False)
+
 
     if args is not None:
         options, args = parser.parse_args(args.split())
@@ -118,13 +135,17 @@ def main(args=None):
         mkm_file = args[1]
         catmap.cli.kmc_translation.translate_model_file(mkm_file, options)
 
+    elif args[0] == 'run_kmc':
+        import catmap.cli.kmc_runner
+        catmap.cli.kmc_runner.main(options)
+
     elif args[0] == 'version':
         import catmap
         print(catmap.__version__)
     else:
         parser.error('Command "%s" not understood.' % args[0])
 
-        
+
 
 
 def sh(banner):
