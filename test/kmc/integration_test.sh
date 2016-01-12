@@ -19,7 +19,7 @@ do
 
     #catmap run_kmc
     pwd
-    ls
+    ls -rtlh
 
 
     popd
