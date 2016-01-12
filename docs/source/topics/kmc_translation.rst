@@ -6,16 +6,16 @@
 
     Main limitations include but are not limited to:
     
-    - limited support of adsorbate-adsorbate interactions
-    - significantly manual testing for convergence and steady-state required
+        - limited support of adsorbate-adsorbate interactions
+        - significantly manual testing for convergence and steady-state required
 
 
 .. note::
     For users on the Stanford Sherlock Cluster a light-weight version can
     be used after adding the following two lines to your `~/.bashrc` ::
 
-    export PYTHONPATH=${PYTHONPATH}:home/maxjh/env/kmos/lib64/python2.7/site-packages
-    export PATH=${PATH}:/home/maxjh/env/kmos/bin/
+        export PYTHONPATH=${PYTHONPATH}:home/maxjh/env/kmos/lib64/python2.7/site-packages
+        export PATH=${PATH}:/home/maxjh/env/kmos/bin/
 
 Evaluation of a CatMAP model using kinetic Monte Carlo
 ==========================================================
