@@ -24,7 +24,7 @@ usage['to_kmc'] = """{SCRIPT} to_kmc <mkm-file> -i <N>
             Default is 0, beware of computational effort of increasing
             interaction range. Usually 1 or 2 should be sufficient
      -l, --validate (default: True)
-            Validate the kmos kMC model before writing it to XML
+            Validate the kmos kMC model before writing it to INI
 """.format(**locals())
 
 usage['run_kmc'] = """{SCRIPT} run_kmc -E <N> -S <N>

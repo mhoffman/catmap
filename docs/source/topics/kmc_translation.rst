@@ -137,19 +137,19 @@ The kMC model will use the values of those exact rate constants in its run later
 crashes or does not seem to finish try with a smaller first. Please feel free to file a bug
 report if your model does not translate.
 
-Once this step is done you should see a file named `translated_model.xml` in the same directory. You can have either
+Once this step is done you should see a file named `translated_model.ini` in the same directory. You can have either
 open this file with a text editor or inspect it with kmos' graphical editor by running ::
 
-    kmos edit translated_model.xml
+    kmos edit translated_model.ini
 
 If you are satisfied with the result you should go ahead and compile the model by issuing ::
 
 
-    kmos export translated_model.xml
+    kmos export translated_model.ini
 
 If this takes a very long time you could try some other backend, like e.g.::
 
-    kmos export -blat_int  translated_model.xml
+    kmos export -blat_int  translated_model.ini
 
 
 For more details please consult the `kmos documentation <http://kmos.rtfd.org`_ . 
