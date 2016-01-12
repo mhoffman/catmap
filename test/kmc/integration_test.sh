@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 
 # go to directory
@@ -12,7 +12,7 @@ do
     outdir="translated_${seed}_local_smart"
 
     catmap to_kmc ${fn}
-    kmos export translated_${seed}.xml -o
+    kmos export translated_${seed}.ini -o
 
     cp ${fn} ${outdir}
     pushd ${outdir}
