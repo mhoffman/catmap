@@ -10,7 +10,7 @@ def translate_model_file(mkm_filename, options):
     kmos_model = catmap2kmos(catmap_model,
                  adsorbate_interaction=options.interaction)
     kmos_model.print_statistics()
-    kmos_model.save('translated_{seed}.xml'.format(**locals()))
+    kmos_model.save('translated_{seed}.ini'.format(**locals()))
 
     
 
