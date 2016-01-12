@@ -12,12 +12,14 @@ do
     outdir="translated_${seed}_local_smart"
 
     catmap to_kmc ${fn}
-    kmos export translated_${seed}.xml
+    kmos export translated_${seed}.xml -o
 
     cp ${fn} ${outdir}
     pushd ${outdir}
 
-    catmap run_kmc
+    #catmap run_kmc
+    pwd
+    ls
 
 
     popd
