@@ -14,7 +14,7 @@
     For users on the Stanford Sherlock Cluster a light-weight version can
     be used after adding the following two lines to your `~/.bashrc` ::
 
-        export PYTHONPATH=/home/maxjh/env/kmos/lib64/python2.7/site-packages:${PYTHONPATH}
+        export PYTHONPATH=/home/maxjh/env/kmos/lib/python2.7/site-packages:${PYTHONPATH}
         export PATH=/home/vossj/suncat/bin:/home/maxjh/env/kmos/bin/:${PATH}
 
 Evaluation of a CatMAP model using kinetic Monte Carlo
