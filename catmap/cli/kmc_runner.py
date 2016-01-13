@@ -340,9 +340,11 @@ def contour_plot_data(x, y, z, filename,
 
 def main(options, call_path=None):
     if not options.dontrun:
+        init_steps = options.equilibration_steps if options.equilibration_steps else INIT_STEPS
+        sample_steps = options.sampling_steps if options.sampling_steps else SAMPLE_steps
         run_model(seed=SEED,
-             init_steps=INIT_STEPS,
-             sample_steps=SAMPLE_STEPS,
+             init_steps=init_steps,
+             sample_steps=sample_steps,
              call_path=call_path)
 
     if options.plot:

@@ -54,8 +54,8 @@ def get_options(args=None, get_parser=False):
 
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True)
-    parser.add_option('-E', '--equilibration-steps', type='int', default=int(1e8))
-    parser.add_option('-S', '--sampling-steps', type='int', default=int(1e8))
+    parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8))
+    parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8))
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False)
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False)
 
