@@ -144,24 +144,24 @@ The kMC model will use the values of those exact rate constants in its run later
 crashes or does not seem to finish try with a smaller first. Please feel free to file a bug
 report if your model does not translate.
 
-Once this step is done you should see a file named `translated_model.ini` in the same directory. You can have either
+Once this step is done you should see a file named `model_kmc.ini` in the same directory. You can have either
 open this file with a text editor or inspect it with kmos' graphical editor by running ::
 
-    kmos edit translated_model.ini
+    kmos edit model_kmc.ini
 
 If you are satisfied with the result you should go ahead and compile the model by issuing ::
 
 
-    kmos export translated_model.ini
+    kmos export model_kmc.ini
 
 If this takes a very long time you could try some other backend, like e.g.::
 
-    kmos export -blat_int  translated_model.ini
+    kmos export -blat_int  model_kmc.ini
 
 
 For more details please consult the `kmos documentation <http://kmos.rtfd.org`_ . 
 
-Afterwards you should see a new directory named `translated_model_local_smart` or
+Afterwards you should see a new directory named `model_kmc_local_smart` or
 something along the line. The kmc model (settings and source code) are all contained
 within that folder. 
 
@@ -172,7 +172,7 @@ From now one there are two routes forward: (1) you can either evaluate the model
 for comparison with the mean-field model. To this end it is a good idea
 to copy the files resulting from the successful CatMAP run into the kmc folder::
 
-    cp model.mkm model.log model.pkl translated_model_local_smart
+    cp model.mkm model.log model.pkl model_kmc_local_smart
 
 For a simple straightforward comparison you should `cd` into the directory
 and run ::
