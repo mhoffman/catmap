@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import os
-import kmos.run
 import catmap
 import pickle
+import copy
 
 import matplotlib
 matplotlib.use('Agg')
@@ -132,7 +132,17 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
 
 
 
-def run_model(seed, init_steps, sample_steps):
+def run_model(seed, init_steps, sample_steps, call_path=None):
+    # a path we need to add to make sure kmc model import works
+    if call_path is not None:
+        import sys
+        orig_path = copy.copy(sys.path)
+        sys.path.insert(0, call_path)
+    else:
+        orig_path = None
+
+    import kmos.run
+
     data_filename = '{seed}_kMC_output.log'.format(**locals())
     lock_filename = '{seed}.lock'.format(**locals())
     done_filename = '{seed}.done'.format(**locals())
@@ -201,6 +211,10 @@ def run_model(seed, init_steps, sample_steps):
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
+
+    # Restore old path
+    if orig_path is not None:
+        sys.path = orig_path
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=101,
@@ -324,11 +338,12 @@ def contour_plot_data(x, y, z, filename,
 
     plt.savefig(filename, bbox_inches='tight')
 
-def main(options):
+def main(options, call_path=None):
     if not options.dontrun:
         run_model(seed=SEED,
              init_steps=INIT_STEPS,
-             sample_steps=SAMPLE_STEPS)
+             sample_steps=SAMPLE_STEPS,
+             call_path=call_path)
 
     if options.plot:
         data = np.recfromtxt('{SEED}_kMC_output.log'.format(**locals()), names=True)

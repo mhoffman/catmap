@@ -136,8 +136,9 @@ def main(args=None):
         catmap.cli.kmc_translation.translate_model_file(mkm_file, options)
 
     elif args[0] == 'run_kmc':
+        call_path = os.path.abspath(os.getcwd())
         import catmap.cli.kmc_runner
-        catmap.cli.kmc_runner.main(options)
+        catmap.cli.kmc_runner.main(options, call_path=call_path)
 
     elif args[0] == 'version':
         import catmap
