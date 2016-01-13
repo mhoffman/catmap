@@ -20,6 +20,37 @@ DIFFUSION_FACTOR = 1e-3
 
 from matplotlib.mlab import griddata
 
+def setup_model(model, data_point=0, data_file='CO_oxidation.pkl'):
+    import numpy.random
+    import pickle
+
+    with open(data_file) as infile:
+        data = pickle.load(infile)
+    coverage = data['coverage_map'][data_point][1]
+
+    choices = [
+                model.proclist.co,
+                model.proclist.o,
+                model.proclist.empty,
+                ]
+    choices_weights = [
+        coverage[0],
+        coverage[1],
+        1 - sum(coverage),
+    ]
+
+    config = model._get_configuration()
+    X, Y, Z = model.lattice.system_size
+    for x in range(X):
+        for y in range(Y):
+            choice = numpy.random.choice(
+                choices,
+                p=choices_weights,
+            )
+            config[x, y, 0, 0] = choice
+            #print('{x} {y} {choice}'.format(**locals()))
+
+    model._set_configuration(config)
 
 def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=None):
     """
@@ -150,7 +181,6 @@ def run_model(seed, init_steps, sample_steps):
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             print('running DATAPOINT {data_point} DESCRIPTOR {descriptor_string}'.format(**locals()))
             set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=DIFFUSION_FACTOR)
-            from setup_model import setup_model
             setup_model(kmos_model, data_point)
 
             print(kmos_model.rate_constants)
