@@ -166,7 +166,9 @@ something along the line. The kmc model (settings and source code) are all conta
 within that folder. 
 
 You should now copy the original `model.mkm` into the new folder `model_kmc_local_smart`
-as well as other files required by the `*.mkm` such as `energies.txt`.
+as well as other files required by the `*.mkm` such as `energies.txt` ::
+
+    cp model.mkm energies.txt model_kmc_local_smart
 
 Evaluating the kMC model
 -------------------------------------------
