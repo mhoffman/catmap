@@ -159,6 +159,15 @@ If this takes a very long time you could try some other backend, like e.g.::
     kmos export -blat_int  model_kmc.ini
 
 
+.. note::
+    If you get an f2py error complaining that it cannot compile a certain submodule, it
+    might help to explicit set an environment variable for the Fortran compiler you are using, like
+    e.g ::
+    
+        exporrt F2PY_FCOMPILER=intelem
+
+    Though the actual value may depend on your environment.
+
 For more details please consult the `kmos documentation <http://kmos.rtfd.org>`_ . 
 
 Afterwards you should see a new directory named `model_kmc_local_smart` or
