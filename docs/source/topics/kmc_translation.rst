@@ -159,7 +159,7 @@ If this takes a very long time you could try some other backend, like e.g.::
     kmos export -blat_int  model_kmc.ini
 
 
-For more details please consult the `kmos documentation <http://kmos.rtfd.org`_ . 
+For more details please consult the `kmos documentation <http://kmos.rtfd.org>`_ . 
 
 Afterwards you should see a new directory named `model_kmc_local_smart` or
 something along the line. The kmc model (settings and source code) are all contained
