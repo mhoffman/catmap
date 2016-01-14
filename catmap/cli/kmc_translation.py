@@ -12,7 +12,7 @@ def translate_model_file(mkm_filename, options):
     kmos_model.print_statistics()
     kmos_model.save('{seed}_kmc.ini'.format(**locals()))
 
-    
+
 
 def catmap2kmos(cm_model,
                 unit_cell=None,
@@ -26,8 +26,8 @@ def catmap2kmos(cm_model,
     # test for more than one site per unit cell
     # test for more more than one identical site per unit cell (e.g. bridge in
     # Pd(1000) cell)
-    
-    
+
+
     # def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
     #distance_dict = {}
     #neighbor_sites = []
@@ -156,7 +156,30 @@ def catmap2kmos(cm_model,
             step['B'] = None
         elif len(elementary_rxn) == 3:
             step['A'], step['B'], step['C'] = elementary_rxn
+
+
+        # Now let's try to bring terms into the same order
+        # Note: if two sites have the same name, they
+        # are assumed to appear in the same order
+        # This latter case is important to describe
+        # diffusion processes between equal sites.
+        term_order_dict = {}
+        for i, term in enumerate(step['A']):
+            site = term.split('_')[-1]
+            term_order_dict.setdefault(site, []).append(i)
+        step_C_tmp = {}
+        for i, term in enumerate(step['C']):
+            site = term.split('_')[-1]
+            if site in term_order_dict:
+                step_C_tmp[term_order_dict[site].pop(0)] = term
+            else:
+                # special case e.g.  A_a + B_b -> *_a + *_b + AB_g
+                # special treatment for gas phase 'site' if site does show up on left side of reaction
+                step_C_tmp[len(step['A']) + i] = term
+        step['C'] = [_x[1] for _x in sorted(step_C_tmp.items())]
+
         print('\n\n\nSteps {step}'.format(**locals()))
+
 
         print(surface_intermediates)
         # for reversible, (X, Y) in [[True, ('A', 'B')],
