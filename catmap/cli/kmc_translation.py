@@ -15,7 +15,7 @@ def translate_model_file(mkm_filename, options):
     catmap_model = catmap.ReactionModel(setup_file=mkm_filename)
     catmap_model.run() # Running the model once is needed to initialize all model values
     kmos_model = catmap2kmos(catmap_model,
-                 adsorbate_interaction=options.interaction)
+                 options=options)
     kmos_model.print_statistics()
     kmos_model.save('{seed}_kmc.ini'.format(**locals()))
 
@@ -27,7 +27,7 @@ def catmap2kmos(cm_model,
                 diffusion_barriers=None,
                 species_representations=None,
                 surface_representation='None',
-                adsorbate_interaction=0,
+                options=None,
                 ):
     # TODO : write function which finds nearest neighbors shell for adsorbate interaction
     # test for more than one site per unit cell
@@ -63,8 +63,8 @@ def catmap2kmos(cm_model,
     # add meta information
     # TODO : should we add corresponding information
     #        in CatMAP ?
-    pt.set_meta(author='CatMAP USER',
-                email='mkm-developers-request@lists.stanford.edu',
+    pt.set_meta(author=options.author_name,
+                email=options.author_email,
                 model_name='CatMAP_translated_model',
                 model_dimension='2',   # default ...
                 debug=0,  # let's be pessimistic
@@ -374,7 +374,7 @@ def catmap2kmos(cm_model,
                                            actions=conditions,
                                            tof_count={forward_name_root: -1},
                                            rate_constant='reverse_{ri}'.format(**locals()))
-                    if adsorbate_interaction > 0 :
+                    if options.interaction > 0 :
                         # Collect the nearest-neighbor sites up to a certain cut-off
                         coordinate_set = pt.layer_list.generate_coord_set([5, 5, 1])
                         # regenerate all action coordinates via generation string to set the
@@ -397,7 +397,7 @@ def catmap2kmos(cm_model,
                         pprint.pprint(n_neighbors)
 
                         interacting_coords = []
-                        for i in range(adsorbate_interaction):
+                        for i in range(options.interaction):
                             interacting_coords.extend(n_neighbors[i+1])
 
                         pprint.pprint(interacting_coords)

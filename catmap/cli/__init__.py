@@ -53,11 +53,13 @@ def get_options(args=None, get_parser=False):
         version=catmap.__version__)
 
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
-    parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True)
-    parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8))
-    parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8))
-    parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False)
-    parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False)
+    parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
+    parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8), help="The number of kmc steps before it starts sampling averages.")
+    parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8), help="The number of kmc steps used to calculate averages")
+    parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
+    parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
+    parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
+    parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
 
 
     if args is not None:
