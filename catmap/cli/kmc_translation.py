@@ -199,7 +199,7 @@ def catmap2kmos(cm_model,
                             "Elementary reaction steps with more than two intermediates cannot be automatically translated into a kMC model: '{surface_intermediate}".format(**locals()))
                 if len(surface_intermediates[X]) != len(surface_intermediates[Y]):
                     raise UserWarning(
-                        "Number of surface different for elementary reaction: {surface_intermediates}".format(**locals()))
+                        "Number of surface sites different for elementary reaction: {elementary_rxn} equiv. to {surface_intermediates}".format(**locals()))
 
                 for _, siteX in surface_intermediates[X]:
                     sitesY = [s for _, s in surface_intermediates[Y]]
