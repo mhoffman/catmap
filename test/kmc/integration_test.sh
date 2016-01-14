@@ -20,7 +20,7 @@ do
     fi
 
 
-    kmos export ${seed}_kmc.ini -o
+    kmos export -s ${seed}_kmc.ini -o
 
     cp ${fn} ${outdir}
     pushd ${outdir}
