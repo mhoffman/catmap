@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
+def get_color(string):
+ """Generate a color from any string using the hexdigest of
+ the md5 hash
+ """
+ import md5
+ return '#{}'.format(md5.md5(string).hexdigest()[:6])
+
 def translate_model_file(mkm_filename, options):
     import catmap
     import os.path
@@ -92,20 +99,17 @@ def catmap2kmos(cm_model,
 
     # add species
 
-    # for generating random colors
-    import random
 
     pt.add_species(name=EMPTY_SPECIES, color='#ffffff')
     species_names = set()
     for species_definition in cm_model.species_definitions.keys():
-        color = '#%02X%02X%02X' % (random.randint(0, 255),
-                                   random.randint(0, 255),
-                                   random.randint(0, 255))
 
         print('SPECIES DEFINITION {species_definition}'.format(**locals()))
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
             species_name = species_name.replace('-', '_')
+
+            color = get_color(species_name)
 
             species_representation = getattr(cm_model, 'species_representation', {}).get(species_name, "Atoms()")
             if not species_name == '*' \
