@@ -16,6 +16,7 @@ do
     
     if ! diff -q ${seed}_kmc.ini reference/${seed}_kmc.ini > /dev/null
     then
+        echo "Generate kmc file for ${seed} (${fn}) differs from reference"
         exit 1
     fi
 
