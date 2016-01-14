@@ -1,0 +1,106 @@
+#
+#Microkinetic model parameters
+#
+
+rxn_expressions = [
+               '*_b + CO_g -> CO*_b',
+               '2*_h + O2_g <-> O-O*_h + *_h -> 2O*_h',
+               'CO*_b + O*_h   <-> O-CO*_h + *_b -> CO2_g + *_b + *_h',
+               'CO*_b +  *_b <-> *_b + CO*_b ',
+               'O*_h +  *_h <-> *_h + O*_h ',
+                   ]
+
+
+surface_names = ['Pt', 'Ag', 'Cu','Rh','Pd','Au','Ru','Ni'] #surfaces to include in scaling (need to have descriptors defined for each)
+
+descriptor_names= ['O_h','CO_b'] #descriptor names
+
+descriptor_ranges = [[-1,3],[-0.5,4]]
+
+resolution = 2
+
+temperature = 500 #Temperature of the reaction
+
+species_definitions = {}
+species_definitions['CO_g'] = {'pressure':1.} #define the gas pressures
+species_definitions['O2_g'] = {'pressure':1./3.}
+species_definitions['CO2_g'] = {'pressure':0}
+
+species_definitions['s'] = {'site_names': ['111'], 'total':1} #define the sites
+species_definitions['b'] = {'site_names': ['b'], 'total':1} #define the sites
+species_definitions['h'] = {'site_names': ['h'], 'total':1} #define the sites
+
+data_file = 'CO_oxidation.pkl'
+
+
+
+# diffusion steps will have to be added as an elementary reaction step
+# unless otherwise specified diffusion steps will be assumed
+# to be 1-3 orders of magnitude faster than other reaction steps
+
+
+#
+#Parser parameters
+#
+
+input_file = 'energies_full.txt' #input data
+
+#
+#Scaler parameters
+#
+
+gas_thermo_mode = "shomate_gas"
+#gas_thermo_mode = "ideal_gas" #Ideal gas approximation
+#gas_thermo_mode = "zero_point_gas" #uses zero-point corrections only
+#gas_thermo_mode = "fixed_entropy_gas" #assumes entropy of 0.002 eV/K for all gasses except H2 (H2 is 0.00135 eV/K)
+#gas_thermo_mode = "frozen_gas" #neglect thermal contributions
+
+adsorbate_thermo_mode = "frozen_adsorbate"
+#adsorbate_thermo_mode = "harmonic_adsorbate"
+#adsorbate_thermo_mode = "zero_point_adsorbate"
+
+scaling_constraint_dict = {
+                           'O-O_h':['+',0,None],
+                           'O_s':['+',0,None],
+                           'CO_s':[0,'+',None],
+                           'O-CO_s':'initial_state',
+                           'O-O_s':'final_state',
+                           }
+
+
+#
+#Solver parameters
+#
+
+decimal_precision = 100 #precision of numbers involved
+
+tolerance = 1e-50 #all d_theta/d_t's must be less than this at the solution
+
+max_rootfinding_iterations = 100
+
+max_bisections = 3
+
+
+#
+### kMC specific model parameters
+#
+import numpy as np
+import ase.lattice.surface
+import kmos.utils
+
+site_positions = {
+                 's': [[0, .0, 0]],
+                 'b': [[.5, .0, 0],
+                       [.0, .5, 0]
+                       ],
+                 'h': [[.5, .5, 0]]
+                 }
+slab = ase.lattice.surface.fcc111('Rh', [1, 1, 3], vacuum=15)
+
+species_representation = {
+    'O': "Atoms('O')",
+    'CO': "Atoms('CO', [[0., 0., 0.], [0., 0., 1.7]])",
+    'CO2': "Atoms('OCO', [[1., 1., 0.], [0., 0., 0.,], [-1., 1., 0]])",
+}
+
+background_representation = kmos.utils.get_ase_constructor(slab)
