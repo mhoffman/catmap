@@ -13,6 +13,13 @@ do
     outdir="${seed}_kmc_local_smart"
 
     catmap to_kmc ${fn}
+    
+    if ! diff -q ${seed}_kmc.ini reference/${seed}_kmc.ini > /dev/null
+    then
+        exit 1
+    fi
+
+
     kmos export ${seed}_kmc.ini -o
 
     cp ${fn} ${outdir}
