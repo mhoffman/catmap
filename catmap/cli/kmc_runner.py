@@ -14,20 +14,20 @@ import numpy as np
 
 INIT_STEPS = int(1e6)
 SAMPLE_STEPS = INIT_STEPS
-SEED = 'CO_oxidation'
+SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = 1e-3
 
 from matplotlib.mlab import griddata
 
-def setup_model(model, data_point=0, data_file='CO_oxidation.pkl'):
+def setup_model(model, data_point=0, ):
     import numpy.random
     import pickle
 
-    with open(data_file) as infile:
-        data = pickle.load(infile)
-    coverage = data['coverage_map'][data_point][1]
+    seed = model.settings.model_name
 
+    data = merge_catmap_output(seed=seed)
+    coverage = data['coverage_map'][data_point][1]
     choices = [
                 model.proclist.co,
                 model.proclist.o,
@@ -141,6 +141,10 @@ def run_model(seed, init_steps, sample_steps, call_path=None):
     else:
         orig_path = None
 
+    if seed is None:
+        import kmc_settings
+        seed = kmc_settings.model_name
+
     import kmos.run
 
     data_filename = '{seed}_kMC_output.log'.format(**locals())
@@ -155,10 +159,12 @@ def run_model(seed, init_steps, sample_steps, call_path=None):
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
 
-    with open('{seed}.pkl'.format(**locals())) as infile:
-        catmap_data = pickle.load(infile)
+    #with open('{seed}.pkl'.format(**locals())) as infile:
+        #catmap_data = pickle.load(infile)
 
-    print(catmap_data.keys())
+    catmap_data = merge_catmap_output(seed=seed)
+
+    #print(catmap_data.keys())
 
     data_point = 1
 
@@ -409,6 +415,43 @@ def main(options, call_path=None):
                               xlabel=xlabel,
                               ylabel=ylabel,
                               )
+
+
+def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
+    """The entire output from the CatMAP run is distributed
+    to a *.log file and a *.pkl file. The log file contains
+    all variables that require less than 100 lines, and every
+    output variable that is longer is thrown to the Pickle file.
+
+    This function merges both data sources together in one
+    dictionary where the log file data takes precedence over
+    the pickle data.
+
+    :param seed: The prefix of the *.log and *.pickle files
+    :type seed: str
+    :param log_filename: Explicit filename of *.log file if it cannot be built from one <seed>.
+    :type log_filename: str
+    :param pkl_filename: Explicit filename of *.pkl file if it cannot be built from one <seed>.
+    :type pkl_filename: str
+
+    """
+    import pickle
+
+    if log_filename is None:
+        log_filename = '{seed}.log'.format(**locals())
+    if pickle_filename is None:
+        pickle_filename =  '{seed}.pkl'.format(**locals())
+
+    with open(pickle_filename) as pickle_file:
+        pickle_data = pickle.load(pickle_file)
+
+    log_globals, log_locals = {}, {}
+    execfile(log_filename, log_globals, log_locals)
+
+    overlap = set(pickle_data).intersection(set(log_locals))
+    pickle_data.update(log_locals)
+
+    return pickle_data
 
 if __name__ == '__main__':
     main()
