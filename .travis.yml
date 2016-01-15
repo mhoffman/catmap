@@ -1,7 +1,9 @@
 language: python
 python:
   - 2.7
-cache: pip
+cache:
+    pip: true
+    custom_install: true
   
 #notifications:
   #email: false
