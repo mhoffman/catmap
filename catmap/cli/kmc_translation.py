@@ -15,7 +15,9 @@ def translate_model_file(mkm_filename, options):
     catmap_model = catmap.ReactionModel(setup_file=mkm_filename)
     catmap_model.run() # Running the model once is needed to initialize all model values
     kmos_model = catmap2kmos(catmap_model,
-                 options=options)
+                 options=options,
+                 model_name=seed,
+                 )
     kmos_model.print_statistics()
     kmos_model.save('{seed}_kmc.ini'.format(**locals()))
 
@@ -27,6 +29,7 @@ def catmap2kmos(cm_model,
                 diffusion_barriers=None,
                 species_representations=None,
                 surface_representation='None',
+                model_name='CatMAP_translated_model',
                 options=None,
                 ):
     # TODO : write function which finds nearest neighbors shell for adsorbate interaction
@@ -65,7 +68,7 @@ def catmap2kmos(cm_model,
     #        in CatMAP ?
     pt.set_meta(author=options.author_name,
                 email=options.author_email,
-                model_name='CatMAP_translated_model',
+                model_name=model_name,
                 model_dimension='2',   # default ...
                 debug=0,  # let's be pessimistic
                 )
