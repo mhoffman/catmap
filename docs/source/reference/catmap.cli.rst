@@ -1,27 +1,14 @@
-Reference
-==============
-
-Subpackages
------------
-
-.. toctree::
-
-    catmap.analyze
-    catmap.data
-    catmap.mappers
-    catmap.parsers
-    catmap.scalers
-    catmap.solvers
-    catmap.thermodynamics
-    catmap.cli
+catmap.cli package
+==================
 
 Submodules
-----------
+-------------
 
-catmap.model module
--------------------
 
-.. automodule:: catmap.model
+catmap.cli.kmc_translation module
+----------------------------------
+
+.. automodule:: catmap.cli.kmc_translation
     :members:
     :private-members:
     :special-members:
@@ -29,10 +16,10 @@ catmap.model module
     :undoc-members:
     :show-inheritance:
 
-catmap.functions module
------------------------
+catmap.cli.kmc_runner module
+-----------------------------
 
-.. automodule:: catmap.functions
+.. automodule:: catmap.cli.kmc_runner
     :members:
     :private-members:
     :special-members:
@@ -43,7 +30,7 @@ catmap.functions module
 Module contents
 ---------------
 
-.. automodule:: catmap
+.. automodule:: catmap.cli
     :members:
     :private-members:
     :special-members:
