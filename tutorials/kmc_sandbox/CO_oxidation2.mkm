@@ -30,7 +30,7 @@ species_definitions['s'] = {'site_names': ['111'], 'total':1} #define the sites
 species_definitions['b'] = {'site_names': ['b'], 'total':1} #define the sites
 species_definitions['h'] = {'site_names': ['h'], 'total':1} #define the sites
 
-data_file = 'CO_oxidation.pkl'
+data_file = 'CO_oxidation2.pkl'
 
 
 
