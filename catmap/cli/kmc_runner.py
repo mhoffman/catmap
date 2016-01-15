@@ -442,11 +442,17 @@ def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
     if pickle_filename is None:
         pickle_filename =  '{seed}.pkl'.format(**locals())
 
-    with open(pickle_filename) as pickle_file:
-        pickle_data = pickle.load(pickle_file)
+    if os.path.exists(pickle_filename) and os.path.getsize(pickle_filename):
+        with open(pickle_filename) as pickle_file:
+            pickle_data = pickle.load(pickle_file)
+    else:
+        pickle_data = {}
 
-    log_globals, log_locals = {}, {}
-    execfile(log_filename, log_globals, log_locals)
+    if os.path.exists(log_filename) and os.path.getsize(log_filename):
+        log_globals, log_locals = {}, {}
+        execfile(log_filename, log_globals, log_locals)
+    else:
+        log_locals = {}
 
     overlap = set(pickle_data).intersection(set(log_locals))
     pickle_data.update(log_locals)
