@@ -90,8 +90,8 @@ unit_cell = np.diag([2.75064538,   2.75064538,  33.835     ])
 site_positions = {'s': [[0, .0, .57]], }
 
 species_representation = {
-    'O': "Atoms('O')",
-    'CO': "Atoms('CO', [[0., 0., 0.], [0., 0., 1.17]])",
+    'O': {'geometry': "Atoms('O')", 'color': '#ff0000'},
+    'CO':{'geometry': "Atoms('CO', [[0., 0., 0.], [0., 0., 1.17]])", 'color': '#0000ff'},
     'CO2': "Atoms('OCO', [[1., 1., 0.], [0., 0., 0.,], [-1., 1., 0]])",
 }
 
