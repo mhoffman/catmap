@@ -78,8 +78,8 @@ def catmap2kmos(cm_model,
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
-    if hasattr(cm_model, 'background_representation') and hasattr(cm_model, 'background_representation'):
-        print("Warning: unit cell in background_representation will override the given background representation")
+    if hasattr(cm_model, 'background_representation') and hasattr(cm_model, 'unit_cell'):
+        print("Warning: unit cell in background_representation will override the given unit cell {unit_cell}".format(**locals()))
     background_representation = getattr(cm_model,
                                         'background_representation',
                                         'Atoms("H", [[0., 0., -0.1]], cell={unit_cell})'.format(**locals())
