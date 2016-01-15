@@ -109,9 +109,24 @@ def catmap2kmos(cm_model,
             species_name, site = species_definition.split('_')
             species_name = species_name.replace('-', '_')
 
-            color = get_color(species_name)
 
-            species_representation = getattr(cm_model, 'species_representation', {}).get(species_name, "Atoms()")
+            species_representation = getattr(cm_model, 'species_representation', {}).get(species_name, None)
+            if species_representation is None:
+                species_representation = "Atoms()"
+                color = get_color(species_name)
+            elif type(species_representation) is str:
+                species_representation = species_representation
+                color = get_color(species_name)
+            elif type(species_representation) is dict:
+                species_representation, color = species_representation['geometry'], species_representation['color']
+            else:
+                raise UserWarning(("Specification for species representation {species_representation} not understood!\n\n\n"
+                                   "The species representation should a string in the form of an ASE contructor (\"Atoms(...)\")\n"
+                                   "or a dictionary with keys 'geometry' and 'color' where the geometry hold the ASE constructor\n"
+                                   "and the color is a HTML hex string representing the color for the 'kmos edit' GUI\n"
+                                   "like {{'color': '#ff0000', 'geometry': 'Atoms(\"CO\", ... )}}"
+                ).format(**locals()))
+
             if not species_name == '*' \
                     and not species_name == 's' \
                     and not '_' in species_name \
