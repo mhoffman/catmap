@@ -209,7 +209,7 @@ def catmap2kmos(cm_model,
         # DEBUGGING: make everything reversible for now
         #            since we want a non-crashing model first
         for reversible, (X, Y) in [[True, ('A', 'C')], ]:
-            nsite_selector = True
+            nsite_selector = False
             if nsite_selector:
                 pass
             else:
