@@ -1,6 +1,32 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
+import itertools
+
+import itertools
+
+def itertools_product_no_repetition(*vectors):
+    n = len(vectors)
+    for out in itertools.product(*vectors):
+        if len(set(out)) == n:
+            yield out
+
+def sum_edge_length_metric(sites):
+    import itertools
+    import numpy.linalg
+    return sum([
+        numpy.linalg.norm(site_A.pos - site_B.pos)**2
+        for (site_A, site_B) in itertools.combinations(sites, 2)
+    ])
+
+def sum_edge_length_squared_metric(sites):
+    import itertools
+    import numpy.linalg
+    return sum([
+        numpy.linalg.norm(site_A.pos - site_B.pos)**2
+        for (site_A, site_B) in itertools.combinations(sites, 2)
+    ])
+
 def get_color(string):
  """Generate a color from any string using the hexdigest of
  the md5 hash
@@ -211,7 +237,102 @@ def catmap2kmos(cm_model,
         for reversible, (X, Y) in [[True, ('A', 'C')], ]:
             nsite_selector = False
             if nsite_selector:
-                pass
+                if step[X] and step[Y]:
+                    # add reversible step between A and B
+                    surface_intermediates[X] = []
+                    surface_intermediates[Y] = []
+
+                    for x in [X, Y]:
+                        print('x = {x}'.format(**locals()))
+                        for intermediate in step[x]:
+                            print(
+                                'intermediate = {intermediate}'.format(**locals()))
+                            if '_' in intermediate:
+                                species, site = intermediate.split('_')
+                                print(
+                                    'SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
+                                print(
+                                    [s.startswith('{site}_'.format(**locals())) for s in site_names])
+                                if any([s.startswith('{site}_'.format(**locals())) for s in site_names]):
+                                    surface_intermediates[
+                                        x].append([species, site])
+                            elif any([s.startswith('{intermediate}_'.format(**locals())) for s in site_names]):
+                                surface_intermediates[x].append(
+                                    [EMPTY_SPECIES, intermediate])
+                            else:
+                                print('NOTHING MATCHED!!!')
+
+                    print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(
+                        **locals()))
+                    # some validation checks to raise better error messages
+                    if len(surface_intermediates[X]) != len(surface_intermediates[Y]):
+                        raise UserWarning(
+                            "Number of surface sites different for elementary reaction: {elementary_rxn} equiv. to {surface_intermediates}".format(**locals()))
+
+                    for _, siteX in surface_intermediates[X]:
+                        sitesY = [s for _, s in surface_intermediates[Y]]
+                        if not siteX in sitesY:
+                            raise UserWarning(
+                                'Site {siteX} is mentioned on one side of the equation but not on the other: {surface_intermediates}'.format(**locals()))
+
+                    for letter_step, surface_intermediate in surface_intermediates.items():
+                        n = len(surface_intermediate)
+                        print('State {letter_step} Number of surface intermediates {n}: {surface_intermediate}'.format(**locals()))
+                        if not letter_step == 'A': # only generat sites set from initial step
+                            continue
+                        sites_vectors = []
+                        for i, (_ads, site_name) in enumerate(surface_intermediate):
+                            if i == 0:
+                                sites_vectors.append(pt.layer_list.generate_coord_set(size=[1, 1, 1], site_name=site_name))
+                            else:
+                                sites_vectors.append(pt.layer_list.generate_coord_set(size=[2, 2, 2], site_name=site_name))
+
+                    sites_list = itertools_product_no_repetition(*sites_vectors)
+
+                    dist_tol =  1e-3
+                    metric_site_list = sorted(map(lambda x: (sum_edge_length_metric(x), x), sites_list))
+                    min_dist = metric_site_list[0][0]
+                    #sites_list = [sites for (dist, sites) in metric_site_list ]
+                    sites_list = [sites for (dist, sites) in metric_site_list if np.abs(dist - min_dist) < dist_tol]
+                    n_sets = len(sites_list)
+                    print("N {n_sets} Sites list {sites_list} Min dist {min_dist}".format(**locals()))
+
+                    for s_i, sites in enumerate(sites_list):
+                        ads_initial = [ads for (ads, site) in surface_intermediates['A']]
+                        ads_final = [ads for (ads, site) in surface_intermediates['C']]
+
+                        condition_string = '_n_'.join([species.replace( '-', '_') + '_' + site for (species, site) in surface_intermediates[X]])
+                        action_string = '_n_'.join([species.replace( '-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
+
+                        forward_name_root = '{condition_string}_2_{action_string}'.format( **locals())
+                        reverse_name_root = '{action_string}_2_{condition_string}'.format( **locals())
+
+                        actions = [Action(species=species, coord=coord) for (species, coord) in zip(ads_final, sites)]
+                        conditions = [Condition(species=species, coord=coord) for (species, coord) in zip(ads_initial, sites)]
+                        diff_prefix = ''
+
+                        raise UserWarning("""
+                        # TODO XXX
+                        # - Don't forget to add observer sites here when doing interaction > 0
+                        # - Don't forget to add diff prefix again for diffusion processes
+                        # - Don't forget to add parameters representing rate constants again
+                        """)
+
+
+                        forward_process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
+                                       conditions=conditions,
+                                       actions=actions,
+                                       rate_constant='{diff_prefix}forward_{ri}'.format(
+                                           **locals()),
+                                       tof_count={forward_name_root: 1})
+
+                        forward_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
+                                       conditions=conditions,
+                                       actions=actions,
+                                       rate_constant='{diff_prefix}reverse_{ri}'.format(
+                                           **locals()),
+                                       tof_count={reverse_name_root: 1})
+
             else:
                 if step[X] and step[Y]:
                     # add reversible step between A and B
@@ -357,8 +478,7 @@ def catmap2kmos(cm_model,
                                         [Action(
                                             species=other_action_species.replace('-', '_'), coord=auxiliary_coord)]
 
-                                    process_name = '{forward_name_root}_{aux_counter}'.format(
-                                        **locals())
+                                    process_name = '{forward_name_root}_{aux_counter}'.format(**locals())
 
                                     process = pt.add_process(name=process_name,
                                                    conditions=aux_conditions,
@@ -429,10 +549,6 @@ def catmap2kmos(cm_model,
                                 site_name = coord.name.split('_')[0]
                                 species_options.append(site_species[site_name])
                             print(species_options)
-
-                            #bystanders = [kmos.types.Bystander(coord=coord,
-                                                               #allowed_species=allowed_species,
-                                                               #flag='
 
                             bystander_list = []
                             for allowed_species, interacting_coord in zip(species_options, interacting_coords):
