@@ -7,7 +7,7 @@ pushd ../../tutorials/kmc_sandbox
 # run test and grep out critical string
 #for fn in CO_oxidation.mkm CO_oxidation2.mkm CO_oxidation_square.mkm
 
-for fn in CO_oxidation.mkm CO_oxidation2.mkm
+for fn in CO_oxidation.mkm CO_oxidation2.mkm CO_oxidation3.mkm
 do
     seed=$(basename ${fn} .mkm)
     outdir="${seed}_kmc_local_smart"
@@ -37,3 +37,5 @@ do
 done
 
 popd
+
+echo "kMC integration test finished successful."
