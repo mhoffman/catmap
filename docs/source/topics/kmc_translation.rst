@@ -15,7 +15,7 @@
     be used after adding the following two lines to your `~/.bashrc` ::
 
         export PYTHONPATH=/home/maxjh/env/kmos/lib/python2.7/site-packages:${PYTHONPATH}
-        export PATH=/home/vossj/suncat/bin:/home/maxjh/env/kmos/bin/:${PATH}
+        export PATH=/home/vossj/suncat/bin:/home/maxjh/env/kmos/bin/${PATH}
 
 Evaluation of a CatMAP model using kinetic Monte Carlo
 ==========================================================
@@ -199,4 +199,54 @@ which should generate more files and finally plots. Or you could directly run ::
 
     kmos run
 
-Please stay tuned for updates.
+
+The default model runner can evaluate every descriptor tuple in a different process. A file
+name `model.lock` keeps track of which data points are currently evaluated. In a cluster environemnt
+you can therefore start many instances of the same evaluation process. Each of them will
+keep running until all descriptor points have been evaluated. A simple submission script could
+look as follows ::
+
+
+    #!/bin/bash -eux
+    #SBATCH -p slac
+    #exclusive means the nodes shouldn't be shared with
+    #other users
+    #don't specify when running jobs that don't use all
+    #cores on the nodes
+    #SBATCH --exclusive
+    #################
+    #set a job name
+    #SBATCH --job-name=myjob
+    #################
+    #a file for job output, you can check job progress
+    #SBATCH --output=myjob.out
+    #################
+    # a file for errors from the job
+    #SBATCH --error=myjob.err
+    #################
+    #time you think you need; default is one hour
+    #in minutes in this case
+    #SBATCH --time=08:00:00
+    #################
+    #number of nodes you are requesting
+    #SBATCH --nodes=1
+    #################
+    #SBATCH --mem-per-cpu=4000
+    #################
+    #get emailed about job BEGIN, END, and FAIL
+    #SBATCH --mail-type=ALL
+    #################
+    #who to send email to; please change to your email
+    #SBATCH  --mail-user=maxjh@stanford.edu
+    #################
+    #task to run per node; each node has 16 cores
+    #SBATCH --ntasks-per-node=16
+    #################
+
+    for i in {1..16}
+    do
+        catmap run_kmc -E 100000000 -S 100000000 &
+        sleep 2
+    done
+
+Please change the email address and make the number of equilibration steps and sampling steps are sufficient.
