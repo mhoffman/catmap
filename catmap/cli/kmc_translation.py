@@ -117,10 +117,10 @@ def catmap2kmos(cm_model,
 
 
     # add site positions
-    for site_name in cm_model.site_names:
+    for site_name in sorted(cm_model.site_names):
         if not site_name == 'g':
             print(cm_model.site_positions)
-            for i, site_position in enumerate(cm_model.site_positions[site_name]):
+            for i, site_position in enumerate(sorted(cm_model.site_positions[site_name])):
                 layer.sites.append(Site(name='{site_name}_{i}'.format(**locals()),
                                         pos=site_position))
 
@@ -131,7 +131,7 @@ def catmap2kmos(cm_model,
 
     pt.add_species(name=EMPTY_SPECIES, color='#ffffff')
     species_names = set()
-    for species_definition in cm_model.species_definitions.keys():
+    for species_definition in sorted(cm_model.species_definitions.keys()):
 
         print('SPECIES DEFINITION {species_definition}'.format(**locals()))
         if '_' in species_definition:
@@ -190,7 +190,7 @@ def catmap2kmos(cm_model,
     # add processes
     site_names = [x.name for x in pt.layer_list[0].sites]
     print('SITE NAMES {site_names}'.format(**locals()))
-    for ri, elementary_rxn in enumerate(cm_model.elementary_rxns):
+    for ri, elementary_rxn in enumerate(sorted(cm_model.elementary_rxns)):
         step = {}
         surface_intermediates = {}
         # N.B: The general form of an elementary reaction in CatMAP is
