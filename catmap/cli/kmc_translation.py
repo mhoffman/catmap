@@ -339,7 +339,7 @@ def catmap2kmos(cm_model,
                         #""")
 
 
-                        forward_process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
+                        process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
                                        conditions=conditions,
                                        actions=actions,
                                        rate_constant='{diff_prefix}forward_{ri}'.format(
@@ -352,8 +352,10 @@ def catmap2kmos(cm_model,
                                        rate_constant='{diff_prefix}reverse_{ri}'.format(
                                            **locals()),
                                        tof_count={forward_name_root: -1})
+                pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
+                pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
 
-            else:
+            else: # Legacy branch, DELETE when nsite selection if sufficiently tested
                 if step[X] and step[Y]:
                     # add reversible step between A and B
                     surface_intermediates[X] = []
@@ -536,57 +538,61 @@ def catmap2kmos(cm_model,
                                                actions=conditions,
                                                tof_count={forward_name_root: -1},
                                                rate_constant='reverse_{ri}'.format(**locals()))
-                        if options.interaction > 0 :
-                            # Collect the nearest-neighbor sites up to a certain cut-off
-                            coordinate_set = pt.layer_list.generate_coord_set([5, 5, 1])
-                            # regenerate all action coordinates via generation string to set the
-                            # absolute position of the coord correctly
-
-                            action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
-                            min_dists = [min(map(lambda x: np.linalg.norm(x.pos-c.pos), action_coords)) for c in coordinate_set]
-
-                            coordinate_set = sorted(zip(min_dists, coordinate_set))
-                            print(min_dists)
-                            print(coordinate_set)
-                            curr_dist = 0.
-                            neighbor_shell = 0
-                            n_neighbors = {}
-                            for dist, coord in coordinate_set:
-                                if abs(curr_dist - dist) > dist_tol:
-                                    curr_dist = dist
-                                    neighbor_shell += 1
-                                n_neighbors.setdefault(neighbor_shell, []).append(coord)
-                            pprint.pprint(n_neighbors)
-
-                            interacting_coords = []
-                            for i in range(options.interaction):
-                                interacting_coords.extend(n_neighbors[i+1])
-
-                            pprint.pprint(interacting_coords)
-
-                            species_options = []
-                            for interacting_coord in interacting_coords:
-                                site_name = coord.name.split('_')[0]
-                                species_options.append(site_species[site_name])
-                            print(species_options)
-
-                            bystander_list = []
-                            for allowed_species, interacting_coord in zip(species_options, interacting_coords):
-                                _X, _Y, _ = interacting_coord.offset
-                                flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
-                                flag = flag.replace('-', 'm')
-                                bystander_list.append(kmos.types.Bystander(
-                                    coord=interacting_coord,
-                                    allowed_species=allowed_species,
-                                    flag=flag
-                                ))
-
-                            process.bystander_list = bystander_list
-                            reverse_process.bystander_list = bystander_list
 
 
                 pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
                 pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
+
+            if options.interaction > 0 :
+                # Collect the nearest-neighbor sites up to a certain cut-off
+                coordinate_set = pt.layer_list.generate_coord_set([5, 5, 1])
+                # regenerate all action coordinates via generation string to set the
+                # absolute position of the coord correctly
+
+                action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
+                min_dists = [min(map(lambda x: np.linalg.norm(x.pos-c.pos), action_coords)) for c in coordinate_set]
+
+                coordinate_set = sorted(zip(min_dists, coordinate_set))
+
+                curr_dist = 0.
+                neighbor_shell = 0
+                n_neighbors = {}
+                for dist, coord in coordinate_set:
+                    if abs(curr_dist - dist) > dist_tol:
+                        curr_dist = dist
+                        neighbor_shell += 1
+                    n_neighbors.setdefault(neighbor_shell, []).append(coord)
+                pprint.pprint(n_neighbors)
+
+                interacting_coords = []
+                for i in range(options.interaction):
+                    interacting_coords.extend(n_neighbors[i+1])
+
+                pprint.pprint(interacting_coords)
+
+                species_options = []
+                for interacting_coord in interacting_coords:
+                    site_name = coord.name.split('_')[0]
+                    species_options.append(site_species[site_name])
+                print(species_options)
+
+                bystander_list = []
+                for allowed_species, interacting_coord in zip(species_options, interacting_coords):
+                    _X, _Y, _ = interacting_coord.offset
+                    flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
+                    flag = flag.replace('-', 'm')
+                    try:
+                        bystander_list.append(kmos.types.Bystander(
+                            coord=interacting_coord,
+                            allowed_species=allowed_species,
+                            flag=flag
+                        ))
+                    except AttributeError as e:
+                        raise type(e)('{e.message}: adsorbate-adsorbate interaction using bystanders not support in this kmos version'.format(**locals()))
+                        
+
+                process.bystander_list = bystander_list
+                reverse_process.bystander_list = bystander_list
 
 
 
