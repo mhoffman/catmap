@@ -235,7 +235,7 @@ def catmap2kmos(cm_model,
         # DEBUGGING: make everything reversible for now
         #            since we want a non-crashing model first
         for reversible, (X, Y) in [[True, ('A', 'C')], ]:
-            nsite_selector = False
+            nsite_selector = True
             if nsite_selector:
                 if step[X] and step[Y]:
                     # add reversible step between A and B
@@ -297,7 +297,7 @@ def catmap2kmos(cm_model,
                     n_sets = len(sites_list)
                     print("N {n_sets} Sites list {sites_list} Min dist {min_dist}".format(**locals()))
 
-                    for s_i, sites in enumerate(sites_list):
+                    for s_i, sites in enumerate(sorted(sites_list)):
                         ads_initial = [ads for (ads, site) in surface_intermediates['A']]
                         ads_final = [ads for (ads, site) in surface_intermediates['C']]
 
@@ -311,12 +311,32 @@ def catmap2kmos(cm_model,
                         conditions = [Condition(species=species, coord=coord) for (species, coord) in zip(ads_initial, sites)]
                         diff_prefix = ''
 
-                        raise UserWarning("""
-                        # TODO XXX
-                        # - Don't forget to add observer sites here when doing interaction > 0
-                        # - Don't forget to add diff prefix again for diffusion processes
-                        # - Don't forget to add parameters representing rate constants again
-                        """)
+                        # if the process is a diffusion process
+                        # mark it as such in the rate constant
+                        # so that we can later fine tune its rate-constant
+                        # easier
+                        if len(sites_vectors) == 2 :
+                            si = surface_intermediates
+                            if ((si['A'][0][0] == EMPTY_SPECIES) and (si['C'][1][0] == EMPTY_SPECIES) and (si['A'][1][0] == si['C'][0][0])) \
+                            or ((si['A'][1][0] == EMPTY_SPECIES) and (si['C'][0][0] == EMPTY_SPECIES) and (si['A'][0][0] == si['C'][1][0])) :
+                                diff_prefix = 'diff_'
+                            else:
+                                diff_prefix = ''
+
+
+                        #if other_condition_species == EMPTY_SPECIES \
+                           #and action_species == EMPTY_SPECIES \
+                           #and condition_species == other_action_species:
+                            #diff_prefix = 'diff_'
+                        #else:
+                            #diff_prefix = ''
+
+
+                        #raise UserWarning("""
+                        ## TODO XXX
+                        ## - Don't forget to add observer sites here when doing interaction > 0
+                        ## - Don't forget to add parameters representing rate constants again
+                        #""")
 
 
                         forward_process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
@@ -326,12 +346,12 @@ def catmap2kmos(cm_model,
                                            **locals()),
                                        tof_count={forward_name_root: 1})
 
-                        forward_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
+                        reverse_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
                                        conditions=conditions,
                                        actions=actions,
                                        rate_constant='{diff_prefix}reverse_{ri}'.format(
                                            **locals()),
-                                       tof_count={reverse_name_root: 1})
+                                       tof_count={forward_name_root: -1})
 
             else:
                 if step[X] and step[Y]:
