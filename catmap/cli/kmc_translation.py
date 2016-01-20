@@ -347,8 +347,8 @@ def catmap2kmos(cm_model,
                                        tof_count={forward_name_root: 1})
 
                         reverse_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
-                                       conditions=conditions,
-                                       actions=actions,
+                                       conditions=actions,
+                                       actions=conditions,
                                        rate_constant='{diff_prefix}reverse_{ri}'.format(
                                            **locals()),
                                        tof_count={forward_name_root: -1})
