@@ -164,7 +164,7 @@ If this takes a very long time you could try some other backend, like e.g.::
     might help to explicit set an environment variable for the Fortran compiler you are using, like
     e.g ::
     
-        exporrt F2PY_FCOMPILER=intelem
+        export F2PY_FCOMPILER=intelem
 
     Though the actual value may depend on your environment.
 
@@ -183,22 +183,24 @@ Evaluating the kMC model
 -------------------------------------------
 
 From now one there are two routes forward: (1) you can either evaluate the model
-for comparison with the mean-field model. To this end it is a good idea
-to copy the files resulting from the successful CatMAP run into the kmc folder::
+for comparison with the mean-field model. (2) you can run and analyze kMC trajectories
+for individual descriptor points using the capabilities of the `kmos.run` module.
+This brief topical introduction will focus on the first route, please consult
+the `kmos documentation <http://kmos.rtfd.org>`_  for the latter.
 
-    cp model.mkm model.log model.pkl model_kmc_local_smart
+To this end it is a good idea to copy the files resulting from the successful CatMAP run into the kmc folder::
+
+    cp model.mkm energies.txt model_kmc_local_smart
 
 For a simple straightforward comparison you should `cd` into the directory
 and run ::
 
-    catmap run_kmc
+    catmap run_kmc -s
 
-
-which should generate more files and finally plots. Or you could directly run ::
-
-
-    kmos run
-
+This is a good check to the if all necesseary files for evaluating both the mean-field as
+well as the kMC model are present. The `-s` will cause the kmc runner to evaluate only a
+single data point. The process runs only on a single CPU and requires a few ~10 MB
+RSS memory depending mostly on the lattice size.
 
 The default model runner can evaluate every descriptor tuple in a different process. A file
 name `model.lock` keeps track of which data points are currently evaluated. In a cluster environemnt
