@@ -37,6 +37,21 @@ usage['run_kmc'] = """{SCRIPT} run_kmc -E <N> -S <N>
            number of sampling steps to calculate rates
            and coverages.
            CHECK CAREFULLY IF SUFFICIENT
+
+        -s, --single-point
+          Force 'catmap run_kmc'  to only evalute one descriptor point
+          and finish evaluation.
+          Otherwise the model runner will keep evaluating descriptor
+          points until they are all exhausted.
+
+        -n, --dont-run
+         If 'catmap run_kmc' should only plot results and
+         not evaluate any descriptor points
+
+        -p, --print
+         If 'catmap run_kmc' should plot results
+
+
 """.format(**locals())
 
 
