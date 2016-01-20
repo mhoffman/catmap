@@ -186,7 +186,7 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
 
         with open(lock_filename, 'r') as lockfile:
             if descriptor_string in lockfile.readlines():
-                print('Skipping {descriptor_string}'.format(**locals()))
+                #print('Skipping {descriptor_string}'.format(**locals()))
                 continue
         with open(lock_filename, 'a') as lockfile:
             lockfile.write('{descriptor_string}'.format(**locals()))
@@ -217,6 +217,9 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
         if options.single_point:
             print("User requested to run only a single-descriptor point, stopping here.")
             break
+
+    else:
+        print("Looks like all descriptor points are evaluated. Consider plotting the result with 'catmap run_kmc -n -p'")
 
     # Restore old path
     if orig_path is not None:
