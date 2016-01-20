@@ -152,6 +152,9 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
     lock_filename = '{seed}_kMC.lock'.format(**locals())
     done_filename = '{seed}_kMC.done'.format(**locals())
 
+    # Let's first run the CatMAP model again with the
+    # forward/back-wards rate constants
+    # generating necessary rate constants
     catmap_model = catmap.ReactionModel(
         setup_file='{seed}.mkm'.format(**locals()))
 
@@ -159,16 +162,10 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
     catmap_model.output_variables.append('forward_rate_constant')
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
-
-    #with open('{seed}.pkl'.format(**locals())) as infile:
-        #catmap_data = pickle.load(infile)
-
     catmap_data = merge_catmap_output(seed=seed)
 
-    #print(catmap_data.keys())
-
-    data_point = 1
-
+    # create of lock-file for currently running data-points
+    # if it doesn't exist
     if not os.path.exists(lock_filename):
         with open(lock_filename, 'w'):
             pass
@@ -195,6 +192,7 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
             lockfile.write('{descriptor_string}'.format(**locals()))
             lockfile.flush()
 
+        # generate the data
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             print('running DATAPOINT {data_point} DESCRIPTOR {descriptor_string}'.format(**locals()))
             set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=DIFFUSION_FACTOR)
@@ -208,12 +206,6 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
             kmos_model.do_steps(init_steps)
             atoms = kmos_model.get_atoms()
             data = kmos_model.get_std_sampled_data(1, sample_steps, tof_method='integ')
-
-            #with open('procstat_{data_point}.log'.format(**locals()), 'w') as outfile:
-                #outfile.write(kmos_model.print_procstat(False))
-
-            #with open('rateconstants_{data_point}.log'.format(**locals()), 'w') as outfile:
-                #outfile.write(kmos_model.rate_constants)
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
@@ -281,8 +273,6 @@ def contour_plot_data(x, y, z, filename,
 
     #x, y = np.linspace(x.min(), x.max(), m_gp), np.linspace(y.min(), y.max(), m_gp)
 
-    print(x, y)
-    print(z)
     xi, yi = np.linspace(x.min(), x.max(), n_gp), np.linspace(y.min(), y.max(), n_gp)
     xi, yi = np.meshgrid(xi, yi)
 
@@ -447,7 +437,7 @@ def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
     import pickle
 
     if log_filename is None:
-        log_filename = '{seed}_kMC.log'.format(**locals())
+        log_filename = '{seed}.log'.format(**locals())
     if pickle_filename is None:
         pickle_filename =  '{seed}.pkl'.format(**locals())
 
