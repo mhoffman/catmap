@@ -302,11 +302,10 @@ def contour_plot_data(x, y, z, filename,
 
     if normalized:
         levels = np.linspace(0, 1, 11)
-        print('NORMALIZED {zmin} {zmax}'.format(**locals()))
         zmax = 1.
         zmin = 0.
     else:
-        levels = np.linspace(zmin, zmax, int(zmax - zmin))
+        levels = np.linspace(zmin, zmax, max(int(zmax - zmin), 2))
 
 
     contour_plot = plt.contourf(zi, vmin=zmin, vmax=zmax, origin='lower',
@@ -376,6 +375,7 @@ def main(options, call_path=None):
                 continue
             if '_2_' in name: # we are plotting a rate
                 normalized = False
+                # Plot only the log base 10 of rates
                 plot_data = np.log10(data[name])
                 #plot_data = data[name]
                 if not np.isfinite(plot_data).any():
