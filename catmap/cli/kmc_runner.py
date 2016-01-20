@@ -132,7 +132,7 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
 
 
 
-def run_model(seed, init_steps, sample_steps, call_path=None):
+def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
     # a path we need to add to make sure kmc model import works
     if call_path is not None:
         import sys
@@ -217,6 +217,10 @@ def run_model(seed, init_steps, sample_steps, call_path=None):
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
+
+        if options.single_point:
+            print("User requested to run only a single-descriptor point, stopping here.")
+            break
 
     # Restore old path
     if orig_path is not None:
@@ -351,7 +355,8 @@ def main(options, call_path=None):
         run_model(seed=SEED,
              init_steps=init_steps,
              sample_steps=sample_steps,
-             call_path=call_path)
+             call_path=call_path,
+             options=options)
 
     if options.plot:
         data = np.recfromtxt('{SEED}_kMC_output.log'.format(**locals()), names=True)
