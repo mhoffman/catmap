@@ -51,6 +51,7 @@ def setup_model(model, data_point=0, ):
             #print('{x} {y} {choice}'.format(**locals()))
 
     model._set_configuration(config)
+    model._adjust_database()
 
 def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=None):
     """
@@ -200,7 +201,10 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
             setup_model(kmos_model, data_point)
 
             print(kmos_model.rate_constants)
+            kmos_model.print_coverages()
+            kmos_model.print_accum_rate_summation()
             print('INIT STEPS {init_steps} |  SAMPLE STEPS {sample_steps}'.format(**locals()))
+
             kmos_model.do_steps(init_steps)
             atoms = kmos_model.get_atoms()
             data = kmos_model.get_std_sampled_data(1, sample_steps, tof_method='integ')
