@@ -20,6 +20,19 @@ DIFFUSION_FACTOR = 1e-3
 
 from matplotlib.mlab import griddata
 
+def get_seed_from_path(import_path):
+    import sys
+    orig_path = copy.copy(sys.path)
+    sys.path.insert(0, import_path)
+
+    import kmc_settings
+    seed = kmc_settings.model_name
+
+    sys.path = orig_path
+
+    return seed
+
+
 def setup_model(model, data_point=0, ):
     import numpy.random
     import pickle
@@ -142,9 +155,7 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
     else:
         orig_path = None
 
-    if seed is None:
-        import kmc_settings
-        seed = kmc_settings.model_name
+    seed = seed or get_seed_from_path(call_path)
 
     import kmos.run
 
@@ -356,7 +367,8 @@ def main(options, call_path=None):
              options=options)
 
     if options.plot:
-        data = np.recfromtxt('{SEED}_kMC.log'.format(**locals()), names=True)
+        seed = get_seed_from_path(call_path)
+        data = np.recfromtxt('{seed}_kMC.log'.format(**locals()), names=True)
 
         for name in data.dtype.names:
             print(name)
@@ -385,7 +397,7 @@ def main(options, call_path=None):
                        .replace('_0', ''))
 
             catmap_model = catmap.ReactionModel(
-                setup_file='{SEED}.mkm'.format(**locals()))
+                setup_file='{seed}.mkm'.format(**locals()))
 
             catmap_model.run()
 
