@@ -147,9 +147,9 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
 
     import kmos.run
 
-    data_filename = '{seed}_kMC_output.log'.format(**locals())
-    lock_filename = '{seed}.lock'.format(**locals())
-    done_filename = '{seed}.done'.format(**locals())
+    data_filename = '{seed}_kMC.log'.format(**locals())
+    lock_filename = '{seed}_kMC.lock'.format(**locals())
+    done_filename = '{seed}_kMC.done'.format(**locals())
 
     catmap_model = catmap.ReactionModel(
         setup_file='{seed}.mkm'.format(**locals()))
@@ -359,7 +359,7 @@ def main(options, call_path=None):
              options=options)
 
     if options.plot:
-        data = np.recfromtxt('{SEED}_kMC_output.log'.format(**locals()), names=True)
+        data = np.recfromtxt('{SEED}_kMC.log'.format(**locals()), names=True)
 
         for name in data.dtype.names:
             print(name)
@@ -443,7 +443,7 @@ def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
     import pickle
 
     if log_filename is None:
-        log_filename = '{seed}.log'.format(**locals())
+        log_filename = '{seed}_kMC.log'.format(**locals())
     if pickle_filename is None:
         pickle_filename =  '{seed}.pkl'.format(**locals())
 
