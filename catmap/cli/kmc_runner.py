@@ -33,7 +33,36 @@ def get_seed_from_path(import_path):
     return seed
 
 
-def setup_model(model, data_point=0, ):
+
+def setup_model_species(model, species):
+    if not species in model.settings.species_tags:
+        tags = model.settings.species_tags.keys()
+        raise UserWarning("Species '{species}' unknown, choose from {tags}.".format(**locals()))
+
+    fortran_species = species.lower()
+    kmos_species = int(eval('model.proclist.{fortran_species}'.format(**locals())))
+
+    # extract the model dimensions
+    X, Y, Z = model.lattice.system_size
+    N = int(model.lattice.spuck)
+    config = model._get_configuration()
+
+    config[:] = kmos_species
+
+    model._set_configuration(config)
+    model._adjust_database()
+
+def setup_model_probabilistic(model, data_point=0, majority=False ):
+    """Make an educated initial guess for coverages by setting
+    adsorbates for each with probabilites according to the
+    mean field model result.
+
+    Note that this naive way of implementing this initialization
+    might lattices which are locally not realistic.
+
+    If majority==True all sites are two the respective majority-species (a.k.a winner takes it all).
+    """
+
     import numpy.random
     import pickle
 
@@ -41,27 +70,63 @@ def setup_model(model, data_point=0, ):
 
     data = merge_catmap_output(seed=seed)
     coverage = data['coverage_map'][data_point][1]
-    choices = [
-                model.proclist.co,
-                model.proclist.o,
-                model.proclist.empty,
-                ]
-    choices_weights = [
-        coverage[0],
-        coverage[1],
-        1 - sum(coverage),
-    ]
+    catmap_sitenames = list(data['site_names'])
+    if 'g' in catmap_sitenames:
+        catmap_sitenames.remove('g')
 
-    config = model._get_configuration()
+    # extract the model dimensions
     X, Y, Z = model.lattice.system_size
-    for x in range(X):
-        for y in range(Y):
-            choice = numpy.random.choice(
-                choices,
-                p=choices_weights,
-            )
-            config[x, y, 0, 0] = choice
-            #print('{x} {y} {choice}'.format(**locals()))
+    N = int(model.lattice.spuck)
+    S = int(model.proclist.nr_of_species)
+    config = model._get_configuration()
+
+    # construct the mapping
+    # from kmos species number to catmap coverage of given species
+    catmap_coverages = dict(zip(data['adsorbate_names'], map(float, data['coverage_map'][data_point][1])))
+
+    for model_sitename in model.settings.site_names:
+        catmap_sitename = model_sitename.split('_')[1]
+        model_sitename_index = int(eval('model.lattice.{model_sitename}'.format(**locals())))
+
+        choices = range(S) # XXX I doubt it ...
+        choices_weights = [0.] * S
+
+        for kmos_speciesname in model.settings.species_tags.keys():
+            fortran_speciesname = kmos_speciesname.lower()
+
+            n = int(eval('model.proclist.{fortran_speciesname}'.format(**locals())))
+            catmap_adsorbatename = '{kmos_speciesname}_{catmap_sitename}'.format(**locals())
+            choices_weights[n] = catmap_coverages.get(catmap_adsorbatename, 0.)
+
+        # fill up the 'empty' (= default_species) so that all choices per site sum to 1
+        choices_weights[model.proclist.default_species] =  1 - sum(choices_weights)
+
+        choices_weights = map(float, choices_weights)
+
+        if majority:
+            argmax = np.argmax(choices_weights)
+            choices_weights = [0.] * len(choices_weights)
+            choices_weights[argmax] = 1.
+
+
+        ## DEBUGGING
+        import pprint
+        print("CATMAP Coverages")
+        pprint.pprint(catmap_coverages)
+        #print("DEBUGGING")
+        print("SITE NAME")
+        print(catmap_sitename, model_sitename_index)
+        print("CHOICES")
+        pprint.pprint(choices)
+        print("CHOICES WEIGHTS")
+        pprint.pprint(choices_weights)
+
+        # iterate over every lattice site and fill in proportionally weighted species
+        for x in range(X):
+            for y in range(Y):
+                for z in range(Z):
+                    choice = numpy.random.choice(choices, p=choices_weights,)
+                    config[x, y, z, model_sitename_index - 1] = choice
 
     model._set_configuration(config)
     model._adjust_database()
@@ -207,11 +272,24 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             print('running DATAPOINT {data_point} DESCRIPTOR {descriptor_string}'.format(**locals()))
             set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=DIFFUSION_FACTOR)
-            setup_model(kmos_model, data_point)
+            if options.initial_configuration == 'probabilistic':
+                setup_model_probabilistic(kmos_model, data_point)
+            elif options.initial_configuration.startswith('species:'):
+                setup_model_species(kmos_model, options.initial_configuration.split(':')[-1])
+            elif options.initial_configuration == 'empty':
+                pass
+            elif options.initial_configuration == 'majority':
+                setup_model_probabilistic(kmos_model, data_point, majority=True)
+            else:
+                raise UserWarning("Directions for initial configuration '{options.initial_configuration}' can not be processed".format(**locals()))
 
-            print(kmos_model.rate_constants)
+
+            # DEBUGGING
+            print("kmos coverages")
             kmos_model.print_coverages()
             kmos_model.print_accum_rate_summation()
+
+            print(kmos_model.rate_constants)
             print('INIT STEPS {init_steps} |  SAMPLE STEPS {sample_steps}'.format(**locals()))
 
             kmos_model.do_steps(init_steps)

@@ -51,6 +51,11 @@ usage['run_kmc'] = """{SCRIPT} run_kmc -E <N> -S <N>
         -p, --print
          If 'catmap run_kmc' should plot results
 
+        -c, --initial-configuration
+         Pick how the kmc model runner initializes the lattice.
+         Currently implemented are:
+         probabilistic [default], empty, species:<species_name>, and majority.
+
 
 """.format(**locals())
 
@@ -67,14 +72,15 @@ def get_options(args=None, get_parser=False):
         + ') [options]',
         version=catmap.__version__)
 
-    parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
-    parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
     parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8), help="The number of kmc steps before it starts sampling averages.")
     parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8), help="The number of kmc steps used to calculate averages")
+    parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
+    parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
+    parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
+    parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
+    parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
-    parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
-    parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
 
 
