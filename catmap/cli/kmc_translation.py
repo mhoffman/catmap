@@ -388,8 +388,9 @@ def catmap2kmos(cm_model,
                                 ).format(**locals()))
 
                         print('Process {process} Bystanders {bystander_list}'.format(**locals()))
+
                         process.bystander_list = bystander_list
-                    reverse_process.bystander_list = bystander_list
+                        reverse_process.bystander_list = bystander_list
 
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
