@@ -88,7 +88,7 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
         catmap_sitename = model_sitename.split('_')[1]
         model_sitename_index = int(eval('model.lattice.{model_sitename}'.format(**locals())))
 
-        choices = range(S) # XXX I doubt it ...
+        choices = range(S)
         choices_weights = [0.] * S
 
         for kmos_speciesname in model.settings.species_tags.keys():
