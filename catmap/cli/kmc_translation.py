@@ -323,22 +323,6 @@ def catmap2kmos(cm_model,
                             else:
                                 diff_prefix = ''
 
-
-                        #if other_condition_species == EMPTY_SPECIES \
-                           #and action_species == EMPTY_SPECIES \
-                           #and condition_species == other_action_species:
-                            #diff_prefix = 'diff_'
-                        #else:
-                            #diff_prefix = ''
-
-
-                        #raise UserWarning("""
-                        ## TODO XXX
-                        ## - Don't forget to add observer sites here when doing interaction > 0
-                        ## - Don't forget to add parameters representing rate constants again
-                        #""")
-
-
                         process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
                                        conditions=conditions,
                                        actions=actions,
