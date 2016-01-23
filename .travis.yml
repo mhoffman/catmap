@@ -28,7 +28,7 @@ before_install:
   - pip install mpmath
   - pip install python-ase
   - python setup.py install #install catmap
-  - pip install git+https://github.com/mhoffman/kmos.git@develop # install kmos for kmc integration testing
+  - pip install git+https://github.com/mhoffman/kmos.git@backend-otf # install kmos for kmc integration testing
  
 # Run tests; this is a very crude way of testing things
 # We should move to a more elegant strategy in the future
