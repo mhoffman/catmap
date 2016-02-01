@@ -359,6 +359,7 @@ def catmap2kmos(cm_model,
                                 curr_dist = dist
                                 neighbor_shell += 1
                             n_neighbors.setdefault(neighbor_shell, []).append(coord)
+                        print('\n\n')
                         print(process.name)
                         print("==========> Neighbor Shells <=============")
                         pprint.pprint(n_neighbors)
