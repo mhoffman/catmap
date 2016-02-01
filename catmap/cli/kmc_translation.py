@@ -186,6 +186,9 @@ def catmap2kmos(cm_model,
     # add parameters
     # TODO : let's avoid this for now and just accept rate constants from
     # catmap
+    # We'll need a global temperature parameter
+    # TODO : figure out how to adjust it
+    pt.add_parameter(name='T', value=600.)
 
     # add processes
     site_names = [x.name for x in pt.layer_list[0].sites]
@@ -336,6 +339,7 @@ def catmap2kmos(cm_model,
                                    tof_count={forward_name_root: -1})
 
                     if options.interaction > 0 :
+
                         r = 1 * options.interaction + 1
                         # Collect the nearest-neighbor sites up to a certain cut-off
                         coordinate_set = pt.layer_list.generate_coord_set([r, r, 1])
@@ -372,10 +376,13 @@ def catmap2kmos(cm_model,
                         print(species_options)
 
                         bystander_list = []
+                        Vint = "0 \\\n"
                         for allowed_species, interacting_coord in zip(species_options, interacting_coords):
                             _X, _Y, _ = interacting_coord.offset
                             flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
                             flag = flag.replace('-', 'm')
+                            # DEBUGGING: TODO: Put accurate interaction energy here
+                            Vint += ' + nr_{allowed_species[0]}_{flag} * 0.01 \\\n'.format(**locals())
                             try:
                                 bystander_list.append(kmos.types.Bystander(
                                     coord=interacting_coord,
@@ -388,9 +395,19 @@ def catmap2kmos(cm_model,
                                 ).format(**locals()))
 
                         print('Process {process} Bystanders {bystander_list}'.format(**locals()))
+                        Vint += ' + 0\n'
 
                         process.bystander_list = bystander_list
                         reverse_process.bystander_list = bystander_list
+
+                        process.otf_rate = """
+                        Vint = {Vint}
+                        otf_rate = base_rate * exp(-beta*Vint*eV)
+                        """.format(**locals())
+                        reverse_process.otf_rate = """
+                        Vint = {Vint}
+                        otf_rate = base_rate * exp(-beta*Vint*eV)
+                        """.format(**locals())
 
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
