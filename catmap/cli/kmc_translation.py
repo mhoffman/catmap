@@ -282,11 +282,11 @@ def catmap2kmos(cm_model,
                     if not letter_step == 'A': # only generat sites set from initial step
                         continue
                     sites_vectors = []
-                    for i, (_ads, site_name) in enumerate(surface_intermediate):
+                    for i, (_ads, site_name) in enumerate(sorted(surface_intermediate)):
                         if i == 0:
-                            sites_vectors.append(pt.layer_list.generate_coord_set(size=[1, 1, 1], site_name=site_name))
+                            sites_vectors.append(sorted(pt.layer_list.generate_coord_set(size=[1, 1, 1], site_name=site_name)))
                         else:
-                            sites_vectors.append(pt.layer_list.generate_coord_set(size=[2, 2, 2], site_name=site_name))
+                            sites_vectors.append(sorted(pt.layer_list.generate_coord_set(size=[2, 2, 2], site_name=site_name)))
 
                 sites_list = itertools_product_no_repetition(*sites_vectors)
 
