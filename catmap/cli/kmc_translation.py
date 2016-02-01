@@ -191,7 +191,7 @@ def catmap2kmos(cm_model,
     pt.add_parameter(name='T', value=600.)
 
     # add processes
-    site_names = [x.name for x in pt.layer_list[0].sites]
+    site_names = sorted([x.name for x in pt.layer_list[0].sites])
     print('SITE NAMES {site_names}'.format(**locals()))
     for ri, elementary_rxn in enumerate(sorted(cm_model.elementary_rxns)):
         step = {}
