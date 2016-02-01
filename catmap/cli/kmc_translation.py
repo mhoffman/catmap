@@ -340,7 +340,7 @@ def catmap2kmos(cm_model,
 
                     if options.interaction > 0 :
 
-                        r = 1 * options.interaction + 1
+                        r = 1 * options.interaction + 4
                         # Collect the nearest-neighbor sites up to a certain cut-off
                         coordinate_set = pt.layer_list.generate_coord_set([r, r, 1])
                         # regenerate all action coordinates via generation string to set the
