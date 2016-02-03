@@ -72,9 +72,10 @@ def get_options(args=None, get_parser=False):
         + ') [options]',
         version=catmap.__version__)
 
-    parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8), help="The number of kmc steps before it starts sampling averages.")
-    parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8), help="The number of kmc steps used to calculate averages")
+    parser.add_option('-E', '--equilibration-steps', type='int', dest='equilibration_steps', default=int(1e8), help="The number of kmc steps before it starts sampling averages. If < 100, will be interpreted as 10**x.")
+    parser.add_option('-S', '--sampling-steps', type='int', dest='sampling_steps', default=int(1e8), help="The number of kmc steps used to calculate averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
+    parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
     parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
@@ -88,6 +89,20 @@ def get_options(args=None, get_parser=False):
         options, args = parser.parse_args(args.split())
     else:
         options, args = parser.parse_args()
+
+    # Assume that if we plot, we don't want to
+    # run at the same time
+    if options.plot:
+        options.dontrun = True
+
+    ## Interpret sampling steps and equilibration steps < 100 as 10^x
+
+    if options.sampling_steps < 100:
+        options.sampling_steps = int(10.**options.sampling_steps)
+
+    if options.equilibration_steps < 100 :
+        options.equilibration_steps = int(10.**options.equilibration_steps)
+
     if len(args) < 1:
         parser.error('Command expected')
     if get_parser:
@@ -169,8 +184,6 @@ def main(args=None):
         print(catmap.__version__)
     else:
         parser.error('Command "%s" not understood.' % args[0])
-
-
 
 
 def sh(banner):
