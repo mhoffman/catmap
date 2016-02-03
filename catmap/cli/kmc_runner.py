@@ -211,7 +211,8 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
 
 
 
-def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
+def run_model(seed, init_steps, sample_steps,
+              call_path=None, options=None):
     # a path we need to add to make sure kmc model import works
     if call_path is not None:
         import sys
@@ -246,6 +247,7 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
         with open(lock_filename, 'w'):
             pass
 
+    # write out the data file header
     if not os.path.exists(data_filename):
         with open(data_filename, 'w') as outfile:
             with kmos.run.KMC_Model(print_rates=False, banner=True) as kmos_model:
@@ -286,7 +288,6 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
 
             # DEBUGGING
             print("kmos coverages")
-            kmos_model.print_coverages()
             kmos_model.print_accum_rate_summation()
 
             print(kmos_model.rate_constants)
@@ -313,6 +314,56 @@ def run_model(seed, init_steps, sample_steps, call_path=None, options=None):
     # Restore old path
     if orig_path is not None:
         sys.path = orig_path
+
+def line_plot_data(x, y, filename,
+                      n_gp=101,
+                      m_gp=20,
+                      title='',
+                      xlabel='',
+                      ylabel='',
+                      zmin=None,
+                      zmax=None,
+                      xlabel_unit='',
+                      ylabel_unit='',
+                      ticks=None,
+                      seed=None,
+                      catmap_model=None,
+                      normalized=False,
+                      colorbar_label=None):
+    fig = plt.figure()
+    x = np.array(x)
+    y = np.array(y)
+
+
+    # with golden ration and the whole shebang ...
+    # settings size and font for revtex stylesheet
+    fig_width_pt = 2*246.0  # Get this from LaTeX using \showthe\columnwidth
+    #fig_width_pt *= 300./72 # convert to 300 dpi
+    inches_per_pt = 1.0/72.27               # Convert pt to inches
+    #inches_per_pt = 1.0/300               # Convert pt to inches
+    golden_mean = (np.sqrt(5)-1.0)/2.0         # Aesthetic ratio
+    fig_width = fig_width_pt*inches_per_pt  # width in inches
+    fig_height = fig_width*golden_mean       # height in inches
+    fig_size = [fig_width, 1.3 * fig_height]
+
+    font_size = 10
+    tick_font_size = 10
+    xlabel_pad = 8
+    ylabel_pad = 8
+    matplotlib.rcParams['ps.usedistiller'] = 'xpdf'
+    matplotlib.rcParams['font.family'] = 'serif'
+    matplotlib.rcParams['font.serif'] = 'Gill Sans'
+    matplotlib.rcParams['font.sans-serif'] = 'Gill Sans'
+    matplotlib.rcParams['text.usetex'] = 'true'
+    matplotlib.rcParams['lines.linewidth'] = 1.
+
+    plot = plt.plot(x, y)
+
+    plt.savefig(filename, bbox_inches='tight')
+    print("Plotted {filename}".format(**locals()))
+
+
+
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=101,
@@ -447,6 +498,11 @@ def main(options, call_path=None):
         seed = get_seed_from_path(call_path)
         data = np.recfromtxt('{seed}_kMC.log'.format(**locals()), names=True)
 
+        catmap_model = catmap.ReactionModel(
+            setup_file='{seed}.mkm'.format(**locals()))
+
+        catmap_model.run()
+
         for name in data.dtype.names:
             print(name)
             if name in ['descriptor1', 'descriptor0']:
@@ -474,39 +530,61 @@ def main(options, call_path=None):
                        .replace('empty', '*') \
                        .replace('_0', ''))
 
-            catmap_model = catmap.ReactionModel(
-                setup_file='{seed}.mkm'.format(**locals()))
+            diff = lambda x: x[1] - x[0]
 
-            catmap_model.run()
+            if diff(catmap_model.descriptor_ranges[0]) == 0 and diff(catmap_model.descriptor_ranges[1]) == 0:
+                raise UserWarning("Both descriptor ranges are 0, I don't know how to plot that!")
+            elif diff(catmap_model.descriptor_ranges[0]) == 0 or diff(catmap_model.descriptor_ranges[1]) == 0:
+                if diff(catmap_model.descriptor_ranges[0]) == 0  :
+                    iv = independent_variable = 1
 
-            zmin = None
-            zmax = None
-            ticks = None
-            xlabel = 'O reactivity [eV]'
-            ylabel = 'CO reactivity [eV]'
-            if name == 'CO_s_n_O_s_2_empty_s_n_empty_s_0':
+                else:
+                    iv = independent_variable = 0
+
+
+                x_data = data['descriptor{iv}'.format(**locals())]
+
+                sort_order = np.argsort(x_data)
+                x_data = x_data[sort_order]
+                y_data = plot_data[sort_order]
+
+                line_plot_data(x_data,
+                               y_data,
+                               'plot_kMC_{name}.pdf'.format(**locals()),
+                               catmap_model=catmap_model,
+                               normalized=normalized,
+                               title=title,
+                               )
+
+            else:
+                zmin = None
+                zmax = None
+                ticks = None
                 xlabel = 'O reactivity [eV]'
                 ylabel = 'CO reactivity [eV]'
-                zmin = -48
-                zmax = 2
-                ticks = range(zmin, zmax+1, 6)
+                if name == 'CO_s_n_O_s_2_empty_s_n_empty_s_0':
+                    xlabel = 'O reactivity [eV]'
+                    ylabel = 'CO reactivity [eV]'
+                    zmin = -48
+                    zmax = 2
+                    ticks = range(zmin, zmax+1, 6)
 
-            contour_plot_data(data['descriptor0'],
-                              data['descriptor1'],
-                              plot_data,
-                              'output_{name}.pdf'.format(**locals()),
-                              #seed=SEED,
-                              catmap_model=catmap_model,
-                              normalized=normalized,
-                              title=title,
-                              zmin=zmin,
-                              zmax=zmax,
-                              ticks=ticks,
-                              xlabel_unit='eV',
-                              ylabel_unit='eV',
-                              xlabel=xlabel,
-                              ylabel=ylabel,
-                              )
+                contour_plot_data(data['descriptor0'],
+                                  data['descriptor1'],
+                                  plot_data,
+                                  'plot_kMC_{name}.pdf'.format(**locals()),
+                                  #seed=SEED,
+                                  catmap_model=catmap_model,
+                                  normalized=normalized,
+                                  title=title,
+                                  zmin=zmin,
+                                  zmax=zmax,
+                                  ticks=ticks,
+                                  xlabel_unit='eV',
+                                  ylabel_unit='eV',
+                                  xlabel=xlabel,
+                                  ylabel=ylabel,
+                                  )
 
 
 def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
