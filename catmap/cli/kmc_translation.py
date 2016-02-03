@@ -3,7 +3,21 @@
 
 import itertools
 
-import itertools
+class MemoizeMutable:
+    """Memoize(fn) - an instance which acts like fn but memoizes its arguments
+       Will work on functions with mutable arguments (slower than Memoize)
+
+       from http://code.activestate.com/recipes/52201-memoizing-cacheing-function-return-values/
+    """
+    def __init__(self, fn):
+        self.fn = fn
+        self.memo = {}
+    def __call__(self, *args):
+        import cPickle
+        str = cPickle.dumps(args)
+        if not self.memo.has_key(str):
+            self.memo[str] = self.fn(*args)
+        return self.memo[str]
 
 def itertools_product_no_repetition(*vectors):
     n = len(vectors)
@@ -339,6 +353,29 @@ def catmap2kmos(cm_model,
                                    tof_count={forward_name_root: -1})
 
                     if options.interaction > 0 :
+                        import dbmi
+
+                        interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
+                        interaction_energy = dbmi.calculate_interaction_energy
+
+                        INTERACTIONS_FILENAME = 'interactions.dat'
+                        INTERACTIONS_SURFACE = 'Rh(111)'
+                        SITE_NAME = {'s_0': 'fcc'}
+                        PBC = (4, 4)
+                        INTERACTION = 'auto' # automatically decide is transition or coinage metal
+
+                        with open(INTERACTIONS_FILENAME) as infile:
+                            interaction_data = eval(infile.read())
+
+
+                        base_initial_adsorbates = [[INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
+                                                   for condition in conditions if condition.species != pt.species_list.default_species]
+
+                        base_final_adsorbates = [[INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
+                                                   for condition in actions if condition.species != pt.species_list.default_species]
+
+                        base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                        base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
 
                         r = 1 * options.interaction + 4
                         # Collect the nearest-neighbor sites up to a certain cut-off
@@ -377,13 +414,37 @@ def catmap2kmos(cm_model,
                         print(species_options)
 
                         bystander_list = []
-                        Vint = "0 \\\n"
+                        otf_rate = ""
+                        otf_rate += "delta_E_initial = 0.\n"
+                        otf_rate += "delta_E_final = 0.\n"
+
                         for allowed_species, interacting_coord in zip(species_options, interacting_coords):
                             _X, _Y, _ = interacting_coord.offset
                             flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
                             flag = flag.replace('-', 'm')
                             # DEBUGGING: TODO: Put accurate interaction energy here
-                            Vint += ' + nr_{allowed_species[0]}_{flag} * 0.01 \\\n'.format(**locals())
+                            for species in allowed_species:
+                                if species == pt.species_list.default_species:
+                                    continue
+                                #DEBUGGING
+                                # only print those terms that contribute and fill in correct energy parameters from dbmi
+                                initial_adsorbates = base_initial_adsorbates + [[INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
+                                final_adsorbates = base_final_adsorbates + [[INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
+
+                                print("----------------------------")
+
+                                print(initial_adsorbates)
+                                print(final_adsorbates)
+
+                                print("----------------------------")
+
+                                deltaE_initial = interaction_energy(interaction_data, initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_initial_energy
+                                deltaE_final = interaction_energy(interaction_data, final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_final_energy
+
+                                if deltaE_initial != 0.:
+                                    otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * {deltaE_initial} \n'.format(**locals())
+                                if deltaE_final != 0. :
+                                    otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * {deltaE_final} \n'.format(**locals())
                             try:
                                 bystander_list.append(kmos.types.Bystander(
                                     coord=interacting_coord,
@@ -396,18 +457,19 @@ def catmap2kmos(cm_model,
                                 ).format(**locals()))
 
                         print('Process {process} Bystanders {bystander_list}'.format(**locals()))
-                        Vint += ' + 0\n'
+
+                        otf_rate += 'delta_E = delta_E_final - delta_E_initial\n'
 
                         process.bystander_list = bystander_list
                         reverse_process.bystander_list = bystander_list
 
                         process.otf_rate = """
-                        Vint = {Vint}
-                        otf_rate = base_rate * exp(-beta*Vint*eV)
+                        {otf_rate}
+                        otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV)
                         """.format(**locals())
                         reverse_process.otf_rate = """
-                        Vint = {Vint}
-                        otf_rate = base_rate * exp(-beta*Vint*eV)
+                        {otf_rate}
+                        otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
                         """.format(**locals())
 
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
