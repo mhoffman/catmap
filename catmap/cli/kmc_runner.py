@@ -8,9 +8,9 @@ import copy
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+from matplotlib.mlab import griddata
 
 import numpy as np
-
 
 INIT_STEPS = int(1e6)
 SAMPLE_STEPS = INIT_STEPS
@@ -18,7 +18,6 @@ SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = 1e-3
 
-from matplotlib.mlab import griddata
 
 def get_seed_from_path(import_path):
     import sys
@@ -31,8 +30,6 @@ def get_seed_from_path(import_path):
     sys.path = orig_path
 
     return seed
-
-
 
 def setup_model_species(model, species):
     if not species in model.settings.species_tags:
@@ -209,8 +206,6 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
             setattr(kmos_model.parameters, 'diff_reverse_{i}'.format(
                 **locals()), reverse_rate_constant)
 
-
-
 def run_model(seed, init_steps, sample_steps,
               call_path=None, options=None):
     # a path we need to add to make sure kmc model import works
@@ -309,7 +304,7 @@ def run_model(seed, init_steps, sample_steps,
             break
 
     else:
-        print("Looks like all descriptor points are evaluated. Consider plotting the result with 'catmap run_kmc -n -p'")
+        print("Looks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
 
     # Restore old path
     if orig_path is not None:
@@ -361,9 +356,6 @@ def line_plot_data(x, y, filename,
 
     plt.savefig(filename, bbox_inches='tight')
     print("Plotted {filename}".format(**locals()))
-
-
-
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=101,
@@ -585,7 +577,6 @@ def main(options, call_path=None):
                                   xlabel=xlabel,
                                   ylabel=ylabel,
                                   )
-
 
 def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
     """The entire output from the CatMAP run is distributed
