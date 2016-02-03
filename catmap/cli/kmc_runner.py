@@ -4,6 +4,7 @@ import os
 import catmap
 import pickle
 import copy
+import time
 
 import matplotlib
 matplotlib.use('Agg')
@@ -402,7 +403,9 @@ def run_model(seed, init_steps, sample_steps,
                 outfile.write(
                     '# descriptor0 descriptor1 {data_header}'.format(**locals()))
 
-    for data_point in range(len(catmap_data['forward_rate_constant_map'])):
+    total_points = len(catmap_data['forward_rate_constant_map'])
+    for data_point in range(total_points):
+        t_0 = time.time()
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
 
         # multi IO mechanism: keep lockfile with one line descriptors of datapoint
@@ -418,8 +421,9 @@ def run_model(seed, init_steps, sample_steps,
             lockfile.flush()
 
         # generate the data
+        n_current_point = data_point + 1
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
-            print('running DATAPOINT {data_point} DESCRIPTOR {descriptor_string}'.format(**locals()))
+            print('\n\nrunning DATAPOINT {n_current_point}/{total_points} DESCRIPTOR {catmap_model.descriptor_names} = {descriptor_string}'.format(**locals()))
             set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=DIFFUSION_FACTOR)
             if options.initial_configuration == 'probabilistic':
                 setup_model_probabilistic(kmos_model, data_point)
@@ -434,15 +438,21 @@ def run_model(seed, init_steps, sample_steps,
 
 
             # DEBUGGING
-            print("kmos coverages")
-            kmos_model.print_accum_rate_summation()
+            f_init_steps = float(init_steps)
+            f_sample_steps = float(sample_steps)
+            print('INIT STEPS {f_init_steps:.2e} |  SAMPLE STEPS {f_sample_steps:.2e}'.format(**locals()))
 
-            print(kmos_model.rate_constants)
-            print('INIT STEPS {init_steps} |  SAMPLE STEPS {sample_steps}'.format(**locals()))
+            t_startup = time.time()
+            progress_bar = kmos.utils.progressbar.ProgressBar()
+            for i in range(100):
+                kmos_model.do_steps(init_steps/100)
+                progress_bar.render(i+1, 'Equilibration')
 
-            kmos_model.do_steps(init_steps)
+            t_equilibrate = time.time()
             atoms = kmos_model.get_atoms()
-            data = kmos_model.get_std_sampled_data(1, sample_steps, tof_method='integ')
+            data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
+
+            t_sample = time.time()
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
@@ -451,12 +461,20 @@ def run_model(seed, init_steps, sample_steps,
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
 
+        t_shutdown = time.time() - t_sample
+        t_runtime = t_sample - t_startup
+        n_total_steps = float(sample_steps + init_steps)
+        rate = n_total_steps / t_runtime
+        t_startup = t_startup - t_0
+
+        print("Timing: Did {n_total_steps:.2e} kmc steps in {t_runtime:.2e} s ({rate:.2e} steps/s), boot-up time {t_startup:.2e} s, shutdown {t_shutdown:.2e} s.".format(**locals()))
+
         if options.single_point:
             print("User requested to run only a single-descriptor point, stopping here.")
             break
 
     else:
-        print("Looks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
+        print("\nLooks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
 
     # Restore old path
     if orig_path is not None:
@@ -521,15 +539,8 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
 
         ## DEBUGGING
         import pprint
-        print("CATMAP Coverages")
+        print("Initial CatMAP Coverages")
         pprint.pprint(catmap_coverages)
-        #print("DEBUGGING")
-        print("SITE NAME")
-        print(catmap_sitename, model_sitename_index)
-        print("CHOICES")
-        pprint.pprint(choices)
-        print("CHOICES WEIGHTS")
-        pprint.pprint(choices_weights)
 
         # iterate over every lattice site and fill in proportionally weighted species
         for x in range(X):
@@ -540,6 +551,9 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
 
     model._set_configuration(config)
     model._adjust_database()
+
+    print("Initial kmos Coverages")
+    model.print_coverages()
 
 def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=None):
     """
