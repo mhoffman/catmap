@@ -410,7 +410,7 @@ def run_model(seed, init_steps, sample_steps,
             with kmos.run.KMC_Model(print_rates=False, banner=True) as kmos_model:
                 data_header = kmos_model.get_std_header()[1:]
                 outfile.write(
-                    '# descriptor0 descriptor1 {data_header}'.format(**locals()))
+                    'descriptor0 descriptor1 {data_header}'.format(**locals()))
 
     total_points = len(catmap_data['forward_rate_constant_map'])
     for data_point in range(total_points):
@@ -459,13 +459,14 @@ def run_model(seed, init_steps, sample_steps,
 
             t_equilibrate = time.time()
             atoms = kmos_model.get_atoms()
+            #print(kmos_model.rate_constants)
             data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
 
             t_sample = time.time()
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
-                    '{descriptors[0]} {descriptors[1]} {data}'.format(**locals()))
+                    '{descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals()))
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
