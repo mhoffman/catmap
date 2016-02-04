@@ -17,7 +17,7 @@ INIT_STEPS = int(1e6)
 SAMPLE_STEPS = INIT_STEPS
 SEED = None
 TEMPERATURE = 500
-DIFFUSION_FACTOR = 1e-3
+DIFFUSION_FACTOR = None
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=101,
