@@ -202,7 +202,7 @@ def catmap2kmos(cm_model,
     # catmap
     # We'll need a global temperature parameter
     # TODO : figure out how to adjust it
-    pt.add_parameter(name='T', value=600.)
+    pt.add_parameter(name='T', value=600., adjustable=True)
 
     # add processes
     site_names = sorted([x.name for x in pt.layer_list[0].sites])
@@ -472,8 +472,8 @@ def catmap2kmos(cm_model,
                         otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
                         """.format(**locals())
 
-            pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
-            pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
+            pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1., adjustable=True)
+            pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1., adjustable=True)
 
 
 
