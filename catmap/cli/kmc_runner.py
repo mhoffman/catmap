@@ -192,7 +192,15 @@ def line_plot_data(x, y, filename,
     matplotlib.rcParams['text.usetex'] = 'true'
     matplotlib.rcParams['lines.linewidth'] = 1.
 
-    plot = plt.plot(x, y)
+    if 'forward' in filename or 'reverse' in filename:
+        # we are plotting a rate constant, do it on a log-scale
+        plot = plt.semilogy(x, y)
+    else:
+        plot = plt.plot(x, y)
+
+    plt.xlabel(xlabel)
+    plt.title(title)
+
 
     plt.savefig(filename, bbox_inches='tight')
     print("Plotted {filename}".format(**locals()))
@@ -267,6 +275,7 @@ def main(options, call_path=None):
                                catmap_model=catmap_model,
                                normalized=normalized,
                                title=title,
+                               xlabel=catmap_model.descriptor_names[iv],
                                )
 
             else:
