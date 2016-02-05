@@ -200,6 +200,7 @@ def line_plot_data(x, y, filename,
 
     plt.xlabel(xlabel)
     plt.title(title)
+    plt.xlim((x.min(), x.max()))
 
 
     plt.savefig(filename, bbox_inches='tight')
@@ -217,7 +218,7 @@ def main(options, call_path=None):
 
     if options.plot:
         seed = get_seed_from_path(call_path)
-        data = np.recfromtxt('{seed}_kMC.log'.format(**locals()), names=True)
+        data = np.recfromtxt('kMC_run_{seed}.log'.format(**locals()), names=True)
 
         catmap_model = catmap.ReactionModel(
             setup_file='{seed}.mkm'.format(**locals()))
@@ -231,8 +232,8 @@ def main(options, call_path=None):
             if '_2_' in name: # we are plotting a rate
                 normalized = False
                 # Plot only the log base 10 of rates
-                plot_data = np.log10(data[name])
-                #plot_data = data[name]
+                #plot_data = np.log10(data[name])
+                plot_data = data[name]
                 if not np.isfinite(plot_data).any():
                     plot_data[:] = 0.
                 else:
@@ -244,12 +245,38 @@ def main(options, call_path=None):
                 plot_data = data[name]
                 normalized = True
 
-            title = r'${{\rm {}}}$'.format(name \
-                       .replace('_2_', r' \rightarrow ') \
-                       .replace('_n_', ' + ') \
-                       .replace('_default', '') \
-                       .replace('empty', '*') \
-                       .replace('_0', ''))
+            if 'forward' in name or 'reverse' in name:
+                import kmc_settings
+                for pname, (param, _) in kmc_settings.rate_constants.items():
+                    if name == param:
+                        pname = '_'.join(pname.split('_')[:-1])
+                        break
+                else:
+                    raise UserWarning("Process corresponding to {name} not found.".format(**locals()))
+
+                pname = r'${{\rm {}}}$'.format(pname \
+                           .replace('_2_', r' \rightarrow ') \
+                           .replace('_n_', ' + ') \
+                           .replace('_default', '') \
+                           .replace('empty', '*') \
+                           .replace('_0', ''))
+
+                if 'forward' in name:
+                    k = r'$\overrightarrow{k}$'
+                else:
+                    k = r'$\overleftarrow{k}$'
+
+                title = '{k}({pname})'.format(**locals())
+
+                print(pname, title)
+
+            else:
+                title = r'${{\rm {}}}$'.format(name \
+                           .replace('_2_', r' \rightarrow ') \
+                           .replace('_n_', ' + ') \
+                           .replace('_default', '') \
+                           .replace('empty', '*') \
+                           .replace('_0', ''))
 
             diff = lambda x: x[1] - x[0]
 
@@ -271,7 +298,7 @@ def main(options, call_path=None):
 
                 line_plot_data(x_data,
                                y_data,
-                               'plot_kMC_{name}.pdf'.format(**locals()),
+                               'kMC_plot_{name}.pdf'.format(**locals()),
                                catmap_model=catmap_model,
                                normalized=normalized,
                                title=title,
@@ -294,7 +321,7 @@ def main(options, call_path=None):
                 contour_plot_data(data['descriptor0'],
                                   data['descriptor1'],
                                   plot_data,
-                                  'plot_kMC_{name}.pdf'.format(**locals()),
+                                  'kMC_plot_{name}.pdf'.format(**locals()),
                                   #seed=SEED,
                                   catmap_model=catmap_model,
                                   normalized=normalized,
@@ -382,9 +409,9 @@ def run_model(seed, init_steps, sample_steps,
 
     import kmos.run
 
-    data_filename = '{seed}_kMC.log'.format(**locals())
-    lock_filename = '{seed}_kMC.lock'.format(**locals())
-    done_filename = '{seed}_kMC.done'.format(**locals())
+    data_filename = 'kMC_run_{seed}.log'.format(**locals())
+    lock_filename = 'kMC_run_{seed}.lock'.format(**locals())
+    done_filename = 'kMC_run_{seed}.done'.format(**locals())
 
     # Let's first run the CatMAP model again with the
     # forward/back-wards rate constants
@@ -460,7 +487,11 @@ def run_model(seed, init_steps, sample_steps,
             t_equilibrate = time.time()
             atoms = kmos_model.get_atoms()
             #print(kmos_model.rate_constants)
-            data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
+            try:
+                data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
+            except:
+                print("Warning: Encountered zero-division error in sampling. Make sure this is correct.")
+                continue
 
             t_sample = time.time()
 
@@ -584,8 +615,10 @@ def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=Non
     max_rate_constant = float('-inf')
 
     for i in range(len(catmap_data['forward_rate_constant_map'][data_point][1])):
-        forward_rate_constant = catmap_data['forward_rate_constant_map'][data_point][1][i]
-        reverse_rate_constant = catmap_data['reverse_rate_constant_map'][data_point][1][i]
+        forward_rate_constant = float(catmap_data['forward_rate_constant_map'][data_point][1][i])
+        reverse_rate_constant = float(catmap_data['reverse_rate_constant_map'][data_point][1][i])
+
+        print('{i} Forward {forward_rate_constant:.3e} Reverse {reverse_rate_constant:.3e}'.format(**locals()))
 
         if hasattr(kmos_model.parameters, 'forward_{i}'.format(**locals())):
             max_rate_constant = max(max_rate_constant, forward_rate_constant)
@@ -596,6 +629,7 @@ def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=Non
             setattr(kmos_model.parameters, 'reverse_{i}'.format(
                 **locals()), reverse_rate_constant)
 
+    # set the rate-constant of diffusion rate-constants
     for i in range(len(catmap_data['forward_rate_constant_map'][data_point][1])):
         forward_rate_constant = catmap_data['forward_rate_constant_map'][data_point][1][i] if diffusion_factor is None else max_rate_constant * diffusion_factor
         reverse_rate_constant = catmap_data['reverse_rate_constant_map'][data_point][1][i] if diffusion_factor is None else max_rate_constant * diffusion_factor
