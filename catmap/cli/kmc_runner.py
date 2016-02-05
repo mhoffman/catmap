@@ -270,8 +270,21 @@ def main(options, call_path=None):
 
                 print(pname, title)
 
-            else:
+            elif name == 'kmc_time':
+                title = '$t_{\\rm kMC}$'
+            elif name == 'kmc_steps':
+                title = '\#kMC steps'
+            elif name == 'T':
+                title = '$T$ [K]'
+            elif '_2_' in name :
                 title = r'${{\rm {}}}$'.format(name \
+                           .replace('_2_', r' \rightarrow ') \
+                           .replace('_n_', ' + ') \
+                           .replace('_default', '') \
+                           .replace('empty', '*') \
+                           .replace('_0', ''))
+            else:
+                title = r'$\Theta({{\rm {}}})$'.format(name \
                            .replace('_2_', r' \rightarrow ') \
                            .replace('_n_', ' + ') \
                            .replace('_default', '') \
