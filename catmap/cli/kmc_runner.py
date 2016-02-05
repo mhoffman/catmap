@@ -4,6 +4,7 @@ import os
 import catmap
 import pickle
 import copy
+import re
 import time
 
 import matplotlib
@@ -268,7 +269,6 @@ def main(options, call_path=None):
 
                 title = '{k}({pname})'.format(**locals())
 
-                print(pname, title)
 
             elif name == 'kmc_time':
                 title = '$t_{\\rm kMC}$'
@@ -289,8 +289,12 @@ def main(options, call_path=None):
                            .replace('_n_', ' + ') \
                            .replace('_default', '') \
                            .replace('empty', '*') \
-                           .replace('_0', ''))
+                           #.replace('_0', ''))
+                           )
+                title = re.sub('_([0-9]+)', r'\1', title)
+                title = re.sub('_([^_() ]+)', r'_{\1}', title)
 
+            print('{name} => {title}'.format(**locals()))
             diff = lambda x: x[1] - x[0]
 
             if diff(catmap_model.descriptor_ranges[0]) == 0 and diff(catmap_model.descriptor_ranges[1]) == 0:
