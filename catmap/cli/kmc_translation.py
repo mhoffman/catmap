@@ -207,7 +207,9 @@ def catmap2kmos(cm_model,
     # add processes
     site_names = sorted([x.name for x in pt.layer_list[0].sites])
     print('SITE NAMES {site_names}'.format(**locals()))
-    for ri, elementary_rxn in enumerate(sorted(cm_model.elementary_rxns)):
+    # WARNING: Even though usually a good idea do not sort this
+    # or the rate constants and processes will get garbled !!!
+    for ri, elementary_rxn in enumerate((cm_model.elementary_rxns)):
         step = {}
         surface_intermediates = {}
         # N.B: The general form of an elementary reaction in CatMAP is
@@ -350,7 +352,7 @@ def catmap2kmos(cm_model,
                                    actions=conditions,
                                    rate_constant='{diff_prefix}reverse_{ri}'.format(
                                        **locals()),
-                                   tof_count={forward_name_root: -1})
+                                   tof_count={forward_name_root: -1 if diff_prefix == '' else 1})
 
                     if options.interaction > 0 :
                         import dbmi
