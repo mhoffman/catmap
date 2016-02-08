@@ -1,9 +1,20 @@
 #!/usr/bin/env python
+#LSF -q suncat2
+#LSF -n 12
+#LSF -N
+#LSF -o kmc_run_%J_O.log
+#LSF -e kmc_run_%J_E.log
+#LSF -W 05:00
+
+#import multiprocessing
+#n_cpu = multiprocessing.cpu_count()
 
 import os
 import kmos.run
+import functools
 import catmap
 import pickle
+import ase.parallel
 
 import matplotlib
 matplotlib.use('Agg')
@@ -28,7 +39,7 @@ def set_rate_constants(kmos_model, catmap_data, data_point):
             **locals()), catmap_data['reverse_rate_constant_map'][data_point][1][i])
 
 
-def run_model(seed, init_steps, sample_steps):
+def run_model(seed, init_steps, sample_steps, catmap_data, data_point=None):
     data_filename = '{seed}_kMC_output.log'.format(**locals())
     lock_filename = '{seed}.lock'.format(**locals())
 
@@ -40,36 +51,36 @@ def run_model(seed, init_steps, sample_steps):
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
 
-    with open('{seed}.pkl'.format(**locals())) as infile:
-        catmap_data = pickle.load(infile)
-
     print(catmap_data.keys())
 
-    data_point = 1
-
     if not os.path.exists(lock_filename):
-        with open(lock_filename, 'w'):
+        with ase.parallel.paropen(lock_filename, 'w'):
             pass
 
     if not os.path.exists(data_filename):
-        with open(data_filename, 'w') as outfile:
+        with ase.parallel.paropen(data_filename, 'w') as outfile:
             with kmos.run.KMC_Model(print_rates=False, banner=True) as kmos_model:
                 data_header = kmos_model.get_std_header()[1:]
                 outfile.write(
                     '# descriptor0 descriptor1 {data_header}'.format(**locals()))
 
-    for data_point in range(len(catmap_data['forward_rate_constant_map'])):
+    if data_point is None:
+        data_points = range(len(catmap_data['forward_rate_constant_map']))
+    else:
+        data_points = [data_point]
+
+    for data_point in data_points:
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
 
         # multi IO mechanism: keep lockfile with one line descriptors of datapoint
         # if datapoint is already in there, skip to next datapoint
         descriptor_string = str(descriptors) + '\n'
 
-        with open(lock_filename, 'r') as lockfile:
+        with ase.parallel.paropen(lock_filename, 'r') as lockfile:
             if descriptor_string in lockfile.readlines():
                 print('Skipping {descriptor_string}'.format(**locals()))
                 continue
-        with open(lock_filename, 'a') as lockfile:
+        with ase.parallel.paropen(lock_filename, 'a') as lockfile:
             lockfile.write('{descriptor_string}'.format(**locals()))
 
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
@@ -81,9 +92,9 @@ def run_model(seed, init_steps, sample_steps):
 
             # run model (hopefully) to steady state and evaluate
             kmos_model.do_steps(init_steps)
-            data = kmos_model.get_std_sampled_data(1, sample_steps, verbose=True, tof_method='integ')
+            data = kmos_model.get_std_sampled_data(1, sample_steps, tof_method='integ')
 
-            with open(data_filename, 'a') as outfile:
+            with ase.parallel.paropen(data_filename, 'a') as outfile:
                 outfile.write(
                     '{descriptors[0]} {descriptors[1]} {data}'.format(**locals()))
 
@@ -128,6 +139,9 @@ def contour_plot_data(x, y, z, filename, n_gp=101, m_gp=20, title='', seed=None,
 if __name__ == '__main__':
     import optparse
 
+    #pool = multiprocessing.Pool(n_cpu)
+
+
 
     parser = optparse.OptionParser()
 
@@ -136,10 +150,27 @@ if __name__ == '__main__':
 
     options, args = parser.parse_args()
 
+    with ase.parallel.paropen('{SEED}.pkl'.format(**locals()), 'r') as infile:
+        CATMAP_DATA = pickle.load(infile)
+
+
     if not options.dontrun:
-        run_model(seed=SEED,
-             init_steps=INIT_STEPS,
-             sample_steps=SAMPLE_STEPS)
+        #run_model(seed=SEED,
+             #init_steps=INIT_STEPS,
+             #sample_steps=SAMPLE_STEPS)
+
+        def f(x, seed=SEED,
+                 init_steps=INIT_STEPS,
+                 sample_steps=SAMPLE_STEPS,
+                 catmap_data=catmap_data):
+            return run_model(seed=SEED,
+                             init_steps=INIT_STEPS,
+                             sample_steps=SAMPLE_STEPS,
+                             catmap_data=CATMAP_DATA,
+                             data_point=x)
+
+        map(f, range(400))
+
 
     if options.plot:
         data = np.recfromtxt('{seed}_kMC_output.log', names=True)
