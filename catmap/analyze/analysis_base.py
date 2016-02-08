@@ -1,6 +1,7 @@
 import catmap
 from catmap import ReactionModelWrapper
 from catmap.model import ReactionModel as RM
+from catmap import griddata
 from copy import copy
 from scipy.stats import norm
 from matplotlib.ticker import MaxNLocator
@@ -11,14 +12,18 @@ pickle= catmap.pickle
 np = catmap.np
 spline = catmap.spline
 mtransforms = catmap.mtransforms
-griddata = catmap.griddata
 
 basic_colors = [[0,0,0],[0,0,1],[0.1,1,0.1],[1,0,0],[0,1,1],[1,0.5,0],[1,0.9,0],
-        [1,0,1],[0,0.5,0.5],[0.5,0.25,0.15],[0.5,0.5,0.5]]
-        #black,blue,green,red,cyan,orange,yellow,magenta,turquoise,brown,gray
+                [1,0,1],[0,0.5,0.5],[0.5,0.25,0.15],[0.5,0.5,0.5]]
+               #black,blue,green,red,cyan,orange,yellow,magenta,turquoise,brown,gray
 
 def get_colors(n_colors):
-    "Get n colors"
+    """
+    Get n colors from basic_colors.
+
+    :param n_colors: Number of colors
+    :type n_colors: int
+    """
     if n_colors <len(basic_colors):
         return basic_colors[0:n_colors]
     else:
@@ -27,10 +32,33 @@ def get_colors(n_colors):
 
 def boltzmann_vector(energy_list,vector_list,temperature):
     """
-    Create a vector which is a boltzmann average of the vector_list weighted
+    Create a vector which is a Boltzmann average of the vector_list weighted
     with energies in the energy_list.
+
+    :param energy_list: List of energies
+    :type energy_list: list
+
+    :param vector_list: List of vectors
+    :type energy_list: list
+
+    :param temperature: Temperature
+    :type energy_list: float
     """
     def boltzmann_avg(es,ns,T):
+        """
+        Calculate the Boltzmann average
+        
+        :param es: energies
+        :type es: iterable
+
+        :param ns:
+        :type ns: iterable
+
+        :param T: temperature
+        :type T: float
+
+        ..todo: description for ns
+        """
         kB = 8.613e-5 #assuming energies are in eV and T is in K
         es = [e-min(es) for e in es] #normalize to minimum energy
         exp_sum = sum([np.exp(-e/(kB*T)) for e in es])
@@ -43,7 +71,47 @@ def boltzmann_vector(energy_list,vector_list,temperature):
 
 class MapPlot:
     """
-    .. todo:: __doc__
+    Class for generating plots using a dictionary of default plotting attributes.
+
+    The following attributes can be modified:
+
+    :param resolution_enhancement: Resolution enhancement for interpolated maps
+    :type resolution_enhancement: int
+
+    :param min: Minimum
+    :type min:
+
+    :param max: Maximum
+    :type max:
+
+    :param n_ticks: Number of ticks
+    :type n_ticks: int
+
+    :param descriptor_labels: Label of descriptors
+    :type descriptor_labels: list
+
+    :param default_descriptor_pt_args: Dictionary of descriptor point arguments
+    :type default_descriptor_pt_args: dict
+
+    :param default_descriptor_label_args: Dictionary of descriptor labels
+    :type default_descriptor_label_args: dict
+
+    :param descriptor_pt_args:
+    :type descriptor_pt_args: dict
+
+    :param include_descriptors: Include the descriptors
+    :type include_descriptors: bool
+
+    :param plot_size: Size of the plot
+    :type plot_size: int
+
+    :param aspect: 
+    :type aspect:
+
+    :param subplots_adjust_kwargs: Dictionary of keyword arguments for adjusting matplotlib subplots
+    :type subplots_adjust_kwargs: dict
+
+    .. todo:: Some missing descriptions
     """
     def __init__(self):
         defaults = dict(
@@ -77,6 +145,8 @@ class MapPlot:
 
     def update_descriptor_args(self):
         """
+        Update descriptor arguments
+
         .. todo:: __doc__
         """
         if getattr(self,'descriptor_dict',None):
@@ -91,6 +161,20 @@ class MapPlot:
 
     def plot_descriptor_pts(self, mapp, idx, ax, plot_in=None):
         """
+        Plot descriptor points
+
+        :param mapp:
+        :type mapp:
+
+        :param idx:
+        :type idx:
+
+        :param ax: axes object
+
+        :param plot_in:
+        :type plot_in:
+
+
         .. todo:: __doc__
         """
         if getattr(self,'descriptor_dict',None):
@@ -123,6 +207,19 @@ class MapPlot:
             overlay_map = None, alpha_range=None,
             **plot_args):
         """
+        :param mapp:
+
+        :param rxn_index: Index for the reaction
+        :type rxn_index: int
+
+        :param ax: axes object
+
+        :param overlay_map:
+        :type overlay_map: 
+
+        :type alpha_range:
+        :type alpha_range:
+
         .. todo:: __doc__
         """
         if not ax:
@@ -234,6 +331,7 @@ class MapPlot:
         if dim == 1:
             ax.set_xlim(descriptor_ranges[0])
             ax.set_xlabel(self.descriptor_labels[0])
+            ax.set_ylim([float(self.min), float(self.max)])
         elif dim == 2:
             if self.colorbar:
                 if log_scale: #take only integer tick labels
@@ -287,6 +385,8 @@ class MapPlot:
     def plot_separate(self,mapp,ax_list=None,indices=None,
             overlay_map = None,**plot_single_kwargs):
         """
+        Generate separate plots
+
         .. todo:: __doc__
         """
 
@@ -359,6 +459,20 @@ class MapPlot:
     def plot_weighted(self,mapp,ax=None,weighting='linear',
             second_map=None,indices=None,**plot_args):
         """
+        Generate weighted plot
+
+        :param mapp:
+        :type mapp:
+
+        :param ax: axes object
+
+        :param weighting: weighting function, 'linear' or 'dual'.
+        :type weighting: str
+
+        :param second_map:
+
+        :param indices:
+
         .. todo:: __doc__
         """
         if ax is None:
@@ -410,9 +524,9 @@ class MapPlot:
         x,y = zip(*pts)
         xi = np.linspace(min(x),max(x),eff_res)
         yi = np.linspace(min(y),max(y),eff_res)
-        ri = griddata(x,y,r,xi,yi,interp='linear')
-        gi = griddata(x,y,g,xi,yi,interp='linear')
-        bi = griddata(x,y,b,xi,yi,interp='linear')
+        ri = griddata(x,y,r,xi,yi)
+        gi = griddata(x,y,g,xi,yi)
+        bi = griddata(x,y,b,xi,yi)
         rgb_array = np.zeros((eff_res,eff_res,3))
         for i in range(0,eff_res):
             for j in range(0,eff_res):
@@ -422,7 +536,7 @@ class MapPlot:
         xminmax,yminmax = self.descriptor_ranges
         xmin,xmax = xminmax
         ymin,ymax = yminmax
-        ax.imshow(rgb_array,extent=[xmin,xmax,ymin,ymax],origin='lower',interpolation='nearest')
+        ax.imshow(rgb_array,extent=[xmin,xmax,ymin,ymax],origin='lower')
         self.plot_descriptor_pts(mapp, i, ax)
         if getattr(self,'n_xticks',None):
             ax.xaxis.set_major_locator(MaxNLocator(self.n_xticks))
@@ -437,7 +551,13 @@ class MapPlot:
 
     def save(self, fig, save=True, default_name='map_plot.pdf'):
         """
-        .. todo:: __doc__
+        :param fig: figure object
+
+        :param save: save the figure
+        :type save: bool
+
+        :param default_name: default name for the saved figure.
+        :type default: str
         """
         if save == True:
             if not hasattr(self,'output_file'):
@@ -449,7 +569,16 @@ class MapPlot:
 
 class MechanismPlot:
     """
-    .. todo:: __doc__
+    Class for generating potential energy diagrams
+
+    :param energies: list of energies
+    :type energies: list
+
+    :param barriers: list of barriers
+    :type barriers: list
+
+    :param labels: list of labels
+    :type labels: list
     """
     def __init__(self,energies,barriers=[],labels=[]):
         self.energies = energies
@@ -466,9 +595,21 @@ class MechanismPlot:
 
     def draw(self, ax=None):
         """
+        Draw the potential energy diagram
+
         .. todo:: __doc__
         """
         def attr_to_list(attrname,required_length=len(self.energies)):
+            """
+            Return list of attributes
+            :param attrname: Name of attributes
+            :type attrname: list
+
+            :param required_length: Required length for the list of attributes
+            :type required_length: int
+
+            .. todo:: __doc__
+            """
             try:
                 getattr(self,attrname)[0] #Ensure that it is a list
                 iter(getattr(self,attrname)) #Ensure that it is a list...
@@ -577,6 +718,8 @@ class MechanismPlot:
                                 for t in ax.xaxis.get_ticklabels()]
                     except:
                         pass
+            elif label_position in ['omit']:
+                pass
             else:
                 ypos = energy_lines[i][1][0]
                 if 'ha' not in args:# and 'textcoords' not in args:
@@ -587,7 +730,33 @@ class MechanismPlot:
 
 class ScalingPlot:
     """
-    .. todo:: __doc__
+    :param descriptor_names: list of descriptor names
+    :type descriptor_names: list
+
+    :param descriptor_dict: dictionary of descriptors
+    :type descriptor_dict: dict
+    
+    :param surface_names: list of the surface names
+    :type surface_names: list 
+    
+    :param parameter_dict: dictionary of parameters
+    :type parameter_dict: dict
+
+    :param scaling_function: function to project descriptors into energies.
+                             Should take descriptors as an argument and return a 
+                             dictionary of {adsorbate:energy} pairs.
+    :type scaling_function: function
+    
+    :param x_axis_function: function to project descriptors onto the x-axis.
+                            Should take descriptors as an argument and return a
+                            dictionary of {adsorbate:x_value} pairs.
+    :type x_axis_function: function
+
+    :param scaling_function_kwargs: keyword arguments for scaling_function.
+    :type scaling_function_kwargs: dict
+
+    :param x_axis_function_kwargs: keyword arguments for x_axis_function.
+    :type x_axis_function_kwargs: dict
     """
     def __init__(self,descriptor_names,descriptor_dict,surface_names,
             parameter_dict,scaling_function,x_axis_function,
@@ -598,14 +767,10 @@ class ScalingPlot:
         self.descriptor_dict = descriptor_dict
         self.parameter_dict = parameter_dict
         self.scaling_function = scaling_function
-        #function to project descriptors into energies.
-        #Should take descriptors as an argument and return a
-        #dictionary of {adsorbate:energy} pairs.
+
         self.scaling_function_kwargs = scaling_function_kwargs
         self.x_axis_function = x_axis_function
-        #function to project descriptors onto the x-axis.
-        #Should take descriptors as an argument and return a
-        #dictionary of {adsorbate:x_value} pairs.
+
         self.x_axis_function_kwargs = x_axis_function_kwargs
         self.axis_label_size = 16
         self.surface_label_size = 16
@@ -625,6 +790,15 @@ class ScalingPlot:
 
     def plot(self, ax_list=None, plot_size=4.0, save=None):
         """
+        :param ax_list: list of axes objects
+        :type ax_list: [ax]
+
+        :param plot_size: size of the plot
+        :type plot_size: float
+
+        :param save: whether or not to save the plot
+        :type save: bool
+
         .. todo:: __doc__
         """
         all_ads = self.adsorbate_names + self.transition_state_names
@@ -655,7 +829,7 @@ class ScalingPlot:
         if not ax_list:
             spx = round(np.sqrt(len(ads_names)+extra))
             spy = round(np.sqrt(len(ads_names)+extra))
-            if spy*spx < len(ads_names):
+            if spy*spx < len(ads_names)+extra:
                 spy+= 1
             fig = plt.figure(figsize=(spy*plot_size,spx*plot_size))
             ax_list = [fig.add_subplot(spx,spy,i+1)

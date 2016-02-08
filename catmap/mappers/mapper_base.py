@@ -1,3 +1,31 @@
+"""Class for `mapping' equilibrium coverages and rates through
+descriptor space. This class acts as a base class to be inherited
+by other mapper classes, but is not functional on its own.
+
+get_rxn_parameter_map(descriptor_ranges,resolution): Uses a
+    scaler object to determine the reaction parameters as a function of
+    descriptor space. May be useful for debugging or providing
+    intuition about rate determining steps. Should return a list of
+    the form
+[[descriptor_1,descriptor_2,...],[rxn_parameter1, rxn_parameter2, ...]]
+
+save_map(map,map_file): creates a pickle of the "map" list and dumps it
+    to the map_file
+
+load_map(map_file):  loads a "map" list by loading a pickle from
+    the map_file
+
+A functional derived mapper class must also contain the methods:
+
+get_coverage_map(descriptor_ranges,resolution): a function which
+    returns a list of the form
+    [[descriptor_1,descriptor_2,...], [cvg_ads1,cvg_ads2,...]]
+
+get_rates_map(descriptor_ranges,resolution): a function which returns
+    a list of the form
+    [[descriptor_1,descriptor_2,...], [rate_rxn1,rate_rxn2,...]]
+
+"""
 from matplotlib.mlab import griddata
 import numpy as np
 import mpmath as mp
@@ -16,34 +44,6 @@ class MapperBase(ReactionModelWrapper):
     # as the default value and then instantiate ReactionModel in the
     # function body of __init__ .
     def __init__(self,reaction_model=ReactionModel()):
-        """Class for `mapping' equilibrium coverages and rates through
-        descriptor space. This class acts as a base class to be inherited
-        by other mapper classes, but is not functional on its own.
-
-        get_rxn_parameter_map(descriptor_ranges,resolution): Uses a
-            scaler object to determine the reaction parameters as a function of
-            descriptor space. May be useful for debugging or providing
-            intuition about rate determining steps. Should return a list of
-            the form
-        [[descriptor_1,descriptor_2,...],[rxn_parameter1, rxn_parameter2, ...]]
-
-        save_map(map,map_file): creates a pickle of the "map" list and dumps it
-            to the map_file
-
-        load_map(map_file):  loads a "map" list by loading a pickle from
-            the map_file
-
-        A functional derived mapper class must also contain the methods:
-
-        get_coverage_map(descriptor_ranges,resolution): a function which
-            returns a list of the form
-            [[descriptor_1,descriptor_2,...], [cvg_ads1,cvg_ads2,...]]
-
-        get_rates_map(descriptor_ranges,resolution): a function which returns
-            a list of the form
-            [[descriptor_1,descriptor_2,...], [rate_rxn1,rate_rxn2,...]]
-
-        """
         self._rxm = reaction_model
         self._solver_output = ['coverage','rate', #outputs requiring solver
                 'turnover_frequency','selectivity','rate_control',
@@ -102,22 +102,7 @@ class MapperBase(ReactionModelWrapper):
                 ismapped = True
 
         if ismapped == False:
-            #HACK - the following code is copy-pasted from min_resid_mapper.
-            #need to abstract it out.
-            resolution = np.array(resolution)
-            if resolution.size == 1:
-                resx = resy = float(resolution)
-            elif resolution.size == 2:
-                resx = resolution[0]
-                resy = resolution[1]
-            else:
-                raise ValueError('Resolution is not the correct shape')
-
-            d1min,d1max = descriptor_ranges[0]
-            d2min,d2max = descriptor_ranges[1]
-            d1Vals = np.linspace(d1min,d1max,resx)
-            d2Vals = np.linspace(d2min,d2max,resy)
-            #ENDHACK
+            d1Vals, d2Vals = self.process_resolution()
             for d1V in d1Vals:
                 for d2V in d2Vals:
                     self._descriptors = [d1V,d2V]
@@ -136,3 +121,24 @@ class MapperBase(ReactionModelWrapper):
             if getattr(self,out+'_map_file'):
                 outfile = getattr(self,out+'_map_file')
                 self.save_map(mapp,outfile)
+    
+    def process_resolution(self, descriptor_ranges = None, resolution = None):
+        if not descriptor_ranges:
+            descriptor_ranges = self.descriptor_ranges
+        if resolution is None:
+            resolution = self.resolution
+        resolution = np.array(resolution)
+        if resolution.size == 1:
+            resx = resy = float(resolution)
+        elif resolution.size ==2:
+            resx = resolution[0]
+            resy = resolution[1]
+        else:
+            raise ValueError('Resolution is not the correct shape')
+
+        d1min, d1max = descriptor_ranges[0]
+        d2min, d2max = descriptor_ranges[1]
+        d1Vals = np.linspace(d1min, d1max, resx)
+        d2Vals = np.linspace(d2min, d2max, resy)
+        return d1Vals, d2Vals
+

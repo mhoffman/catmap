@@ -1,0 +1,103 @@
+# COPYRIGHT of this file goes to Xinyan Liu
+rxn_expressions = [
+
+               'NO_g + *_t -> NO*_t', #1
+               'NO*_t + *_t <-> N-O*_t + *_t -> N*_t + O*_t', #2
+               #'NO*_t + *_t -> N*_t + O*_t', #2
+               '2O*_t <-> O-O*_t + *_t -> O2_g + 2*_t', #3
+               '2N*_t <-> N-N*_t + *_t -> N2_g + 2*_t', #4
+               #'2O*_t -> O2_g + 2*_t', #3
+               #'2N*_t -> N2_g + 2*_t', #4	       
+               'N*_t + *_t -> *_t + N*_t',
+                   ]
+
+surface_names = ['Pd', 'Re', 'Rh', 'Ru']
+
+descriptor_names = ['N_t','O_t']
+
+scaling_constraint_dict = {
+
+                    #for each adsorbate with a constraint, the key
+                    #should be the adsorbate name and the value
+                    #should be a list of len(descriptors)+1
+                    #which defines the constraint on each descriptor
+                    #coefficient and the intercept
+
+                    #Constrain to scale with N (positive slope)
+                    'N_t': ['+', 0, None],
+			 
+                    #Constrain to scale with O (positive slope)
+                    'O_t': [0, '+', None],
+
+                    #Several possibilities exist for scaling transition-states
+
+                    #fit to combination of other states
+                    'N-O_t': 'final_state',
+
+                    #specify explicitly
+                    'N-O_t': 'TS(N_t + O_t):[0.5974,1.2011]',
+
+                    #back to the "standard" way of fitting to initial/final state
+                    'O-O_t': 'initial_state',
+		    'N-N_t': 'initial_state',
+
+                    }
+
+species_definitions = {}
+species_definitions['NO_g'] = {'pressure':0.001}
+species_definitions['O2_g'] = {'pressure':0.1}
+species_definitions['N2_g'] = {'pressure':0.7}
+
+species_definitions['t'] = {'total':1.0, 'site_names':['t']}
+
+temperature = 700
+
+data_file = "./data.pkl"
+
+input_file = 'energies.txt'
+
+decimal_precision = 100
+
+adsorbate_thermo_mode = 'frozen_adsorbate'
+
+estimate_frequencies = False
+
+gas_thermo_mode = 'shomate_gas'
+
+tolerance = 1e-25
+
+max_tolerance_iterations = 100
+
+max_bisections = 3
+
+rxn_mechanisms = {'NO_dissociation':[1,2,3,4]}
+
+#descriptor_ranges = [[-8,8.0],[-8.0,8.0]]
+descriptor_ranges = [[-3.5,1.5],[-3.5,1.5]]
+
+resolution = 10
+#
+### kMC model specific model parameters
+#
+
+surface = 'Rh'
+import numpy as np
+import ase.lattice.surface
+import kmos.utils
+
+slab = ase.lattice.surface.fcc111(surface, [1, 1, 4], vacuum=10)
+max_z = max(slab.get_scaled_positions()[:, 2]) + 1.5
+
+unit_cell = slab.cell
+background_representation = kmos.utils.get_ase_constructor(slab)
+
+site_positions = {
+    'fcc': [[1./3, 1./3, max_z ]],
+    'hcp': [[2./3, 2./3, max_z ]],
+    'top': [[0., 0., max_z + .5]],
+    't': [
+    #[1./3., 1./3, max_z + .5],
+    #[2./3., 2./3, max_z + .5],
+    [0., 0., max_z + .5],
+    ],
+}

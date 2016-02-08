@@ -1,7 +1,10 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 
 import os.path
 import copy
+import pprint
+import itertools
 
 from kmos.types import Project, Site, Condition, Action
 import kmos.utils
@@ -34,7 +37,8 @@ def catmap2kmos(cm_model,
                 site_positions=None,
                 diffusion_barriers=None,
                 species_representations=None,
-                surface_representation=None,
+                surface_representation='None',
+                adsorbate_interaction=2,
                 ):
 
     EMPTY_SPECIES = 'empty'
@@ -54,13 +58,20 @@ def catmap2kmos(cm_model,
 
     # add unit cell
     layer = pt.add_layer(name='default')
-    pt.layer_list.cell = cm_model.unit_cell
-    cell = cm_model.unit_cell.tolist()
+
+    if unit_cell is None:
+        unit_cell = np.diag([1., 1., 1.]).tolist()
 
     # Need dummy atom (here 'H') so that ase.atoms.Atoms doesn't puke further
     # down
-    pt.layer_list.representation = '[Atoms("H", cell={cell})]'.format(
-        **locals())
+    if hasattr(cm_model, 'background_representation') and hasattr(cm_model, 'background_representation'):
+        print("Warning: unit cell in background_representation will override the given background representation")
+    background_representation = getattr(cm_model,
+                                        'background_representation',
+                                        'Atoms("H", [[0., 0., -0.1]], cell={unit_cell})'.format(**locals())
+    )
+    pt.layer_list.representation = '[{background_representation}]'.format(**locals())
+
 
     # add site positions
     for site_name in cm_model.site_names:
@@ -88,11 +99,34 @@ def catmap2kmos(cm_model,
         if '_' in species_definition:
             species_name, site = species_definition.split('_')
             species_name = species_name.replace('-', '_')
+
+            species_representation = getattr(cm_model, 'species_representation', {}).get(species_name, "Atoms()")
             if not species_name == '*' \
                     and not species_name == 's' \
                     and not '_' in species_name \
                     and not species_name in [x.name for x in pt.species_list]:
-                pt.add_species(name=species_name, color=color)
+                pt.add_species(name=species_name,
+                               representation=species_representation,
+                               color=color,
+                              )
+
+    # figure out which adsorbates can be one which site
+    # extract all existing reaction terms from catmap model
+    # this will be needed in case we later want to auto-generate adsorbate-adsorbate interaction
+    reaction_terms = list(cm_model.elementary_rxns)
+    # flatten the reaction terms list (twice)
+    reaction_terms = [item for sublist in reaction_terms for item in sublist]
+    reaction_terms = [item for sublist in reaction_terms for item in sublist]
+    # build up site -> species mapping
+    site_species = {}
+    for term in reaction_terms :
+        if not '-' in term: # skip terms with a transition state
+            if '_' in term:
+                species, site = term.split('_')
+            else:
+                species, site = 'empty', term
+            if not species in site_species.get(site, []):
+                site_species.setdefault(site, []).append(species)
 
     # add parameters
     # TODO : let's avoid this for now and just accept rate constants from
@@ -102,11 +136,6 @@ def catmap2kmos(cm_model,
     site_names = [x.name for x in pt.layer_list[0].sites]
     print('SITE NAMES {site_names}'.format(**locals()))
     for ri, elementary_rxn in enumerate(cm_model.elementary_rxns):
-        # set a parameter for each rate constant
-        # which we can later directly from CatMAP
-        pt.add_parameter(name='forward_{ri}'.format(**locals()), value=1.)
-        pt.add_parameter(name='reverse_{ri}'.format(**locals()), value=1.)
-
         step = {}
         surface_intermediates = {}
         # N.B: The general form of an elementary reaction in CatMAP is
@@ -213,7 +242,10 @@ def catmap2kmos(cm_model,
                     dist_tol = 1.e-3
 
                     # geometrically complex case: two-sites
+
+                    two_site_process = False
                     if len(surface_intermediates[X]) == 2:
+                        two_site_process = True
                         other_condition_species, other_condition_site = surface_intermediates[
                             X][1]
                         other_action_species, other_action_site = surface_intermediates[
@@ -244,6 +276,19 @@ def catmap2kmos(cm_model,
                         # produce reaction steps with all auxiliary sites with-in dist_tol of that
                         # minimum distance
                         aux_counter = 0
+
+                        # if the process is a diffusion process
+                        # mark it as such in the rate constant
+                        # so that we can later fine tune its rate-constant
+                        # easier
+                        if other_condition_species == EMPTY_SPECIES \
+                           and action_species == EMPTY_SPECIES \
+                           and condition_species == other_action_species:
+                            diff_prefix = 'diff_'
+                        else:
+                            diff_prefix = ''
+
+
                         for auxiliary_coord in auxiliary_coords:
                             aux_dist = np.linalg.norm(
                                 auxiliary_coord.pos - condition_coord.pos)
@@ -259,28 +304,29 @@ def catmap2kmos(cm_model,
                                 process_name = '{forward_name_root}_{aux_counter}'.format(
                                     **locals())
 
-                                pt.add_process(name=process_name,
+                                process = pt.add_process(name=process_name,
                                                conditions=aux_conditions,
                                                actions=aux_actions,
-                                               rate_constant='forward_{ri}'.format(
+                                               rate_constant='{diff_prefix}forward_{ri}'.format(
                                                    **locals()),
                                                tof_count={forward_name_root: 1})
 
                                 if reversible:  # swap conditions and actions
                                     process_name = '{reverse_name_root}_{aux_counter}'.format(
                                         **locals())
-                                    pt.add_process(name=process_name,
+                                    reverse_process = pt.add_process(name=process_name,
                                                    conditions=aux_actions,
                                                    actions=aux_conditions,
-                                                   rate_constant='reverse_{ri}'.format(
+                                                   rate_constant='{diff_prefix}reverse_{ri}'.format(
                                                        **locals()),
                                                    tof_count={forward_name_root: -1})
 
                                 aux_counter += 1
 
                     else:  # trivial case: single-site processes
+                        diff_prefix = ''
                         process_name = forward_name_root
-                        pt.add_process(name=process_name,
+                        process = pt.add_process(name=process_name,
                                        conditions=conditions,
                                        actions=actions,
                                        tof_count={forward_name_root: 1},
@@ -289,11 +335,112 @@ def catmap2kmos(cm_model,
                         if reversible:
                             # swap conditions and actions
                             process_name = reverse_name_root
-                            pt.add_process(name=process_name,
+                            reverse_process = pt.add_process(name=process_name,
                                            conditions=actions,
                                            actions=conditions,
                                            tof_count={forward_name_root: -1},
                                            rate_constant='reverse_{ri}'.format(**locals()))
+                    if adsorbate_interaction > 0 :
+                        # Collect the nearest-neighbor sites up to a certain cut-off
+                        coordinate_set = pt.layer_list.generate_coord_set([5, 5, 1])
+                        # regenerate all action coordinates via generation string to set the
+                        # absolute position of the coord correctly
+
+                        action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
+                        min_dists = [min(map(lambda x: np.linalg.norm(x.pos-c.pos), action_coords)) for c in coordinate_set]
+
+                        coordinate_set = sorted(zip(min_dists, coordinate_set))
+                        print(min_dists)
+                        print(coordinate_set)
+                        curr_dist = 0.
+                        neighbor_shell = 0
+                        n_neighbors = {}
+                        for dist, coord in coordinate_set:
+                            if abs(curr_dist - dist) > dist_tol:
+                                curr_dist = dist
+                                neighbor_shell += 1
+                            n_neighbors.setdefault(neighbor_shell, []).append(coord)
+                        pprint.pprint(n_neighbors)
+
+                        interacting_coords = []
+                        for i in range(adsorbate_interaction):
+                            interacting_coords.extend(n_neighbors[i+1])
+
+                        pprint.pprint(interacting_coords)
+
+                        species_options = []
+                        for interacting_coord in interacting_coords:
+                            site_name = coord.name.split('_')[0]
+                            species_options.append(site_species[site_name])
+                        print(species_options)
+
+                        #bystanders = [kmos.types.Bystander(coord=coord,
+                                                           #allowed_species=allowed_species,
+                                                           #flag='
+
+                        bystander_list = []
+                        for allowed_species, interacting_coord in zip(species_options, interacting_coords):
+                            _X, _Y, _ = interacting_coord.offset
+                            flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
+                            flag = flag.replace('-', 'm')
+                            bystander_list.append(kmos.types.Bystander(
+                                coord=interacting_coord,
+                                allowed_species=allowed_species,
+                                flag=flag
+                            ))
+
+                        process.bystander_list = bystander_list
+                        reverse_process.bystander_list = bystander_list
+
+                        #species_sets = list(itertools.product(*species_options))
+
+                        #for i, species_set in enumerate(species_sets):
+                            #print(i, species_set)
+                            #condition_list = process.condition_list
+                            #action_list = process.action_list
+                            #rate_constant = process.rate_constant
+                            #name = process.name
+                            #tof_count = process.tof_count
+
+                            #reverse_name = reverse_process.name
+                            #reverse_rate_constant = reverse_process.rate_constant
+                            #reverse_tof_count = reverse_process.tof_count
+
+                            #aux_conditions = [
+                                #kmos.types.ConditionAction(
+                                    #coord=coord,
+                                    ##species=species,
+                                #) for (species, coord) in zip(species_set, interacting_coords)
+                            #]
+                            #pt.add_process(name='{name}_{i}'.format(**locals()),
+                                           #action_list=action_list,
+                                           ##condition_list=condition_list + aux_conditions,
+                                           ##rate_constant='{rate_constant}_{i}'.format(**locals()),
+                                           ##tof_count=tof_count)
+
+                            #pt.add_process(name='{name}_{i}'.format(**locals()),
+                                           #action_list=condition_list,
+                                           ##condition_list=action_list + aux_conditions,
+                                           ##rate_constant='{reverse_rate_constant}_{i}'.format(**locals()),
+                                           ##tof_count=reverse_tof_count,)
+
+                        #pt.process_list.remove(process)
+                        #pt.process_list.remove(reverse_process)
+
+
+
+                        # Add adsorbate interaction processes with all necessary combinations
+                        # or nearest neighbor sites
+
+                        # Add sensible markers to adsorption rates to calculate
+                        # adsorbate interactions from DBMI model
+
+
+                pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.)
+                pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.)
+
+
+
 
     return pt
 
@@ -301,6 +448,8 @@ if __name__ == '__main__':
     import optparse
 
     parser = optparse.OptionParser('Usage: %script *.mkm')
+
+    parser.add_option('-v', '--validate', dest='validate', action='store_true', default=False)
 
     options, args = parser.parse_args()
 
@@ -319,4 +468,5 @@ if __name__ == '__main__':
     # print(kmos_model)
     kmos_model.print_statistics()
     for suffix in ['xml']:
+        #kmos_model.save('translated_{seed}.{suffix}'.format(**locals()), validate=options.validate)
         kmos_model.save('translated_{seed}.{suffix}'.format(**locals()))

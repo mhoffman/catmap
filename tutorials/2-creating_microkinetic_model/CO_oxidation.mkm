@@ -4,7 +4,10 @@
 
 rxn_expressions = [
 
+#               '*_s + CO_g -> CO*', 
+#               '2*_s + O2_g <-> O-O* + *_s -> 2O*',
                '*_s + CO_g -> CO*', 
+#               '2*_s + O2_g -> 2O*',
                '2*_s + O2_g <-> O-O* + *_s -> 2O*',
                'CO* +  O* <-> O-CO* + * -> CO2_g + 2*',
                'CO* +  * <-> * + CO* ',
@@ -89,3 +92,11 @@ site_positions = {'s': [[0, .0, 0]], }
 unit_cell = np.array([[  2.68700577,   0.        ,   0.        ],
                       [  1.34350288,   2.32701526,   0.        ],
                       [  0.        ,   0.        ,  26.58179307]])
+
+species_representation = {
+    'O': "Atoms('O')",
+    'CO': "Atoms('CO', [[0., 0., 0.], [0., 0., 1.7]])",
+    'CO2': "Atoms('OCO', [[1., 1., 0.], [0., 0., 0.,], [-1., 1., 0]])",
+}
+
+background_representation = "Atoms('Rh')"
