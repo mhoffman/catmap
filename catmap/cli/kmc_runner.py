@@ -477,7 +477,7 @@ def run_model(seed, init_steps, sample_steps,
         n_current_point = data_point + 1
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             print('\n\nrunning DATAPOINT {n_current_point}/{total_points} DESCRIPTOR {catmap_model.descriptor_names} = {descriptor_string}'.format(**locals()))
-            set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=DIFFUSION_FACTOR)
+            set_rate_constants(kmos_model, catmap_data, data_point, options=options)
             if options.initial_configuration == 'probabilistic':
                 setup_model_probabilistic(kmos_model, data_point)
             elif options.initial_configuration.startswith('species:'):
@@ -613,7 +613,7 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
     print("Initial kmos Coverages")
     model.print_coverages()
 
-def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=None):
+def set_rate_constants(kmos_model, catmap_data, data_point, options=None):
     """
         A rate constants of a kmos model from a corresponding CatMAP model for
         a given data point (i.e. a tuple of of reactivity descriptors).
@@ -623,7 +623,7 @@ def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=Non
         is left at its default value (None) is it simply faithfully set to the corresponding
         CatMAP value which will usually be the normal prefactor (kT/h). If instead it is
         set to a finite float it will be set to diffusion_factor * max_rate_constant
-        where max_rate_constant is the fastet rate constant of all non-diffusion
+        where max_rate_constant is the fastest rate constant of all non-diffusion
         reaction steps.
 
     """
@@ -648,8 +648,8 @@ def set_rate_constants(kmos_model, catmap_data, data_point, diffusion_factor=Non
 
     # set the rate-constant of diffusion rate-constants
     for i in range(len(catmap_data['forward_rate_constant_map'][data_point][1])):
-        forward_rate_constant = catmap_data['forward_rate_constant_map'][data_point][1][i] if diffusion_factor is None else max_rate_constant * diffusion_factor
-        reverse_rate_constant = catmap_data['reverse_rate_constant_map'][data_point][1][i] if diffusion_factor is None else max_rate_constant * diffusion_factor
+        forward_rate_constant = catmap_data['forward_rate_constant_map'][data_point][1][i] if options.diffusion_factor is None else max_rate_constant * options.diffusion_factor
+        reverse_rate_constant = catmap_data['reverse_rate_constant_map'][data_point][1][i] if options.diffusion_factor is None else max_rate_constant * options.diffusion_factor
 
         if hasattr(kmos_model.parameters, 'diff_forward_{i}'.format(**locals())):
             setattr(kmos_model.parameters, 'diff_forward_{i}'.format(
