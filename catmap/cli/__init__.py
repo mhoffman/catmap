@@ -77,6 +77,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
     parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
+    parser.add_option('-d', '--diffusion-factor', dest='diffusion_factor', default=None, help="Parameter to tune the rate-constant of diffusion processes. The rationale is that for transition metal surfaces diffusion barriers are typically quite low, leading to fast surface diffusion processes. If no factor is specified the diffusion barrier is derived from whatever scaling relation is specified. If a diffusion factor X is specified all diffusion rate constants are set to k_max*X where k_max is the faster rate-constant among all non-diffusion elementary processes. If X < 10, the factor is interpreted as 10**X")
     parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
@@ -106,6 +107,9 @@ def get_options(args=None, get_parser=False):
         options.equilibration_steps = int(10.**options.equilibration_steps)
     else:
         options.equilibration_steps = int(options.equilibration_steps)
+
+    if options.diffusion_factor is not None and options.diffusion_factor < 10:
+        options.diffusion_factor = 10.**float(options.diffusion_factor)
 
     if len(args) < 1:
         parser.error('Command expected')
