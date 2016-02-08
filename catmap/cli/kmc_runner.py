@@ -63,7 +63,10 @@ def contour_plot_data(x, y, z, filename,
     matplotlib.rcParams['font.family'] = 'serif'
     matplotlib.rcParams['font.serif'] = 'Gill Sans'
     matplotlib.rcParams['font.sans-serif'] = 'Gill Sans'
-    matplotlib.rcParams['text.usetex'] = 'true'
+    if os.system('which latex'):
+        matplotlib.rcParams['text.usetex'] = 'false'
+    else:
+        matplotlib.rcParams['text.usetex'] = 'true'
 
     matplotlib.rcParams['lines.linewidth'] = 1.
 
@@ -190,7 +193,10 @@ def line_plot_data(x, y, filename,
     matplotlib.rcParams['font.family'] = 'serif'
     matplotlib.rcParams['font.serif'] = 'Gill Sans'
     matplotlib.rcParams['font.sans-serif'] = 'Gill Sans'
-    matplotlib.rcParams['text.usetex'] = 'true'
+    if os.system('which latex'):
+        matplotlib.rcParams['text.usetex'] = 'false'
+    else:
+        matplotlib.rcParams['text.usetex'] = 'true'
     matplotlib.rcParams['lines.linewidth'] = 1.
 
     if 'forward' in filename or 'reverse' in filename:
@@ -425,6 +431,8 @@ def run_model(seed, init_steps, sample_steps,
     seed = seed or get_seed_from_path(call_path)
 
     import kmos.run
+    import kmos.utils
+    import kmos.utils.progressbar
 
     data_filename = 'kMC_run_{seed}.log'.format(**locals())
     lock_filename = 'kMC_run_{seed}.lock'.format(**locals())
