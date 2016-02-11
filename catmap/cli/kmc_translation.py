@@ -59,7 +59,10 @@ def translate_model_file(mkm_filename, options):
                  model_name=seed,
                  )
     kmos_model.print_statistics()
-    kmos_model.save('{seed}_kmc.ini'.format(**locals()))
+    if options.interaction == 0:
+        kmos_model.save('{seed}_kmc.ini'.format(**locals()))
+    else:
+        kmos_model.save('{seed}_kmc_i{options.interaction}.ini'.format(**locals()))
 
 
 
