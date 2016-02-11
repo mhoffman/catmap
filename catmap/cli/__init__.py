@@ -108,8 +108,15 @@ def get_options(args=None, get_parser=False):
     else:
         options.equilibration_steps = int(options.equilibration_steps)
 
-    if options.diffusion_factor is not None and options.diffusion_factor < 10:
-        options.diffusion_factor = 10.**float(options.diffusion_factor)
+    if options.diffusion_factor is not None:
+        options.diffusion_factor = float(options.diffusion_factor)
+        # to make batch calculations simpler assume that any negative
+        # diffusion factor means that the original diffusion rate
+        # constant is not affected
+        if options.diffusion_factor < 0:
+            options.diffusion_factor = None
+        elif options.diffusion_factor < 10:
+            options.diffusion_factor = 10.**float(options.diffusion_factor)
 
     if len(args) < 1:
         parser.error('Command expected')
