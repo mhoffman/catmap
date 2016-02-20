@@ -437,6 +437,7 @@ def run_model(seed, init_steps, sample_steps,
     data_filename = 'kMC_run_{seed}.log'.format(**locals())
     lock_filename = 'kMC_run_{seed}.lock'.format(**locals())
     done_filename = 'kMC_run_{seed}.done'.format(**locals())
+    complete_filename = 'kMC_run_{seed}.complete'.format(**locals())
 
     # Let's first run the CatMAP model again with the
     # forward/back-wards rate constants
@@ -510,7 +511,7 @@ def run_model(seed, init_steps, sample_steps,
                 progress_bar.render(i+1, 'Equilibration')
 
             t_equilibrate = time.time()
-            atoms = kmos_model.get_atoms()
+            #atoms = kmos_model.get_atoms()
             #print(kmos_model.rate_constants)
             try:
                 data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
@@ -523,6 +524,9 @@ def run_model(seed, init_steps, sample_steps,
             with open(data_filename, 'a') as outfile:
                 outfile.write(
                     '{descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals()))
+
+            with open("procstat_{:04d}.dat".format(data_point)) as procstat_file:
+                procstat_file.write(kmos_model.get_procstat(to_stdout=False))
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
@@ -540,6 +544,8 @@ def run_model(seed, init_steps, sample_steps,
             break
 
     else:
+        with open(complete_filename, 'a') as outfile:
+            pass
         print("\nLooks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
 
     # Restore old path
