@@ -535,6 +535,9 @@ def run_model(seed, init_steps, sample_steps,
             with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
                 procstat_file.write(kmos_model.print_procstat(to_stdout=False))
 
+            kmos_model.do_steps(sample_steps)
+            with open("equilibrium_{:04d}.dat".format(data_point), 'w') as eq_file:
+                eq_file.write(report_equilibration(kmos_model))
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
@@ -715,6 +718,52 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
         if hasattr(kmos_model.parameters, 'diff_reverse_{i}'.format(**locals())):
             setattr(kmos_model.parameters, 'diff_reverse_{i}'.format(
                 **locals()), reverse_rate_constant)
+
+
+
+def find_pairs(project):
+    """Find pairs of elementary processes that are reverse processes with respect
+    to each others from a kmos.types.Project
+
+    """
+    pairs = []
+    for p1 in sorted(project.process_list):
+        for p2 in sorted(project.process_list):
+            if p1.condition_list == p2.action_list and p2.condition_list == p1.action_list:
+                if not (p1, p2) in pairs and not (p2, p1) in pairs:
+                    pairs.append((p1, p2))
+    return pairs
+
+def report_equilibration(model):
+    """Iterate over pairs of reverse proceses and print
+        rate1 * rho1 / rate2 * rho2
+
+      for each.
+    """
+    import kmos.types
+    import StringIO
+
+    project = kmos.types.Project()
+    project.import_ini_file(StringIO.StringIO(model.settings.xml))
+    pairs = find_pairs(project)
+
+    atoms = model.get_atoms(geometry=False)
+
+    procstat = dict(zip(sorted(model.settings.rate_constants), atoms.procstat))
+    rate_constants = dict(zip(sorted(model.settings.rate_constants), (model.base.get_rate(i+1) for i in range(len(procstat)))))
+
+    integ_rates = dict(zip(sorted(model.settings.rate_constants), atoms.integ_rates))
+
+
+    report = ''
+    for pair in pairs:
+        pn1, pn2 = pair[0].name, pair[1].name
+        left = integ_rates[pn1] * rate_constants[pn2]
+        right = integ_rates[pn2] * rate_constants[pn1]
+        ratio = left/right
+        eq_score = 4 * left * right / (left + right)**2
+        report += ('{pn1} : {pn2} => {left:.2e}/{right:.2e} = {ratio:.2e}, eq_score = {eq_score:.7f}\n'.format(**locals()))
+    return report
 
 if __name__ == '__main__':
     main()
