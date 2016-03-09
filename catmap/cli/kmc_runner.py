@@ -463,7 +463,7 @@ def run_model(seed, init_steps, sample_steps,
             with kmos.run.KMC_Model(print_rates=False, banner=True) as kmos_model:
                 data_header = kmos_model.get_std_header()[1:]
                 outfile.write(
-                    'descriptor0 descriptor1 {data_header}'.format(**locals()))
+                    'datapoint descriptor0 descriptor1 {data_header}'.format(**locals()))
 
     total_points = len(catmap_data['forward_rate_constant_map'])
     for data_point in range(total_points):
@@ -530,7 +530,7 @@ def run_model(seed, init_steps, sample_steps,
 
             with open(data_filename, 'a') as outfile:
                 outfile.write(
-                    '{descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals()))
+                    '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals()))
 
             with open("procstat_{:04d}.dat".format(data_point)) as procstat_file:
                 procstat_file.write(kmos_model.get_procstat(to_stdout=False))
