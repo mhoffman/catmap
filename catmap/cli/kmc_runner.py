@@ -515,15 +515,15 @@ def run_model(seed, init_steps, sample_steps,
             try:
                 #data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
                 import kmos.run.steady_state
-                data = kmos.run.steady_state.sample_data_state(model,
-                       show_progress=False,
+                data = kmos.run.steady_state.sample_steady_state(kmos_model,
+                       show_progress=True,
                        make_plots=True,
                        output='str',
                        seed='EWMA_{data_point:04d}'.format(**locals()),
                        )
 
-            except:
-                print("Warning: Encountered zero-division error in sampling. Make sure this is correct.")
+            except Exception as e:
+                print("Warning: Encountered error in sampling: {e}. Make sure this is correct.".format(**locals()))
                 continue
 
             t_sample = time.time()
