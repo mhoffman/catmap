@@ -532,8 +532,9 @@ def run_model(seed, init_steps, sample_steps,
                 outfile.write(
                     '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals()))
 
-            with open("procstat_{:04d}.dat".format(data_point)) as procstat_file:
-                procstat_file.write(kmos_model.get_procstat(to_stdout=False))
+            with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
+                procstat_file.write(kmos_model.print_procstat(to_stdout=False))
+
 
         with open(done_filename, 'a') as outfile:
             outfile.write('{descriptor_string}'.format(**locals()))
