@@ -505,16 +505,23 @@ def run_model(seed, init_steps, sample_steps,
             print('INIT STEPS {f_init_steps:.2e} |  SAMPLE STEPS {f_sample_steps:.2e}'.format(**locals()))
 
             t_startup = time.time()
-            progress_bar = kmos.utils.progressbar.ProgressBar()
-            for i in range(100):
-                kmos_model.do_steps(init_steps/100)
-                progress_bar.render(i+1, 'Equilibration')
-
+            #progress_bar = kmos.utils.progressbar.ProgressBar()
+            #for i in range(100):
+                #kmos_model.do_steps(init_steps/100)
+                #progress_bar.render(i+1, 'Equilibration')
             t_equilibrate = time.time()
             #atoms = kmos_model.get_atoms()
             #print(kmos_model.rate_constants)
             try:
-                data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
+                #data = kmos_model.get_std_sampled_data(options.coverage_samples, sample_steps, tof_method='integ')
+                import kmos.run.steady_state
+                data = kmos.run.steady_state.sample_data_state(model,
+                       show_progress=False,
+                       make_plots=True,
+                       output='str',
+                       seed='EWMA_{data_point:04d}'.format(**locals()),
+                       )
+
             except:
                 print("Warning: Encountered zero-division error in sampling. Make sure this is correct.")
                 continue
