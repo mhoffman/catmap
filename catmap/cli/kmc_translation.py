@@ -348,14 +348,16 @@ def catmap2kmos(cm_model,
                                    actions=actions,
                                    rate_constant='{diff_prefix}forward_{ri}'.format(
                                        **locals()),
-                                   tof_count={forward_name_root: 1})
+                                   tof_count={forward_name_root: 1},
+                                   )
 
                     reverse_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
                                    conditions=actions,
                                    actions=conditions,
                                    rate_constant='{diff_prefix}reverse_{ri}'.format(
                                        **locals()),
-                                   tof_count={forward_name_root: -1 if diff_prefix == '' else 1})
+                                   tof_count={reverse_name_root: 1},
+                                   )
 
                     if options.interaction > 0 :
                         import dbmi
