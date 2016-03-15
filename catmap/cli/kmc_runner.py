@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os
+import sys
+import pprint
 import catmap
 import pickle
 import copy
@@ -199,11 +201,17 @@ def line_plot_data(x, y, filename,
         matplotlib.rcParams['text.usetex'] = 'true'
     matplotlib.rcParams['lines.linewidth'] = 1.
 
-    if 'forward' in filename or 'reverse' in filename:
+    if 'forward' in filename or 'reverse' in filename or 'time' in filename  or '_2_' in filename :
         # we are plotting a rate constant, do it on a log-scale
-        plot = plt.semilogy(x, y)
+        #plot = plt.semilogy(x, y)
+        plot = plt.plot(x, y)
     else:
         plot = plt.plot(x, y)
+
+    if 'Theta' in title:
+        plt.ylabel('coverage [ML]')
+    elif 'rightarrow' in title:
+        plt.ylabel('rate [$\\rm{cell}^{-1} \\rm{s}^{-1}$]')
 
     plt.xlabel(xlabel)
     plt.title(title)
@@ -234,7 +242,7 @@ def main(options, call_path=None):
 
         for name in data.dtype.names:
             print(name)
-            if name in ['descriptor1', 'descriptor0']:
+            if name in ['descriptor1', 'descriptor0', 'datapoint']:
                 continue
             if '_2_' in name: # we are plotting a rate
                 normalized = False
@@ -269,9 +277,9 @@ def main(options, call_path=None):
                            .replace('_0', ''))
 
                 if 'forward' in name:
-                    k = r'$\overrightarrow{k}$'
+                    k = r'$k$'
                 else:
-                    k = r'$\overleftarrow{k}$'
+                    k = r'$k$'
 
                 title = '{k}({pname})'.format(**locals())
 
@@ -279,9 +287,11 @@ def main(options, call_path=None):
             elif name == 'kmc_time':
                 title = '$t_{\\rm kMC}$'
             elif name == 'kmc_steps':
-                title = '\#kMC steps'
+                title = '# kMC steps'
             elif name == 'T':
                 title = '$T$ [K]'
+            elif name == 'simulated_time':
+                title = '$t_{\\rm sim.}$'
             elif '_2_' in name :
                 title = r'${{\rm {}}}$'.format(name \
                            .replace('_2_', r' \rightarrow ') \
