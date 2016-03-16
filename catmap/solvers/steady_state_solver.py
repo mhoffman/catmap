@@ -48,6 +48,8 @@ class SteadyStateSolver(MeanFieldSolver):
         which corresponds to no interaction regardless of which interaction
         model is used.
 
+        If no coverages are supplied assume limit of zero coverage which corresponds to no interaction regardless of which interaction model is used.
+
         :param rxn_parameters: Sequence of reaction parameters.
         :type rxn_parameters: [float]
         :param coverages: Sequence of coverages.
