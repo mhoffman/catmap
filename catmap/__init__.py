@@ -10,12 +10,29 @@ from string import Template
 
 #Non-standard dependencies
 import numpy as np
-from scipy.interpolate import InterpolatedUnivariateSpline as spline
+try:
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+except ImportError:
+    def spline_wrapper(x_data, y_data, k=3):  # input kwarg k is intentionally ignored
+        # behaves like scipy.interpolate.InterpolatedUnivariateSpline for k=1
+        def spline_func(x):
+            return np.interp(x, map(float,x_data), map(float,y_data))  # loss of precision here
+        return spline_func
+    spline = spline_wrapper
+
 import matplotlib as mpl
 mpl.use('Agg')
 import pylab as plt
 import matplotlib.transforms as mtransforms
-from matplotlib.mlab import griddata
+from matplotlib.mlab import griddata as mlab_griddata
+
+def griddata(*args, **kwargs):
+    """Wrapper function to avoid annoying griddata errors"""
+    try:
+        return mlab_griddata(*args, **kwargs)
+    except RuntimeError:
+        kwargs['interp'] = 'linear'
+        return mlab_griddata(*args, **kwargs)
 
 import mpmath as mp
 from ase.atoms import string2symbols
@@ -24,7 +41,15 @@ from ase.structure import molecule
 from catmap.model import ReactionModel
 import data
 
-__version__ = "0.2.125"
+__version__ = "0.2.270"
+
+def griddata(*args, **kwargs):
+    """Wrapper function to avoid annoying griddata errors"""
+    try:
+        return mlab_griddata(*args, **kwargs)
+    except RuntimeError:
+        kwargs['interp'] = 'linear'
+        return mlab_griddata(*args, **kwargs)
 
 def load(setup_file):
     rxm = ReactionModel(setup_file = setup_file)
@@ -46,12 +71,12 @@ class ReactionModelWrapper:
         else:
             if attr in self.__dict__:
                 val =  object.__getattribute__(self,attr)
-                del self.__dict__[attr] 
+                del self.__dict__[attr]
                 #this makes sure that the attr is read from _rxm
                 setattr(self._rxm,attr,val)
                 return val
             elif attr.startswith('_'):
-                raise AttributeError()
+                raise AttributeError("Attribute {attr} in invalid".format(**locals()))
             else:
                 return None
 

@@ -2,7 +2,10 @@
 """Catalysis Micro-kinetic Analysis Package (CatMAP)"""
 
 import os
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 from catmap import __version__ as version
 
 maintainer = 'Andrew J. Medford'
@@ -33,7 +36,7 @@ requires = ['ase',
             'numpy',
                    ]
 license = 'COPYING.txt'
-long_description = file('README.txt').read()
+long_description = file('README.md').read()
 name='python-catmap'
 packages = [
            'catmap',

@@ -4,8 +4,10 @@ Topics
 .. toctree::
   :maxdepth: 2
 
-  thermodynamic_descriptors
-  accessing_reformatting_output
-  electrochemistry
   code_overview
+  accessing_reformatting_output
+  thermodynamic_descriptors
+  including_adsorbate_adsorbate_interactions
+  electrochemistry
+  output_variables
   developer_info

@@ -41,7 +41,7 @@ class ScalerBase(ReactionModelWrapper):
             length N (number of elementary reactions): 
             [[E_rxn1,E_a1],[E_rxn2,E_a2],...[E_rxnN,E_aN]]
         get_rxn_parameters(descriptors): a function to obtain all necessary 
-            reaction parameters frm the descriptors. Should return a list of 
+            reaction parameters from the descriptors. Should return a list of 
             length N (number of elementary reactions): 
             [[param1_rxn1,param2_rxn1...]...[param1_rxnN,param2_rxnN...]]. 
             For a simple model this could be the same as get_energetics, 
@@ -70,7 +70,7 @@ class ScalerBase(ReactionModelWrapper):
                 if len(f) > max_len:
                     max_len = len(f)
             nu_labels = ['nu_'+str(i+1) for i in range(max_len)]
-            self.output_labels = [ads,nu_labels]
+            self.output_labels['frequency'] = [ads,nu_labels]
 
         if 'electronic_energy' in self.output_variables:
             electronic_energy_dict = self.get_electronic_energies(descriptors)
@@ -100,7 +100,7 @@ class ScalerBase(ReactionModelWrapper):
             self._enthalpy = [self._enthalpy_dict[a] for a in ads]
             self._entropy = [self._entropy_dict[a] for a in ads]
             self.output_labels['enthalpy'] = ads
-            self.output_labels['entroy'] = ads
+            self.output_labels['entropy'] = ads
             self.output_labels['zero_point_energy'] = ads
 
         if 'interaction_matrix' in self.output_variables:
