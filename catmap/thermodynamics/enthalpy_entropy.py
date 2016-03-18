@@ -452,7 +452,7 @@ class ThermoCorrections(ReactionModelWrapper):
                     frequencies = [max(nu,nu_min) for nu in frequencies]
                 therm = HarmonicThermo(frequencies)
                 try:
-                    free_energy = therm.get_gibbs_energy(
+                    free_energy = therm.get_helmholtz_energy(
                             temperature,verbose=False)
                 except AttributeError:
                     warnings.warn('HarmonicThermo.get_free_energy is deprecated.'
@@ -586,7 +586,7 @@ class ThermoCorrections(ReactionModelWrapper):
         the elementary rxn from which it belongs
         """
         for rxn_index, eq in enumerate(self.elementary_rxns):
-            if TS in eq:
+            if len(eq) == 3 and TS in eq[1]:
                 return rxn_index
 
     def simple_electrochemical(self):
