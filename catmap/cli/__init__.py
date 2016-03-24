@@ -75,6 +75,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-E', '--equilibration-steps', type='float', dest='equilibration_steps', default=int(1e8), help="The number of kmc steps before it starts sampling averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-S', '--sampling-steps', type='float', dest='sampling_steps', default=int(1e8), help="The number of kmc steps used to calculate averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
+    parser.add_option('-b', '--batch-size', dest='batch_size', default=int(1e6), type='int', help="The default number of steps per batch for determinining the steady-state and sampling averages of rates and coverages")
     parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
     parser.add_option('-d', '--diffusion-factor', dest='diffusion_factor', default=None, help="Parameter to tune the rate-constant of diffusion processes. The rationale is that for transition metal surfaces diffusion barriers are typically quite low, leading to fast surface diffusion processes. If no factor is specified the diffusion barrier is derived from whatever scaling relation is specified. If a diffusion factor X is specified all diffusion rate constants are set to k_max*X where k_max is the faster rate-constant among all non-diffusion elementary processes. If X < 10, the factor is interpreted as 10**X")
@@ -98,7 +99,11 @@ def get_options(args=None, get_parser=False):
 
     ## Interpret sampling steps and equilibration steps < 100 as 10^x
 
-    if options.sampling_steps < 100:
+    if options.batch_size < 100 :
+        options.batch_size = int(10.**options.batch_size)
+    else:
+        options.sampling_steps = int(options.sampling_steps)
+    if options.sampling_steps < 100 :
         options.sampling_steps = int(10.**options.sampling_steps)
     else:
         options.sampling_steps = int(options.sampling_steps)
@@ -113,9 +118,9 @@ def get_options(args=None, get_parser=False):
         # to make batch calculations simpler assume that any negative
         # diffusion factor means that the original diffusion rate
         # constant is not affected
-        if options.diffusion_factor < 0:
+        if options.diffusion_factor < -100:
             options.diffusion_factor = None
-        elif options.diffusion_factor < 10:
+        elif abs(options.diffusion_factor) < 100:
             options.diffusion_factor = 10.**float(options.diffusion_factor)
 
     if len(args) < 1:
