@@ -94,7 +94,7 @@ def contour_plot_data(x, y, z, filename,
         zmax = 1.
         zmin = 0.
     else:
-        levels = np.linspace(zmin, zmax, max(int(zmax - zmin), 2))
+        levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
 
 
     contour_plot = plt.contourf(zi, vmin=zmin, vmax=zmax, origin='lower',
@@ -103,7 +103,8 @@ def contour_plot_data(x, y, z, filename,
                extend='both')
 
 
-    #plt.scatter(x, y, c=z, s=.2)
+    # plot the data point which we actually evaluated
+    plt.scatter(x, y, c=z, s=.2)
 
     cbar = plt.colorbar(contour_plot, ticks=ticks)
 
@@ -501,7 +502,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                 import kmos.run.steady_state
                 data_dict, data = kmos.run.steady_state.sample_steady_state(kmos_model,
                        show_progress=True,
-                       make_plots=True,
+                       make_plots=False,
                        start_batch=start_batch,
                        batch_size=options.batch_size,
                        bias_threshold=0.10,
