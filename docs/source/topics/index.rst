@@ -10,4 +10,5 @@ Topics
   including_adsorbate_adsorbate_interactions
   electrochemistry
   kmc_translation
+  output_variables
   developer_info

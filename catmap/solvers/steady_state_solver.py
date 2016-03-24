@@ -1,7 +1,11 @@
 from solver_base import *
 from mean_field_solver import *
 from catmap import string2symbols
-from scipy.optimize import fmin_powell as fmin
+try:
+    from scipy.optimize import fmin_powell as fmin
+except ImportError:
+    fmin = None
+
 from catmap.functions import numerical_jacobian
 import math
 from string import Template
@@ -43,6 +47,8 @@ class SteadyStateSolver(MeanFieldSolver):
         If no coverages are supplied assume limit of zero coverage
         which corresponds to no interaction regardless of which interaction
         model is used.
+
+        If no coverages are supplied assume limit of zero coverage which corresponds to no interaction regardless of which interaction model is used.
 
         :param rxn_parameters: Sequence of reaction parameters.
         :type rxn_parameters: [float]

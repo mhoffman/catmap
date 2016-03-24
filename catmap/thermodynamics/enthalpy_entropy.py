@@ -2,7 +2,11 @@ import catmap
 from catmap import ReactionModelWrapper
 from catmap.model import ReactionModel
 from catmap.functions import get_composition, add_dict_in_place
-from scipy.optimize import fmin_powell
+try:
+    from scipy.optimize import fmin_powell
+except ImportError:
+    fmin_powell = None
+
 import warnings
 from mpmath import mpf
 from math import exp, log
@@ -60,7 +64,7 @@ class ThermoCorrections(ReactionModelWrapper):
                 adsorbate_thermo_mode = 'harmonic_adsorbate',
                 electrochemical_thermo_mode = 'simple_electrochemical',
                 pressure_mode = 'static',
-                thermodynamic_corrections = ['gas','adsorbate','electrochemical'],
+                thermodynamic_corrections = ['gas','adsorbate'],
                 thermodynamic_variables = ['temperature','gas_pressures','voltage','beta','pH'],
                 ideal_gas_params = catmap.data.ideal_gas_params,
                 fixed_entropy_dict = catmap.data.fixed_entropy_dict,
@@ -89,7 +93,7 @@ class ThermoCorrections(ReactionModelWrapper):
         depending on the ``thermo mode'' of each class of species
         """
         l = self.thermodynamic_corrections
-        if 'electrochemical' in l and len(self.echem_transition_state_names) > 0:
+        if 'electrochemical' in l:
             self.force_recalculation = True
         state_dict = {}
         for v in self.thermodynamic_variables:
@@ -137,7 +141,7 @@ class ThermoCorrections(ReactionModelWrapper):
         are not specific to any particular mode.
         """
         # pH corrections to proton and hydroxide species
-        if self.pH:
+        if any(ads in ['ele_g', 'H_g', 'OH_g'] for ads in self.species_definitions.keys()):
             G_H2 = self._electronic_energy_dict['H2_g'] + self._correction_dict['H2_g']
             G_H = 0.5*G_H2 - .0592*self.pH
             G_H2O = self._electronic_energy_dict['H2O_g'] + self._correction_dict['H2O_g']
@@ -448,7 +452,7 @@ class ThermoCorrections(ReactionModelWrapper):
                     frequencies = [max(nu,nu_min) for nu in frequencies]
                 therm = HarmonicThermo(frequencies)
                 try:
-                    free_energy = therm.get_gibbs_energy(
+                    free_energy = therm.get_helmholtz_energy(
                             temperature,verbose=False)
                 except AttributeError:
                     warnings.warn('HarmonicThermo.get_free_energy is deprecated.'
@@ -582,7 +586,7 @@ class ThermoCorrections(ReactionModelWrapper):
         the elementary rxn from which it belongs
         """
         for rxn_index, eq in enumerate(self.elementary_rxns):
-            if TS in eq:
+            if len(eq) == 3 and TS in eq[1]:
                 return rxn_index
 
     def simple_electrochemical(self):
@@ -818,7 +822,11 @@ class ThermoCorrections(ReactionModelWrapper):
 
 
 def fit_shomate(Ts, Cps, Hs, Ss, params0,plot_file = None):
-    from scipy.optimize import leastsq
+    try:
+        from scipy.optimize import leastsq
+    except ImportError:
+        leastsq = None
+
     def H(t,A,B,C,D,E,F,H_c):
         H = A*t + (B/2.0)*t**2 + (C/3.0)*t**3 + (D/4.0)*t**4 - E/t + F - H_c 
         #kJ/mol
