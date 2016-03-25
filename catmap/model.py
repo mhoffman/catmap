@@ -272,11 +272,15 @@ class ReactionModel:
                     if (len(repr(getattr(self,attr))) >
                             self._max_log_line_length):
                         #line is too long for logfile -> put into pickle
-                        self._pickle_attrs.append(attr)
+                        #self._pickle_attrs.append(attr)
+                        # let's disable pickling for now to avoid pickle compatibility issues
+                        # on arcane clusters.
+                        pass
             pickled_data = {}
             for attr in self._pickle_attrs:
                 pickled_data[attr] = getattr(self,attr)
-            pickle.dump(pickled_data,open(self.data_file,'w'))
+            with open(self.data_file,'wb') as pickle_outfile:
+                pickle.dump(pickled_data, pickle_outfile)
 
             #Make logfile
             log_txt = self._log_imports
@@ -418,7 +422,8 @@ class ReactionModel:
         Load in output data from external files.
         """
         if os.path.exists(self.data_file):
-            pickled_data = pickle.load(open(self.data_file,'r'))
+            with open(self.data_file,'rb') as pickle_infile:
+                pickled_data = pickle.load(pickle_infile)
             for attr in pickled_data:
                 if not overwrite:
                     if getattr(self,attr,None) is None: #don't over-write
