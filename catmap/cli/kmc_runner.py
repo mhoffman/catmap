@@ -529,13 +529,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                         outfile = log_target
 
                     outfile.write("Procstat\n")
+                    outfile.write("========\n\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
-                    outfile.write('\nRate Constants\n')
+                    outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
-                    outfile.write("\nEquilibration Report\n")
+                    outfile.write("\n\nEquilibration Report\n")
                     equilibration_report, equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model)
                     outfile.write("\nSampled rates and coverages\n")
                     outfile.write(pprint.pformat(data_dict))
+                    outfile.write("\n\nRelative rate differences between reversing processes\n")
                     outfile.write(equilibration_report)
 
                     fast_processes = False
