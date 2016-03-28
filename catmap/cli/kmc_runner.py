@@ -80,7 +80,7 @@ def contour_plot_data(x, y, z, filename,
     xi, yi = np.meshgrid(xi, yi)
 
     #print(z)
-    rbf = scipy.interpolate.Rbf(x, y, z, function='linear',)
+    rbf = scipy.interpolate.Rbf(x, y, z, function='thin_plate',)
     zi = rbf(xi, yi)
     #zi = griddata(x, y, z, xi, yi, interp='linear')
 
@@ -395,7 +395,7 @@ def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
         pickle_filename =  '{seed}.pkl'.format(**locals())
 
     if os.path.exists(pickle_filename) and os.path.getsize(pickle_filename):
-        with open(pickle_filename) as pickle_file:
+        with open(pickle_filename, 'rb') as pickle_file:
             pickle_data = pickle.load(pickle_file)
     else:
         pickle_data = {}
@@ -635,7 +635,7 @@ def run_model(seed, init_steps, sample_steps,
         if outstring is not None:
             with open(data_filename, 'a') as outfile:
                 outfile.write(
-                    '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {outstring}'.format(**locals()))
+                    '{outstring}'.format(**locals()))
 
             with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
                 procstat_file.write(kmos_model.print_procstat(to_stdout=False))
