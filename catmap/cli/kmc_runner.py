@@ -615,7 +615,6 @@ def run_model(seed, init_steps, sample_steps,
     data_filename = 'kMC_run_{seed}.log'.format(**locals())
     lock_filename = 'kMC_run_{seed}.lock'.format(**locals())
     done_filename = 'kMC_run_{seed}.done'.format(**locals())
-    complete_filename = 'kMC_run_{seed}.complete'.format(**locals())
 
     # Let's first run the CatMAP model again with the
     # forward/back-wards rate constants
@@ -692,8 +691,6 @@ def run_model(seed, init_steps, sample_steps,
             break
 
     else:
-        with open(complete_filename, 'a') as outfile:
-            pass
         print("\nLooks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
 
     # Restore old path
