@@ -80,7 +80,7 @@ def contour_plot_data(x, y, z, filename,
     xi, yi = np.meshgrid(xi, yi)
 
     #print(z)
-    rbf = scipy.interpolate.Rbf(x, y, z, function='thin_plate',)
+    rbf = scipy.interpolate.Rbf(x, y, z, function='linear',)
     zi = rbf(xi, yi)
     #zi = griddata(x, y, z, xi, yi, interp='linear')
 
@@ -94,6 +94,7 @@ def contour_plot_data(x, y, z, filename,
         zmax = 1.
         zmin = 0.
     else:
+        #levels = np.linspace(max(-10, zmin), min(2, zmax), min(18, max(int(zmax - zmin), 2)))
         levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
 
 
@@ -110,9 +111,9 @@ def contour_plot_data(x, y, z, filename,
 
     if colorbar_label is None:
         if normalized:
-            cbar.set_label(r'${\rm ML}$')
+            cbar.set_label(cbar_label)
         else:
-            cbar.set_label(r'${\rm s}^{-1} {\rm cell}^{-1}$')
+            cbar.set_label(cbar_label)
     else:
         cbar.set_label(colorbar_label)
 
@@ -243,6 +244,7 @@ def main(options, call_path=None):
 
         for name in data.dtype.names:
             print(name)
+            # set the plotted data, normalization, and colorbar unit
             if name in ['descriptor1', 'descriptor0', 'datapoint']:
                 continue
             if '_2_' in name: # we are plotting a rate
@@ -257,10 +259,25 @@ def main(options, call_path=None):
                     print('MINIMUM {minimum}'.format(**locals()))
                     plot_data[np.logical_or(np.isnan(plot_data),
                                             np.isinf(plot_data))] = minimum
+                colorbar_label = r'$\log({\rm s}^{-1} {\rm cell}^{-1})$'
+            elif 'forward' in name or 'reverse' in name: # a rate-constant
+                #plot_data = np.log10(data[name])
+                plot_data = data[name]
+                normalized = False
+                colorbar_label = r'$\log({\rm s}^{-1})$'
+            elif 'kmc_steps' in name: # kmc_steps or kmc_time
+                #plot_data = np.log10(data[name])
+                plot_data = data[name]
+                normalized = False
+                colorbar_label = r'${\rm steps}$'
+
             else: # we are plotting a coverage
                 plot_data = data[name]
                 normalized = True
+                colorbar_label = r'${\rm ML}$'
 
+
+            # generate the plot title
             if 'forward' in name or 'reverse' in name:
                 import kmc_settings
                 for pname, (param, _) in kmc_settings.rate_constants.items():
@@ -367,6 +384,7 @@ def main(options, call_path=None):
                                   ylabel_unit='eV',
                                   xlabel=xlabel,
                                   ylabel=ylabel,
+                                  colorbar_label = colorbar_label,
                                   )
 
 def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
