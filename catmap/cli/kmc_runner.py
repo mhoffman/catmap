@@ -107,7 +107,7 @@ def contour_plot_data(x, y, z, filename,
     # plot the data point which we actually evaluated
     plt.scatter(x, y, c=z, s=.2)
 
-    cbar = plt.colorbar(contour_plot, ticks=ticks)
+    cbar = plt.colorbar(contour_plot, ticks=ticks, fraction=0.046, pad=0.04)
 
     if colorbar_label is None:
         if normalized:
@@ -128,21 +128,34 @@ def contour_plot_data(x, y, z, filename,
 
     if seed is not None:
         model = catmap.ReactionModel(setup_file='{seed}.mkm'.format(**locals()))
-        plt.xlabel(r'${{\rm {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
-        plt.ylabel(r'${{\rm {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
+
+        print(model.descriptor_labels)
+        if hasattr(model, 'descriptor_labels'):
+            plt.xlabel(model.descriptor_labels[0])
+            plt.ylabel(model.descriptor_labels[1])
+        else:
+            plt.xlabel(r'${{\rm {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
+            plt.ylabel(r'${{\rm {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
+
+        print("Setting title {title}".format(**locals()))
         plt.title(title)
+
+    else:
+        if xlabel:
+            plt.xlabel(xlabel)
+        if ylabel:
+            plt.ylabel(ylabel)
+
 
     plt.xlim((x.min(), x.max()))
     plt.ylim((y.min(), y.max()))
+    plt.xticks(np.arange(x.min(), x.max(), .5))
+    plt.yticks(np.arange(y.min(), y.max(), .5))
+    #plt.autoscale(enable=True, axis='both', tight=True)
 
-    if xlabel:
-        plt.xlabel(xlabel)
-    if ylabel:
-        plt.ylabel(ylabel)
-
-    plt.axis('image')
-    plt.xticks(np.arange(x.min(), x.max() + .5, .5))
-    plt.yticks(np.arange(y.min(), y.max() + .5, .5))
+    #plt.xticks(np.arange(x.min(), x.max() + .5, .5))
+    #plt.yticks(np.arange(y.min(), y.max() + .5, .5))
+    plt.axis('tight')
 
     plt.savefig(filename, bbox_inches='tight')
 
@@ -373,7 +386,7 @@ def main(options, call_path=None):
                                   data['descriptor1'],
                                   plot_data,
                                   'kMC_plot_{name}.pdf'.format(**locals()),
-                                  #seed=SEED,
+                                  seed=seed,
                                   catmap_model=catmap_model,
                                   normalized=normalized,
                                   title=title,
