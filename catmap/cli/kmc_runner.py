@@ -669,6 +669,9 @@ def run_model(seed, init_steps, sample_steps,
                 outfile.write(
                     '{outstring}'.format(**locals()))
 
+            with open(done_filename, 'a') as outfile:
+                outfile.write('{descriptor_string}'.format(**locals()))
+
             with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
                 procstat_file.write(kmos_model.print_procstat(to_stdout=False))
 
@@ -676,8 +679,6 @@ def run_model(seed, init_steps, sample_steps,
             with open("equilibrium_{:04d}.dat".format(data_point), 'w') as eq_file:
                 eq_file.write(report_equilibration(kmos_model))
 
-        with open(done_filename, 'a') as outfile:
-            outfile.write('{descriptor_string}'.format(**locals()))
 
         #t_shutdown = time.time() - t_sample
         #t_runtime = t_sample - t_startup
