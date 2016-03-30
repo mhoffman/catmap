@@ -8,6 +8,7 @@ import pickle
 import copy
 import re
 import time
+import traceback
 
 import matplotlib
 matplotlib.use('Agg')
@@ -94,10 +95,16 @@ def contour_plot_data(x, y, z, filename,
         zmax = 1.
         zmin = 0.
     else:
-        levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
+        #levels = np.linspace(max(-10, zmin), max(2, zmax), min(18, max(int(zmax - zmin), 2)))
+        if np.allclose(zmin, zmax, 1e-2):
+            levels = np.linspace(zmin * (1-1e-2 * np.sign(zmin)), zmin * (1+1e-2 * np.sign(zmin)), 6)
+        else:
+            levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
+
+        print("Levels {levels}".format(**locals()))
 
 
-    contour_plot = plt.contourf(zi, vmin=zmin, vmax=zmax, origin='lower',
+    contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
                extent=[x.min(), x.max(), y.min(), y.max()],
                levels=levels,
                extend='both')
@@ -106,13 +113,13 @@ def contour_plot_data(x, y, z, filename,
     # plot the data point which we actually evaluated
     plt.scatter(x, y, c=z, s=.2)
 
-    cbar = plt.colorbar(contour_plot, ticks=ticks)
+    cbar = plt.colorbar(contour_plot, ticks=ticks, fraction=0.046, pad=0.04)
 
     if colorbar_label is None:
         if normalized:
-            cbar.set_label(r'${\rm ML}$')
+            cbar.set_label(cbar_label)
         else:
-            cbar.set_label(r'${\rm s}^{-1} {\rm cell}^{-1}$')
+            cbar.set_label(cbar_label)
     else:
         cbar.set_label(colorbar_label)
 
@@ -127,23 +134,41 @@ def contour_plot_data(x, y, z, filename,
 
     if seed is not None:
         model = catmap.ReactionModel(setup_file='{seed}.mkm'.format(**locals()))
-        plt.xlabel(r'${{\rm {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
-        plt.ylabel(r'${{\rm {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
+
+        print(model.descriptor_labels)
+        if hasattr(model, 'descriptor_labels'):
+            plt.xlabel(model.descriptor_labels[0])
+            plt.ylabel(model.descriptor_labels[1])
+        else:
+            plt.xlabel(r'${{\rm {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
+            plt.ylabel(r'${{\rm {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
+
+        print("Setting title {title}".format(**locals()))
         plt.title(title)
+
+    else:
+        if xlabel:
+            plt.xlabel(xlabel)
+        if ylabel:
+            plt.ylabel(ylabel)
+
 
     plt.xlim((x.min(), x.max()))
     plt.ylim((y.min(), y.max()))
+    plt.xticks(np.arange(x.min(), x.max(), .5))
+    plt.yticks(np.arange(y.min(), y.max(), .5))
+    #plt.autoscale(enable=True, axis='both', tight=True)
 
-    if xlabel:
-        plt.xlabel(xlabel)
-    if ylabel:
-        plt.ylabel(ylabel)
+    #plt.xticks(np.arange(x.min(), x.max() + .5, .5))
+    #plt.yticks(np.arange(y.min(), y.max() + .5, .5))
+    plt.axis('tight')
 
-    plt.axis('image')
-    plt.xticks(np.arange(x.min(), x.max() + .5, .5))
-    plt.yticks(np.arange(y.min(), y.max() + .5, .5))
+    try:
+        plt.savefig(filename, bbox_inches='tight')
+    except:
+        traceback.print_stack()
+        print("Had trouble saving {filename}".format(**locals()))
 
-    plt.savefig(filename, bbox_inches='tight')
 
 def get_seed_from_path(import_path):
     import sys
@@ -256,10 +281,25 @@ def main(options, call_path=None):
                     print('MINIMUM {minimum}'.format(**locals()))
                     plot_data[np.logical_or(np.isnan(plot_data),
                                             np.isinf(plot_data))] = minimum
+                colorbar_label = r'$\log({\rm s}^{-1} {\rm cell}^{-1})$'
+            elif 'forward' in name or 'reverse' in name: # a rate-constant
+                #plot_data = np.log10(data[name])
+                plot_data = data[name]
+                normalized = False
+                colorbar_label = r'$\log({\rm s}^{-1})$'
+            elif 'kmc_steps' in name: # kmc_steps or kmc_time
+                #plot_data = np.log10(data[name])
+                plot_data = data[name]
+                normalized = False
+                colorbar_label = r'${\rm steps}$'
+
             else: # we are plotting a coverage
                 plot_data = data[name]
                 normalized = True
+                colorbar_label = r'${\rm ML}$'
 
+
+            # generate the plot title
             if 'forward' in name or 'reverse' in name:
                 import kmc_settings
                 for pname, (param, _) in kmc_settings.rate_constants.items():
@@ -355,7 +395,7 @@ def main(options, call_path=None):
                                   data['descriptor1'],
                                   plot_data,
                                   'kMC_plot_{name}.pdf'.format(**locals()),
-                                  #seed=SEED,
+                                  seed=seed,
                                   catmap_model=catmap_model,
                                   normalized=normalized,
                                   title=title,
@@ -366,6 +406,7 @@ def main(options, call_path=None):
                                   ylabel_unit='eV',
                                   xlabel=xlabel,
                                   ylabel=ylabel,
+                                  colorbar_label = colorbar_label,
                                   )
 
 def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
@@ -394,7 +435,7 @@ def merge_catmap_output(seed=None, log_filename=None, pickle_filename=None):
         pickle_filename =  '{seed}.pkl'.format(**locals())
 
     if os.path.exists(pickle_filename) and os.path.getsize(pickle_filename):
-        with open(pickle_filename) as pickle_file:
+        with open(pickle_filename, 'rb') as pickle_file:
             pickle_data = pickle.load(pickle_file)
     else:
         pickle_data = {}
@@ -528,13 +569,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                         outfile = log_target
 
                     outfile.write("Procstat\n")
+                    outfile.write("========\n\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
-                    outfile.write('\nRate Constants\n')
+                    outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
-                    outfile.write("\nEquilibration Report\n")
+                    outfile.write("\n\nEquilibration Report\n")
                     equilibration_report, equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model)
                     outfile.write("\nSampled rates and coverages\n")
                     outfile.write(pprint.pformat(data_dict))
+                    outfile.write("\n\nRelative rate differences between reversing processes\n")
                     outfile.write(equilibration_report)
 
                     fast_processes = False
@@ -565,6 +608,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                 fast_processes_adaption += 1
             return outstring
 
+def sort_catmap_maps_inplace(data):
+    for key in data:
+        if key.endswith('_map'):
+            data[key] = sorted(data[key], key=lambda x: x[0])
+
 
 def run_model(seed, init_steps, sample_steps,
               call_path=None, options=None):
@@ -582,7 +630,6 @@ def run_model(seed, init_steps, sample_steps,
     data_filename = 'kMC_run_{seed}.log'.format(**locals())
     lock_filename = 'kMC_run_{seed}.lock'.format(**locals())
     done_filename = 'kMC_run_{seed}.done'.format(**locals())
-    complete_filename = 'kMC_run_{seed}.complete'.format(**locals())
 
     # Let's first run the CatMAP model again with the
     # forward/back-wards rate constants
@@ -595,6 +642,8 @@ def run_model(seed, init_steps, sample_steps,
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
     catmap_data = merge_catmap_output(seed=seed)
+    sort_catmap_maps(catmap_data)
+
 
     # create of lock-file for currently running data-points
     # if it doesn't exist
@@ -635,7 +684,10 @@ def run_model(seed, init_steps, sample_steps,
         if outstring is not None:
             with open(data_filename, 'a') as outfile:
                 outfile.write(
-                    '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {outstring}'.format(**locals()))
+                    '{outstring}'.format(**locals()))
+
+            with open(done_filename, 'a') as outfile:
+                outfile.write('{descriptor_string}'.format(**locals()))
 
             with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
                 procstat_file.write(kmos_model.print_procstat(to_stdout=False))
@@ -644,8 +696,6 @@ def run_model(seed, init_steps, sample_steps,
             with open("equilibrium_{:04d}.dat".format(data_point), 'w') as eq_file:
                 eq_file.write(report_equilibration(kmos_model))
 
-        with open(done_filename, 'a') as outfile:
-            outfile.write('{descriptor_string}'.format(**locals()))
 
         #t_shutdown = time.time() - t_sample
         #t_runtime = t_sample - t_startup
@@ -659,8 +709,6 @@ def run_model(seed, init_steps, sample_steps,
             break
 
     else:
-        with open(complete_filename, 'a') as outfile:
-            pass
         print("\nLooks like all descriptor points are evaluated. Consider plotting results with 'catmap run_kmc -p'")
 
     # Restore old path
