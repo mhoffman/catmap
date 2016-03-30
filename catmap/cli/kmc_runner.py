@@ -14,6 +14,7 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.mlab import griddata
+import matplotlib.ticker
 
 import numpy as np
 
@@ -91,17 +92,17 @@ def contour_plot_data(x, y, z, filename,
         zmax = z.max()
 
     if normalized:
-        levels = np.linspace(0, 1, 11)
-        zmax = 1.
-        zmin = 0.
+        zmax = 1
+        zmin = 0
+        levels = np.linspace(zmin, zmax, 11)
     else:
         #levels = np.linspace(max(-10, zmin), max(2, zmax), min(18, max(int(zmax - zmin), 2)))
         if np.allclose(zmin, zmax, 1e-2):
             levels = np.linspace(zmin * (1-1e-2 * np.sign(zmin)), zmin * (1+1e-2 * np.sign(zmin)), 6)
         else:
-            levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
+            levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 10)))
 
-        print("Levels {levels}".format(**locals()))
+    print("Levels {levels}".format(**locals()))
 
 
     contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
@@ -113,7 +114,11 @@ def contour_plot_data(x, y, z, filename,
     # plot the data point which we actually evaluated
     plt.scatter(x, y, c=z, s=.2)
 
-    cbar = plt.colorbar(contour_plot, ticks=ticks, fraction=0.046, pad=0.04)
+    def cbar_fmt(x, pos):
+        return '{:.3g}'.format(x)
+
+
+    cbar = plt.colorbar(contour_plot, ticks=ticks, fraction=0.046, pad=0.04, format=matplotlib.ticker.FuncFormatter(cbar_fmt))
 
     if colorbar_label is None:
         if normalized:
@@ -272,8 +277,8 @@ def main(options, call_path=None):
             if '_2_' in name: # we are plotting a rate
                 normalized = False
                 # Plot only the log base 10 of rates
-                #plot_data = np.log10(data[name])
-                plot_data = data[name]
+                plot_data = np.log10(data[name])
+                #plot_data = data[name]
                 if not np.isfinite(plot_data).any():
                     plot_data[:] = 0.
                 else:
@@ -514,6 +519,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
         n_current_point = data_point + 1
 
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
+        descriptor_string = str(descriptors)
 
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             start_batch = 0
@@ -568,8 +574,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                     else:
                         outfile = log_target
 
-                    outfile.write("Procstat\n")
+                    outfile.write("\n\nProcstat\n")
                     outfile.write("========\n\n")
+                    outfile.write("{data_point} {descriptor_string}\n\n".format(**locals()))
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
                     outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
@@ -584,12 +591,14 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                     outfile.write("Evaluating equilibration report\n")
                     for ratio, pn1, pn2 in equilibration_data :
                         outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
-                        if abs(ratio) < 1.e-2:
+                        if 0 < abs(ratio) < 1.e-2:
                             fast_processes = True
                             for pn in [pn1, pn2]:
                                 old_rc = kmos_model.rate_constants.by_name(pn)
                                 rc_tuple = kmos_model.settings.rate_constants[pn]
-                                rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
+                                #rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
+                                rescale_factor = '* %.2e' % (abs(ratio) / 1e-2)
+                                rc_tuple = (rc_tuple[0] + rescale_factor, rc_tuple[1])
                                 kmos_model.settings.rate_constants[pn] = rc_tuple
                                 new_rc = kmos_model.rate_constants.by_name(pn)
                                 #kmos_model.rate_constants.set(pn, new_rc)
@@ -688,21 +697,6 @@ def run_model(seed, init_steps, sample_steps,
 
             with open(done_filename, 'a') as outfile:
                 outfile.write('{descriptor_string}'.format(**locals()))
-
-            with open("procstat_{:04d}.dat".format(data_point), 'w') as procstat_file:
-                procstat_file.write(kmos_model.print_procstat(to_stdout=False))
-
-            kmos_model.do_steps(sample_steps)
-            with open("equilibrium_{:04d}.dat".format(data_point), 'w') as eq_file:
-                eq_file.write(report_equilibration(kmos_model))
-
-
-        #t_shutdown = time.time() - t_sample
-        #t_runtime = t_sample - t_startup
-        #n_total_steps = float(sample_steps + init_steps)
-        #rate = n_total_steps / t_runtime
-        #t_startup = t_startup - t_0
-        #print("Timing: Did {n_total_steps:.2e} kmc steps in {t_runtime:.2e} s ({rate:.2e} steps/s), boot-up time {t_startup:.2e} s, shutdown {t_shutdown:.2e} s.".format(**locals()))
 
         if options.single_point:
             print("User requested to run only a single-descriptor point, stopping here.")
