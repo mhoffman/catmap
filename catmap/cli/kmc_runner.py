@@ -242,8 +242,7 @@ def main(options, call_path=None):
         catmap_model.run()
 
         for name in data.dtype.names:
-            print(name)
-            if name in ['descriptor1', 'descriptor0', 'datapoint']:
+            if name.startswith('descriptor') or name.startswith('datapoint') or name == 'T':
                 continue
             if '_2_' in name: # we are plotting a rate
                 normalized = False
@@ -569,6 +568,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
 
 def run_model(seed, init_steps, sample_steps,
               call_path=None, options=None):
+    import kmos.run
     # a path we need to add to make sure kmc model import works
     if call_path is not None:
         import sys
