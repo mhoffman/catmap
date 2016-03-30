@@ -8,6 +8,7 @@ import pickle
 import copy
 import re
 import time
+import traceback
 
 import matplotlib
 matplotlib.use('Agg')
@@ -94,11 +95,16 @@ def contour_plot_data(x, y, z, filename,
         zmax = 1.
         zmin = 0.
     else:
-        #levels = np.linspace(max(-10, zmin), min(2, zmax), min(18, max(int(zmax - zmin), 2)))
-        levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
+        #levels = np.linspace(max(-10, zmin), max(2, zmax), min(18, max(int(zmax - zmin), 2)))
+        if np.allclose(zmin, zmax, 1e-2):
+            levels = np.linspace(zmin * (1-1e-2 * np.sign(zmin)), zmin * (1+1e-2 * np.sign(zmin)), 6)
+        else:
+            levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 2)))
+
+        print("Levels {levels}".format(**locals()))
 
 
-    contour_plot = plt.contourf(zi, vmin=zmin, vmax=zmax, origin='lower',
+    contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
                extent=[x.min(), x.max(), y.min(), y.max()],
                levels=levels,
                extend='both')
@@ -157,7 +163,12 @@ def contour_plot_data(x, y, z, filename,
     #plt.yticks(np.arange(y.min(), y.max() + .5, .5))
     plt.axis('tight')
 
-    plt.savefig(filename, bbox_inches='tight')
+    try:
+        plt.savefig(filename, bbox_inches='tight')
+    except:
+        traceback.print_stack()
+        print("Had trouble saving {filename}".format(**locals()))
+
 
 def get_seed_from_path(import_path):
     import sys
@@ -599,6 +610,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                 fast_processes_adaption += 1
             return outstring
 
+def sort_catmap_maps_inplace(data):
+    for key in data:
+        if key.endswith('_map'):
+            data[key] = sorted(data[key], key=lambda x: x[0])
+
 
 def run_model(seed, init_steps, sample_steps,
               call_path=None, options=None):
@@ -627,6 +643,8 @@ def run_model(seed, init_steps, sample_steps,
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
     catmap_data = merge_catmap_output(seed=seed)
+    sort_catmap_maps(catmap_data)
+
 
     # create of lock-file for currently running data-points
     # if it doesn't exist
