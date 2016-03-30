@@ -642,7 +642,7 @@ def run_model(seed, init_steps, sample_steps,
     catmap_model.output_variables.append('reverse_rate_constant')
     catmap_model.run()
     catmap_data = merge_catmap_output(seed=seed)
-    sort_catmap_maps(catmap_data)
+    sort_catmap_maps_inplace(catmap_data)
 
 
     # create of lock-file for currently running data-points
