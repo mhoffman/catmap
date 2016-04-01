@@ -1,4 +1,5 @@
 import os
+import pprint
 import shutil
 
 usage = {}
@@ -85,6 +86,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
+    parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
 
 
     if args is not None:
@@ -161,6 +163,10 @@ def main(args=None):
     from glob import glob
 
     options, args, parser = get_options(args, get_parser=True)
+
+    if options.verbose:
+        print("CatMAP CLI options")
+        pprint.pprint(options)
 
     if not args[0] in usage.keys():
         args[0] = match_keys(args[0], usage, parser)
