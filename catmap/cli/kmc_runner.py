@@ -82,7 +82,11 @@ def contour_plot_data(x, y, z, filename,
     xi, yi = np.meshgrid(xi, yi)
 
     #print(z)
-    rbf = scipy.interpolate.Rbf(x, y, z, function='linear',)
+    try:
+        rbf = scipy.interpolate.Rbf(x, y, z, function='linear',)
+    except Exception as e:
+        print("Trouble printing {title}: {e}".format(**locals()))
+        return
     zi = rbf(xi, yi)
     #zi = griddata(x, y, z, xi, yi, interp='linear')
 
@@ -100,7 +104,10 @@ def contour_plot_data(x, y, z, filename,
         if np.allclose(zmin, zmax, 1e-2):
             levels = np.linspace(zmin * (1-1e-2 * np.sign(zmin)), zmin * (1+1e-2 * np.sign(zmin)), 6)
         else:
-            levels = np.linspace(zmin, zmax, min(18, max(int(zmax - zmin), 10)))
+            print(zmin, zmax)
+            divider = np.abs((np.array(map(lambda x: (zmax - zmin) / x, range(1, int(zmax-zmin) + 1))) - 50)).argmin() + 1
+            levels = np.linspace(round(zmin), round(zmax), round(zmax - zmin + 1))[::divider]
+            print(divider, levels)
 
     print("Levels {levels}".format(**locals()))
 
@@ -111,7 +118,7 @@ def contour_plot_data(x, y, z, filename,
                extend='both')
 
 
-    # plot the data point which we actually evaluated
+    ## plot the data point which we actually evaluated
     plt.scatter(x, y, c=z, s=.2)
 
     def cbar_fmt(x, pos):
@@ -140,8 +147,8 @@ def contour_plot_data(x, y, z, filename,
     if seed is not None:
         model = catmap.ReactionModel(setup_file='{seed}.mkm'.format(**locals()))
 
-        print(model.descriptor_labels)
         if hasattr(model, 'descriptor_labels'):
+            print(model.descriptor_labels)
             plt.xlabel(model.descriptor_labels[0])
             plt.ylabel(model.descriptor_labels[1])
         else:
@@ -167,6 +174,10 @@ def contour_plot_data(x, y, z, filename,
     #plt.xticks(np.arange(x.min(), x.max() + .5, .5))
     #plt.yticks(np.arange(y.min(), y.max() + .5, .5))
     plt.axis('tight')
+
+    for axis in [fig.gca().xaxis, fig.gca().yaxis]:
+        axis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
+
 
     try:
         plt.savefig(filename, bbox_inches='tight')
@@ -264,14 +275,21 @@ def main(options, call_path=None):
 
     if options.plot:
         seed = get_seed_from_path(call_path)
-        data = np.recfromtxt('kMC_run_{seed}.log'.format(**locals()), names=True)
+        data_filename = 'kMC_run_{seed}.log'.format(**locals())
+        data = np.recfromtxt(data_filename, names=True)
+        print("Opening {data_filename} for plotting rates and coverages".format(**locals()))
 
         catmap_model = catmap.ReactionModel(
             setup_file='{seed}.mkm'.format(**locals()))
 
+
+        catmap_model.output_variables.append('rate_constant')
+        catmap_model.output_variables.append('forward_rate_constant')
+        catmap_model.output_variables.append('reverse_rate_constant')
         catmap_model.run()
 
-        for name in data.dtype.names:
+        # plot in reverse to that we start with the coverages
+        for name in reversed(data.dtype.names):
             if name.startswith('descriptor') or name.startswith('datapoint') or name == 'T':
                 continue
             if '_2_' in name: # we are plotting a rate
@@ -288,13 +306,13 @@ def main(options, call_path=None):
                                             np.isinf(plot_data))] = minimum
                 colorbar_label = r'$\log({\rm s}^{-1} {\rm cell}^{-1})$'
             elif 'forward' in name or 'reverse' in name: # a rate-constant
-                #plot_data = np.log10(data[name])
-                plot_data = data[name]
+                plot_data = np.log10(data[name])
+                #plot_data = data[name]
                 normalized = False
                 colorbar_label = r'$\log({\rm s}^{-1})$'
             elif 'kmc_steps' in name: # kmc_steps or kmc_time
-                #plot_data = np.log10(data[name])
-                plot_data = data[name]
+                plot_data = np.log10(data[name])
+                #plot_data = data[name]
                 normalized = False
                 colorbar_label = r'${\rm steps}$'
 
@@ -487,7 +505,7 @@ def set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_
     else:
         raise UserWarning("Directions for initial configuration '{options.initial_configuration}' can not be processed".format(**locals()))
 
-def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=None):
+def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=False, log_target=None, bias_threshold=0.10, L=4, alpha=0.01,):
         """
             Evaluate a kMC model at a given data-point using initial bias detection and
             rescaling of fast processes for speeding up the sampling process.
@@ -514,6 +532,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
         import kmos.utils
         import kmos.utils.progressbar
 
+        sort_catmap_maps_inplace(catmap_data)
+
         t_0 = time.time()
         # generate the data
         n_current_point = data_point + 1
@@ -525,6 +545,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
             start_batch = 0
             fast_processes = True
             fast_processes_adaption = 0
+            renormalizations = {}
             while fast_processes == True :
                 set_rate_constants(kmos_model, catmap_data, data_point, options=options)
                 print(kmos_model.rate_constants)
@@ -548,17 +569,20 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                 import kmos.run.steady_state
                 data_dict, data = kmos.run.steady_state.sample_steady_state(kmos_model,
                        show_progress=True,
-                       make_plots=False,
+                       make_plots=make_plots,
                        start_batch=start_batch,
                        batch_size=options.batch_size,
-                       bias_threshold=0.10,
-                       L=4,
-                       alpha=0.01,
+                       bias_threshold=bias_threshold,
+                       L=L,
+                       alpha=alpha,
                        output='both',
                        seed='EWMA_{data_point:04d}'.format(**locals()),
                        )
 
-                start_batch = int(float(data.split()[-1])) / options.batch_size
+                if len(data) >= 0:
+                    start_batch = int(float(data.split()[-1])) / options.batch_size
+                else:
+                    start_batch = 0
 
                 #except Exception as e:
                     #print("Warning: Encountered error in sampling: {e}. Make sure this is correct.".format(**locals()))
@@ -574,10 +598,13 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                     else:
                         outfile = log_target
 
-                    outfile.write("\n\nProcstat\n")
                     outfile.write("========\n\n")
+                    outfile.write("datapoint [descriptor string]\n\n")
                     outfile.write("{data_point} {descriptor_string}\n\n".format(**locals()))
+                    outfile.write("\n\nProcstat (number of executed processes)\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
+                    outfile.write("\n\nCoverages\n")
+                    outfile.write(kmos_model.print_coverages(to_stdout=False))
                     outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
                     outfile.write("\n\nEquilibration Report\n")
@@ -588,17 +615,21 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                     outfile.write(equilibration_report)
 
                     fast_processes = False
-                    outfile.write("Evaluating equilibration report\n")
+                    outfile.write("\nEvaluating equilibration report\n")
                     for ratio, pn1, pn2 in equilibration_data :
                         outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
-                        if 0 < abs(ratio) < 1.e-2:
+                        EQUIB_THRESHOLD = 1e-2
+                        if abs(ratio) < EQUIB_THRESHOLD:
                             fast_processes = True
                             for pn in [pn1, pn2]:
                                 old_rc = kmos_model.rate_constants.by_name(pn)
                                 rc_tuple = kmos_model.settings.rate_constants[pn]
                                 #rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
-                                rescale_factor = '* %.2e' % (abs(ratio) / 1e-2)
-                                rc_tuple = (rc_tuple[0] + rescale_factor, rc_tuple[1])
+                                rescale_factor = max(EQUIB_THRESHOLD, (abs(ratio) / EQUIB_THRESHOLD))
+                                rescale_multiplication = '*%.2e' % rescale_factor
+                                rescale_division = '/%.2e' % rescale_factor
+                                renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
+                                rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
                                 kmos_model.settings.rate_constants[pn] = rc_tuple
                                 new_rc = kmos_model.rate_constants.by_name(pn)
                                 #kmos_model.rate_constants.set(pn, new_rc)
@@ -611,8 +642,30 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, log_target=Non
                     if fast_processes or fast_processes_adaption == 0:
                         outstring = '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals())
 
+                    # Check if every process has been touch in this round
+                    if all([rate < EQUIB_THRESHOLD for (rate, _, _) in equilibration_data]):
+                        fast_processes = False
+                        outfile.write("Found all processes, to be equilibrated. So further adjustments will not help. Quit.")
+
+                    ## Check if every process has been touched at least once
+                    #len_renormalizations = len(renormalizations)
+                    #len_equilibration_data = len(equilibration_data)
+                    #print("len(renormalizations) = {len_renormalizations};  len(equilibration_data) = {len_equilibration_data}".format(**locals()))
+                    #if len_renormalizations >= len_equilibration_data :
+                        #fast_processes = False
+                        #outfile.write("Every process has been found to be equilibrated at least once, exiting.")
+                    # Does not work, let's abandon for now.
+
+                    # Check if ill-defined values in result, if so run again
+                    if not(data_dict):
+                        outfile.write("Found ill-defined processes, will keep running\n")
+                        fast_processes = True
+
+                    # Confirm result
                     if not fast_processes :
                         outfile.write("Found no fast processes after {fast_processes_adaption} adaptions, so this result will count\n".format(**locals()))
+                        outfile.write("\nRenormalizations\n")
+                        outfile.write(pprint.pformat(renormalizations))
 
                 fast_processes_adaption += 1
             return outstring
