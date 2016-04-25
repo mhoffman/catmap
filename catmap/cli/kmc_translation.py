@@ -14,8 +14,7 @@ class MemoizeMutable:
         self.memo = {}
     def __call__(self, *args):
         import cPickle
-        import pickle
-        str = pickle.dumps(args)
+        str = cPickle.dumps(args)
         if not self.memo.has_key(str):
             self.memo[str] = self.fn(*args)
         return self.memo[str]
@@ -344,22 +343,20 @@ def catmap2kmos(cm_model,
                         else:
                             diff_prefix = ''
 
-                    process_name = '{forward_name_root}_{s_i}'.format(**locals())
-                    process = pt.add_process(name=process_name,
+                    process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
                                    conditions=conditions,
                                    actions=actions,
                                    rate_constant='{diff_prefix}forward_{ri}'.format(
                                        **locals()),
-                                   tof_count={forward_name_root: 1, process_name: 1},
+                                   tof_count={forward_name_root: 1},
                                    )
 
-                    process_name = '{reverse_name_root}_{s_i}'.format(**locals())
-                    reverse_process = pt.add_process(name=process_name,
+                    reverse_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
                                    conditions=actions,
                                    actions=conditions,
                                    rate_constant='{diff_prefix}reverse_{ri}'.format(
                                        **locals()),
-                                   tof_count={reverse_name_root: 1, process_name: 1},
+                                   tof_count={reverse_name_root: 1},
                                    )
 
                     if options.interaction > 0 :
