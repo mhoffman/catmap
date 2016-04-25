@@ -549,14 +549,18 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
         # generate the data
         n_current_point = data_point + 1
 
+
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
         descriptor_string = str(descriptors)
 
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
+            # -1 is needed to go form 1 based Fortran to 0 based C.
+            elementary_process_index = dict([(i, eval('kmos_model.proclist.' + i.lower()) - 1) for i in sorted(kmos_model.settings.rate_constants)])
             start_batch = 0
             fast_processes = True
             fast_processes_adaption = 0
             renormalizations = {}
+            numeric_renormalizations = np.ones([kmos_model.proclist.nr_of_proc])
             while fast_processes == True :
                 set_rate_constants(kmos_model, catmap_data, data_point, options=options)
                 print(kmos_model.rate_constants)
@@ -588,9 +592,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                        alpha=alpha,
                        output='both',
                        seed='EWMA_{data_point:04d}'.format(**locals()),
+                       renormalizations=numeric_renormalizations,
                        )
 
-                if len(data) >= 0:
+                if len(data.strip()) > 0:
                     start_batch = int(float(data.split()[-1])) / options.batch_size
                 else:
                     start_batch = 0
@@ -620,6 +625,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                     outfile.write(kmos_model.rate_constants())
                     outfile.write("\n\nEquilibration Report\n")
                     equilibration_report, equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model)
+                    outfile.write("\n\nRenormalizations {numeric_renormalizations}\n\n".format(**locals()))
                     outfile.write("\nSampled rates and coverages\n")
                     outfile.write(pprint.pformat(data_dict))
                     outfile.write("\n\nRelative rate differences between reversing processes\n")
@@ -640,12 +646,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                                 rescale_multiplication = '*%.2e' % rescale_factor
                                 rescale_division = '/%.2e' % rescale_factor
                                 renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
+                                # Hackish way of producing the same normalizations for 2 significant digits
+                                numeric_renormalizations[elementary_process_index[pn]] /= eval('{:.2e}'.format(rescale_factor))
                                 rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
                                 kmos_model.settings.rate_constants[pn] = rc_tuple
                                 new_rc = kmos_model.rate_constants.by_name(pn)
                                 #kmos_model.rate_constants.set(pn, new_rc)
                                 outfile.write("Found a fast equilibrated process {ratio}: {pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n".format(**locals()))
                     print(kmos_model.proclist)
+                    # Reset procstat and kmc steps
                     for proc in range(kmos_model.proclist.nr_of_proc.max()):
                         kmos_model.base.set_procstat(proc + 1, 0)
                     kmos_model.base.set_kmc_step(0)
@@ -658,16 +667,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                         fast_processes = False
                         outfile.write("Found all processes, to be equilibrated. So further adjustments will not help. Quit.")
 
-                    ## Check if every process has been touched at least once
-                    #len_renormalizations = len(renormalizations)
-                    #len_equilibration_data = len(equilibration_data)
-                    #print("len(renormalizations) = {len_renormalizations};  len(equilibration_data) = {len_equilibration_data}".format(**locals()))
-                    #if len_renormalizations >= len_equilibration_data :
-                        #fast_processes = False
-                        #outfile.write("Every process has been found to be equilibrated at least once, exiting.")
-                    # Does not work, let's abandon for now.
-
-                    # Check if ill-defined values in result, if so run again
+                    # Check if ill-defined values in result, if so run again in first round, otherwise report last valid result
                     if not(data_dict):
                         outfile.write("Found ill-defined processes, will keep running\n")
                         fast_processes = True
