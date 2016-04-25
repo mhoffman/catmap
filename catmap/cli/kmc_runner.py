@@ -25,7 +25,7 @@ TEMPERATURE = 500
 DIFFUSION_FACTOR = None
 
 def contour_plot_data(x, y, z, filename,
-                      n_gp=101,
+                      n_gp=201,
                       m_gp=20,
                       title='',
                       xlabel='',
@@ -89,6 +89,8 @@ def contour_plot_data(x, y, z, filename,
         return
     zi = rbf(xi, yi)
     #zi = griddata(x, y, z, xi, yi, interp='linear')
+    if normalized:
+        zi = np.clip(zi, 0, 1)
 
     if zmin is None :
         zmin = z.min()
@@ -105,17 +107,24 @@ def contour_plot_data(x, y, z, filename,
             levels = np.linspace(zmin * (1-1e-2 * np.sign(zmin)), zmin * (1+1e-2 * np.sign(zmin)), 6)
         else:
             print(zmin, zmax)
-            divider = np.abs((np.array(map(lambda x: (zmax - zmin) / x, range(1, int(zmax-zmin) + 1))) - 50)).argmin() + 1
+            attempt_list = np.abs((np.array(map(lambda x: (zmax - zmin) / x, range(1, int(zmax-zmin) + 1))) - 50))
+            if len(attempt_list) > 0 :
+                divider = attempt_list.argmin() + 1
+            else:
+                divider = 1
+
             levels = np.linspace(round(zmin), round(zmax), round(zmax - zmin + 1))[::divider]
             print(divider, levels)
 
     print("Levels {levels}".format(**locals()))
 
 
+
     contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
                extent=[x.min(), x.max(), y.min(), y.max()],
                levels=levels,
-               extend='both')
+               extend={False: 'both', True: 'neither'}[normalized],
+               )
 
 
     ## plot the data point which we actually evaluated
@@ -165,19 +174,21 @@ def contour_plot_data(x, y, z, filename,
             plt.ylabel(ylabel)
 
 
-    plt.xlim((x.min(), x.max()))
-    plt.ylim((y.min(), y.max()))
-    plt.xticks(np.arange(x.min(), x.max(), .5))
-    plt.yticks(np.arange(y.min(), y.max(), .5))
+    #plt.xticks(np.arange(x.min(), x.max(), .5))
+    #plt.yticks(np.arange(y.min(), y.max(), .5))
     #plt.autoscale(enable=True, axis='both', tight=True)
 
     #plt.xticks(np.arange(x.min(), x.max() + .5, .5))
     #plt.yticks(np.arange(y.min(), y.max() + .5, .5))
-    plt.axis('tight')
 
-    for axis in [fig.gca().xaxis, fig.gca().yaxis]:
-        axis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
+    #for axis in [fig.gca().xaxis, fig.gca().yaxis]:
+        #axis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
 
+    plt.axis('tight', clip_on=True)
+    plt.xlim((x.min(), x.max()))
+    plt.ylim((y.min(), y.max()))
+    #plt.axis('image')
+    #plt.axis('scaled')
 
     try:
         plt.savefig(filename, bbox_inches='tight')
