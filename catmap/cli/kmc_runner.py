@@ -790,6 +790,7 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
     seed = model.settings.model_name
 
     data = merge_catmap_output(seed=seed)
+    sort_catmap_maps_inplace(data)
     coverage = data['coverage_map'][data_point][1]
     catmap_sitenames = list(data['site_names'])
     if 'g' in catmap_sitenames:
