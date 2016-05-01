@@ -674,6 +674,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                     if  all([ s >= STAT_MIN for r, _, _, s in equilibration_data ]):
                         fast_processes = False
                         outfile.write("\nObtained well-sampled statistics for every process-pair, no further sampling needed.\n")
+                        outstring = _get_outstring(data_point, descriptors, data)
 
                     # Check if ill-defined values in result, if so run again in first round, otherwise report last valid result
                     if not(data_dict):
@@ -700,15 +701,24 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
 
                     # Confirm result
                     if not fast_processes :
+                        outstring = _get_outstring(data_point, descriptors, data)
                         outfile.write("Found no fast processes after {fast_processes_adaption} adaptions or some other reason to exit (s.a.), so this result will count\n".format(**locals()))
                         outfile.write("\nRenormalizations\n")
                         outfile.write(pprint.pformat(renormalizations))
 
                     if fast_processes or fast_processes_adaption == 0:
-                        outstring = '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals())
+                        outstring = _get_outstring(data_point, descriptors, data)
 
                 fast_processes_adaption += 1
             return outstring
+
+
+def _get_outstring(data_point, descriptors, data):
+    if data.strip():
+        return '{data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} {data}'.format(**locals())
+    else:
+        return '# {data_point:9d} {descriptors[0]: .5e} {descriptors[1]: .5e} EMPTY DATA RETURN CHECK procstat_{data_point:04d}.dat TO SEE WHAT WENT WRONG\n'.format(**locals())
+
 
 def sort_catmap_maps_inplace(data):
     for key in data:
