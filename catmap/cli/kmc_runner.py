@@ -190,7 +190,6 @@ def contour_plot_data(x, y, z, filename,
 
     if title == 'data point':
         for _x, _y, _label in zip(x, y, z):
-            print(_x, _y, _label)
             plt.annotate(_label, xy=(_x , _y), size='small',)
 
     try:
