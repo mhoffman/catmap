@@ -972,6 +972,26 @@ def set_rate_constants_from_descriptors(kmos_model, catmap_model, descriptors, d
                 **locals()), reverse_rate_constant)
 
 
+def set_rate_constants_from_procstat_logfile(model, log_filename, step=0):
+    """Utility function to support debugging: set the (possibly rescaled)
+    rate constants from a generated procstat_XXXX.dat file.
+
+    """
+
+    with open(log_filename) as log_file:
+        while step >= 0 :
+            line = log_file.readline()
+            if line.strip() == 'Rate Constants':
+                step += -1
+
+        for i in range(model.proclist.nr_of_proc):
+            line = log_file.readline().replace(':', '')
+            elements = line.split()
+            print(elements)
+            process_name = elements[1]
+            rate_constant = float(elements[4])
+            model.rate_constants.set(process_name, rate_constant)
+
 
 def find_pairs(project):
     """Find pairs of elementary processes that are reverse processes with respect
