@@ -979,15 +979,18 @@ def set_rate_constants_from_procstat_logfile(model, log_filename, step=0):
     """
 
     with open(log_filename) as log_file:
+        step0 = step
         while step >= 0 :
             line = log_file.readline()
             if line.strip() == 'Rate Constants':
                 step += -1
+            if line == '':
+                print("Warning: Logfile {log_filename} ended before step {step0} was reached, pick an earlier step".format(**locals()))
+                return
 
         for i in range(model.proclist.nr_of_proc):
             line = log_file.readline().replace(':', '')
             elements = line.split()
-            print(elements)
             process_name = elements[1]
             rate_constant = float(elements[4])
             model.rate_constants.set(process_name, rate_constant)
