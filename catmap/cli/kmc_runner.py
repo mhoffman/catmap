@@ -560,6 +560,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
         descriptor_string = str(descriptors)
 
+        log_filename = "procstat_{:04d}.dat".format(data_point)
+
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             # -1 is needed to go form 1 based Fortran to 0 based C.
             elementary_process_index = dict([(i, eval('kmos_model.proclist.' + i.lower()) - 1) for i in sorted(kmos_model.settings.rate_constants)])
@@ -587,6 +589,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                        output='both',
                        seed='EWMA_{data_point:04d}'.format(**locals()),
                        renormalizations=numeric_renormalizations,
+                       log_filename=log_filename,
                        )
 
                 if len(data.strip()) > 0:
@@ -601,7 +604,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point, make_plots=Fal
                 t_sample = time.time()
 
                 import kmos.run.steady_state
-                with open("procstat_{:04d}.dat".format(data_point), 'a') as procstat_file:
+                with open(log_filename, 'a') as procstat_file:
                     if log_target is None:
                         outfile = procstat_file
                     else:
