@@ -65,6 +65,18 @@ def translate_model_file(mkm_filename, options):
         kmos_model.save('{seed}_kmc_i{options.interaction}.ini'.format(**locals()))
 
 
+def surface_intermediates_to_process_names(initial_intermediates, final_intermediates):
+    """Canonical function that translates a CatMAP reaction expression (rxn_expression) into
+    a unique string that can serve as a variable or column name
+    """
+    condition_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in initial_intermediates])
+    action_string = '_n_'.join([species.replace('-', '_') + '_' + site for (species, site) in final_intermediates])
+
+    forward_name_root = '{condition_string}_2_{action_string}'.format(**locals())
+    reverse_name_root = '{action_string}_2_{condition_string}'.format(**locals())
+
+    return forward_name_root, reverse_name_root
+
 
 def catmap2kmos(cm_model,
                 unit_cell=None,
@@ -321,11 +333,7 @@ def catmap2kmos(cm_model,
                     ads_initial = [ads for (ads, site) in surface_intermediates['A']]
                     ads_final = [ads for (ads, site) in surface_intermediates['C']]
 
-                    condition_string = '_n_'.join([species.replace( '-', '_') + '_' + site for (species, site) in surface_intermediates[X]])
-                    action_string = '_n_'.join([species.replace( '-', '_') + '_' + site for (species, site) in surface_intermediates[Y]])
-
-                    forward_name_root = '{condition_string}_2_{action_string}'.format( **locals())
-                    reverse_name_root = '{action_string}_2_{condition_string}'.format( **locals())
+                    forward_name_root, reverse_name_root = surface_intermediates_to_process_names(surface_intermediates[X], surface_intermediates[Y])
 
                     actions = [Action(species=species, coord=coord) for (species, coord) in zip(ads_final, sites)]
                     conditions = [Condition(species=species, coord=coord) for (species, coord) in zip(ads_initial, sites)]
