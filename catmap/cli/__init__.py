@@ -87,6 +87,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
+    parser.add_option('-m', '--simulation-size', dest='simulation_size', default=20, type='int', help="The lattice size of the kMC lattice")
 
 
     if args is not None:

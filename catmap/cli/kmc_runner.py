@@ -606,6 +606,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
         log_filename = "procstat_{:04d}.dat".format(data_point)
 
+        # important to change the lattice size before the Fortran object is instantiated
+        import kmc_settings
+        print(options)
+        print(dir(options))
+        kmc_settings.simulation_size = options.simulation_size
+
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             # -1 is needed to go form 1 based Fortran to 0 based C.
             elementary_process_index = dict([(i, eval('kmos_model.proclist.' + i.lower()) - 1) for i in sorted(kmos_model.settings.rate_constants)])
@@ -657,7 +663,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write("fast-process adaption step {fast_processes_adaption}\n".format(**locals()))
                     outfile.write("\n\nProcstat (number of executed processes)\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
-                    outfile.write("\n\nCoverages\n")
+                    outfile.write("\n\nCoverages, lattice-size {kmos_model.lattice.system_size}\n".format(**locals()))
                     outfile.write(kmos_model.print_coverages(to_stdout=False))
                     outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
@@ -964,6 +970,7 @@ def setup_model_probabilistic(model, data_point=0, majority=False ):
     model._set_configuration(config)
     model._adjust_database()
 
+    print("kMC lattice size {model.lattice.system_size}".format(**locals()))
     print("Initial kmos Coverages")
     model.print_coverages()
 
