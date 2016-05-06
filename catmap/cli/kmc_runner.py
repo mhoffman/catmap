@@ -15,6 +15,7 @@ matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.mlab import griddata
 import matplotlib.ticker
+import matplotlib.colors
 
 import numpy as np
 
@@ -23,6 +24,22 @@ SAMPLE_STEPS = INIT_STEPS
 SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = None
+
+class MidpointNormalize(matplotlib.colors.Normalize):
+    """Credit goes to
+
+    http://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib
+    """
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        matplotlib.colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        print("Mid point normalize vmin = {self.vmin}, vmax = {self.vmax}, midpoint = {self.midpoint}, ({x}, {y})".format(**locals()))
+        return np.ma.masked_array(np.interp(value, x, y))
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=201,
@@ -38,7 +55,8 @@ def contour_plot_data(x, y, z, filename,
                       seed=None,
                       catmap_model=None,
                       normalized=False,
-                      colorbar_label=None):
+                      colorbar_label=None,
+                      cmap=None,):
     import numpy
     import scipy.interpolate
     fig = plt.figure()
@@ -47,6 +65,13 @@ def contour_plot_data(x, y, z, filename,
     y = np.array(y)
     z = np.array(z)
 
+    centered_norm = False
+    if cmap is None:
+        cmap = plt.cm.jet
+    elif type(cmap) is str:
+        if cmap in ['bwr', 'seismic']:
+            centered_norm = True
+        cmap = eval('plt.cm.{cmap}'.format(**locals()))
 
     # with golden ration and the whole shebang ...
     # settings size and font for revtex stylesheet
@@ -118,13 +143,23 @@ def contour_plot_data(x, y, z, filename,
 
     print("Levels {levels}".format(**locals()))
 
-
-
-    contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
-               extent=[x.min(), x.max(), y.min(), y.max()],
-               levels=levels,
-               extend={False: 'both', True: 'neither'}[normalized],
-               )
+    if centered_norm:
+        norm = MidpointNormalize(midpoint=0.)
+        print(norm)
+        contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
+                   extent=[x.min(), x.max(), y.min(), y.max()],
+                   levels=levels,
+                   extend={False: 'both', True: 'neither'}[normalized],
+                   cmap=cmap,
+                   norm=norm,
+                   )
+    else:
+        contour_plot = plt.contourf(np.nan_to_num(zi), vmin=zmin, vmax=zmax, origin='lower',
+                   extent=[x.min(), x.max(), y.min(), y.max()],
+                   levels=levels,
+                   extend={False: 'both', True: 'neither'}[normalized],
+                   cmap=cmap,
+                   )
 
 
     ## plot the data point which we actually evaluated
