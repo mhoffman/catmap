@@ -7,8 +7,11 @@ import catmap
 import pickle
 import copy
 import re
+import math
 import time
 import traceback
+
+import catmap.cli.kmc_translation
 
 import matplotlib
 matplotlib.use('Agg')
@@ -25,6 +28,76 @@ SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = None
 
+
+def process_name_to_latex(pname, arrow=r' \rightarrow '):
+    pname = r'${{\rm {}}}$'.format(pname \
+            .replace('_2_', arrow) \
+            .replace('_n_', ' + ') \
+            .replace('_default', '') \
+            .replace('empty', '*') \
+            .replace('_0', ''))
+    return pname
+
+
+def get_canonical_intermediates(step, site_names=None, empty_species=catmap.cli.kmc_translation.EMPTY_SPECIES):
+    surface_intermediates = []
+    #print('step = {step}'.format(**locals()))
+    for intermediate in step:
+        if '_' in intermediate:
+            species, site = intermediate.split('_')
+            #print(
+                #'SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
+            #print(
+                #[s.startswith('{site}'.format(**locals())) for s in site_names])
+            if any([s.startswith('{site}'.format(**locals())) for s in site_names]):
+                surface_intermediates.append([species, site])
+        elif any([s.startswith('{intermediate}'.format(**locals())) for s in site_names]):
+            surface_intermediates.append(
+                [catmap.cli.kmc_translation.EMPTY_SPECIES, intermediate])
+        else:
+            #print('NOTHING MATCHED!!!')
+            pass
+    return surface_intermediates
+
+
+def get_canonical_process_names(data, empty_species=catmap.cli.kmc_translation.EMPTY_SPECIES):
+    process_names = []
+    site_names = data.site_positions.keys()
+    for elementary_rxn in data.elementary_rxns:
+        #print(elementary_rxn)
+        step = {}
+        surface_intermediates = {}
+        # N.B: The general form of an elementary reaction in CatMAP is
+        #      A <-> B -> C
+        #      where A is the initial state,
+        #            C is the final state,
+        #            B is the transition state
+        #            B may be skipped
+        if len(elementary_rxn) == 2:
+            step['A'], step['C'] = elementary_rxn
+            step['B'] = None
+        elif len(elementary_rxn) == 3:
+            step['A'], step['B'], step['C'] = elementary_rxn
+        #print(surface_intermediates)
+        # for reversible, (X, Y) in [[True, ('A', 'B')],
+        #[False, ['B' , 'C']]]:
+        # DEBUGGING: make everything reversible for now
+        #            since we want a non-crashing model first
+        for reversible, (X, Y) in [[True, ('A', 'C')], ]:
+            if step[X] and step[Y]:
+                # add reversible step between A and B
+                surface_intermediates[X] = []
+                surface_intermediates[Y] = []
+
+                for x in [X, Y]:
+                    surface_intermediates[x] = get_canonical_intermediates(step[x], site_names=site_names, empty_species=catmap.cli.kmc_translation.EMPTY_SPECIES)
+
+                    #print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(
+                        #**locals()))
+                forward_name_root, reverse_name_root = catmap.cli.kmc_translation.surface_intermediates_to_process_names(surface_intermediates[X], surface_intermediates[Y])
+
+                process_names.append((forward_name_root, reverse_name_root))
+    return process_names
 class MidpointNormalize(matplotlib.colors.Normalize):
     """Credit goes to
 
@@ -40,6 +113,7 @@ class MidpointNormalize(matplotlib.colors.Normalize):
         x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
         print("Mid point normalize vmin = {self.vmin}, vmax = {self.vmax}, midpoint = {self.midpoint}, ({x}, {y})".format(**locals()))
         return np.ma.masked_array(np.interp(value, x, y))
+
 
 def contour_plot_data(x, y, z, filename,
                       n_gp=201,
@@ -108,9 +182,12 @@ def contour_plot_data(x, y, z, filename,
 
     #print(z)
     try:
-        rbf = scipy.interpolate.Rbf(x, y, z, function='linear',)
+        #rbf = scipy.interpolate.Rbf(x, y, z, function='linear', smooth=0.2)
+        rbf = scipy.interpolate.Rbf(x, y, z, function='linear')
     except Exception as e:
-        print("Trouble printing {title}: {e}".format(**locals()))
+        import traceback
+        print("Trouble printing {title} {colorbar_label}: {e}".format(**locals()))
+        traceback.print_stack()
         return
     zi = rbf(xi, yi)
     #zi = griddata(x, y, z, xi, yi, interp='linear')
@@ -230,6 +307,7 @@ def contour_plot_data(x, y, z, filename,
     try:
         plt.savefig(filename, bbox_inches='tight')
     except:
+        import traceback
         traceback.print_stack()
         print("Had trouble saving {filename}".format(**locals()))
 
@@ -264,7 +342,6 @@ def line_plot_data(x, y, filename,
     fig = plt.figure()
     x = np.array(x)
     y = np.array(y)
-
 
     # with golden ration and the whole shebang ...
     # settings size and font for revtex stylesheet
@@ -307,17 +384,103 @@ def line_plot_data(x, y, filename,
     plt.title(title)
     plt.xlim((x.min(), x.max()))
 
-
     plt.savefig(filename, bbox_inches='tight')
     print("Plotted {filename}".format(**locals()))
 
+def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
+    process_names = (get_canonical_process_names(catmap_model))
+    for i, elementary_rxn in enumerate(catmap_model.elementary_rxns):
+        print(elementary_rxn)
+        xs, ys, zs = [], [], []
+        zraw = []
+        zMFT_dict = {}
+
+        mft_signal = False
+
+        for (x, y), rates in catmap_model.rate_map:
+            xs.append(x)
+            ys.append(y)
+            zraw.append(float(rates[i]))
+            zs.append(np.log10(float(rates[i])))
+            zMFT_dict.setdefault(round(x, ROUND_DIGITS), {})[round(y, ROUND_DIGITS)] = float(rates[i])
+            if float(rates[i]) != 0.:
+                mft_signal = True
+        zs_MFT_max = max(zraw)
+        pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
+        colorbar_label = '$\\log_{{10}}(R_{{\\rm MFT}})$ ({pname})'.format(**locals())
+        contour_plot_data(xs, ys, zs,
+                          'kMC_plot_MFT_rate_{i}.pdf'.format(**locals()),
+                          colorbar_label=colorbar_label,
+                          catmap_model=catmap_model,)
+
+        print("PLOTTING DELTA")
+        xs, ys, zs = [], [], []
+        x_kMC, y_kMC, z_kMC = [], [], []
+        zs_kMC = np.array(kmos_data[process_names[i][0]]) - np.array(kmos_data[process_names[i][1]])
+
+        zs_kMC_max = max(zs_kMC)
+        z_ratio = zs_MFT_max / zs_kMC_max
+
+        print(zs_MFT_max, zs_kMC_max, z_ratio)
+
+        for x, y, z0, z1 in zip(kmos_data['descriptor0'], kmos_data['descriptor1'], kmos_data[process_names[i][0]], kmos_data[process_names[i][1]]):
+
+            x, y = round(x, ROUND_DIGITS), round(y, ROUND_DIGITS)
+            if np.isfinite(np.log(z0 - z1)):
+                x_kMC.append(x)
+                y_kMC.append(y)
+                z_kMC.append(np.log10(z0 - z1))
+
+            if mft_signal:
+                ztest = - np.log10((z0 - z1) / zMFT_dict[x][y])
+            else:
+                ztest = - np.log10((z0 - z1))
+
+            if not math.isnan(ztest):
+                xs.append(x)
+                ys.append(y)
+                zs.append(ztest)
+        zs = np.array(zs)
+        #zs[np.isinf(zs)] = 0.
+        #zs[np.isnan(zs)] = 0
+        zs[np.logical_not(np.isfinite(zs))] = 0.
+        print(zs)
+        pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
+        colorbar_label = '$\\log_{{10}}(R_{{\\rm MFT}}/R_{{\\rm kMC}})$ ({pname})'.format(**locals())
+        print("Colorbar label {colorbar_label}".format(**locals()))
+        try:
+            contour_plot_data(xs, ys, zs,
+                              'kMC_plot_delta_kMC_MFT_{i}.pdf'.format(**locals()),
+                              colorbar_label=colorbar_label, catmap_model=catmap_model, seed=seed, cmap='seismic')
+        except:
+            process_name = process_names[i]
+            print("Trouble plotting delta {process_name}".format(**locals()))
+            print("PLOTTED DELTA KMC_MFT {process_names}".format(**locals()))
+
+
+        pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
+        colorbar_label = '$\\log_{{10}}(R_{{\\rm kMC}})$ ({pname})'.format(**locals())
+        print(z_kMC)
+        try:
+            contour_plot_data(x_kMC, y_kMC, z_kMC,
+                              'kMC_plot_kMC_{i}.pdf'.format(**locals()),
+                              colorbar_label=colorbar_label,
+                              catmap_model=catmap_model,
+                              seed=seed,
+                              )
+        except:
+            process_name = process_names[i]
+            print("Trouble plotting kMC {process_name}".format(**locals()))
+
+
+
 def main(options, call_path=None):
     if not options.dontrun:
-        init_steps = options.equilibration_steps if options.equilibration_steps else INIT_STEPS
-        sample_steps = options.sampling_steps if options.sampling_steps else SAMPLE_steps
+        #init_steps = options.batch_size if options.batch_size else INIT_STEPS
+        #sample_steps = options.batch_size if options.batch_size else SAMPLE_steps
         run_model(seed=SEED,
-             init_steps=init_steps,
-             sample_steps=sample_steps,
+             #init_steps=init_steps,
+             #sample_steps=sample_steps,
              call_path=call_path,
              options=options)
 
@@ -338,6 +501,9 @@ def main(options, call_path=None):
         catmap_model.output_variables.append('forward_rate_constant')
         catmap_model.output_variables.append('reverse_rate_constant')
         catmap_model.run()
+
+        # possible move further down
+        plot_mft_kmc_differences(catmap_model, data, seed=seed)
 
         # plot in reverse to that we start with the coverages
         for name in reversed(data.dtype.names):
@@ -385,12 +551,7 @@ def main(options, call_path=None):
                 else:
                     raise UserWarning("Process corresponding to {name} not found.".format(**locals()))
 
-                pname = r'${{\rm {}}}$'.format(pname \
-                           .replace('_2_', r' \rightarrow ') \
-                           .replace('_n_', ' + ') \
-                           .replace('_default', '') \
-                           .replace('empty', '*') \
-                           .replace('_0', ''))
+                pname = process_name_to_latex(pname)
 
                 if 'forward' in name:
                     k = r'$k$'
@@ -398,7 +559,6 @@ def main(options, call_path=None):
                     k = r'$k$'
 
                 title = '{k}({pname})'.format(**locals())
-
 
             elif name == 'datapoint':
                 title = 'data point'
@@ -562,11 +722,10 @@ def set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_
         raise UserWarning("Directions for initial configuration '{options.initial_configuration}' can not be processed".format(**locals()))
 
 def run_kmc_model_at_data_point(catmap_data, options, data_point,
-                                make_plots=False,
+                                make_plots=None,
                                 log_target=None,
-                                bias_threshold=0.10,
                                 L=4,
-                                alpha=0.01,
+                                alpha=0.05,
                                 coverage_tolerance=0.1,
                                 ):
         """
@@ -599,6 +758,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
         # generate the data
         n_current_point = data_point + 1
+
+        if make_plots is None:
+            if hasattr(options, 'make_plots'):
+                make_plots = options.make_plots
+            else:
+                make_plots=False
 
 
         descriptors = catmap_data['forward_rate_constant_map'][data_point][0]
@@ -635,7 +800,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                        make_plots=make_plots,
                        start_batch=start_batch,
                        batch_size=options.batch_size,
-                       bias_threshold=bias_threshold,
+                       bias_threshold=options.bias_threshold,
                        L=L,
                        alpha=alpha,
                        output='both',
@@ -649,7 +814,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 else:
                     start_batch = 0
 
+                import socket
+                import os
                 import kmos.run.steady_state
+                hostname = socket.getfqdn()
+                working_directory = os.getcwd()
+                script_path =  os.path.dirname(os.path.abspath(__file__))
                 with open(log_filename, 'a') as procstat_file:
                     if log_target is None:
                         outfile = procstat_file
@@ -658,6 +828,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
 
                     outfile.write("========\n\n")
+                    outfile.write("Running at {hostname}/{working_directory}\n".format(**locals()))
+                    outfile.write("\tscript located at {script_path}\n".format(**locals()))
                     outfile.write("datapoint [descriptor string]\n\n")
                     outfile.write("{data_point} {descriptor_string}\n\n".format(**locals()))
                     outfile.write("fast-process adaption step {fast_processes_adaption}\n".format(**locals()))
@@ -697,19 +869,27 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile.write('\n\n')
                     else:
                         outfile.write("\ncoverages history: skipped\n")
+                        if data_dict['kmc_time'] == 0.:
+                            outfile.write('\n\tNo time progress recorded resetting kmc_time\n')
+                            kmos_model.base.set_kmc_time(0.)
+
+                    #EQUIB_THRESHOLD = 1e-2
+                    #STAT_MIN = int(1/EQUIB_THRESHOLD**2)
+                    #SAMPLE_MIN = STAT_MIN / 10
+
+                    EQUIB_THRESHOLD = options.equilibration_threshold
+                    SAMPLE_MIN = options.sampling_min
+                    STAT_MIN = SAMPLE_MIN * 10
 
 
+                    sums0 = [ s for r, _, _, s in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD ]
+                    ratios = [ r for r, _, _, s in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD ]
+                    sums = [ EQUIB_THRESHOLD * STAT_MIN / s for r, _, _, s in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD ]
 
-                    EQUIB_THRESHOLD = 1e-2
-                    STAT_MIN = int(1/EQUIB_THRESHOLD**2)
-                    SAMPLE_MIN = STAT_MIN / 10
+                    rescale_factor = max(sums + ratios + [0.01]) if (sums or ratios) else 1.
 
-                    sums0 = [ s for r, _, _, s in equilibration_data if s >= STAT_MIN and abs(r) < EQUIB_THRESHOLD ]
-                    sums = [ EQUIB_THRESHOLD * STAT_MIN / s for r, _, _, s in equilibration_data if s >= STAT_MIN and abs(r) < EQUIB_THRESHOLD ]
-
-                    rescale_factor = max(sums) if sums else 1.
-
-                    outfile.write("\nrescale factor calculation threshold {EQUIB_THRESHOLD}, stat. min. {STAT_MIN}\n".format(**locals()))
+                    outfile.write("\nrescale factor calculation threshold {EQUIB_THRESHOLD}, SAMPLE_MIN. min. {SAMPLE_MIN} STAT_MIN {STAT_MIN}\n".format(**locals()))
+                    outfile.write("ratios {ratios}\n".format(**locals()))
                     outfile.write("original sums {sums0}\n".format(**locals()))
                     outfile.write("rescaled sums {sums}\n".format(**locals()))
 
@@ -720,7 +900,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     for ratio, pn1, pn2, left_right_sum in equilibration_data :
                         outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
                         # Minimum number of events, to produce statistically meaningful results
-                        if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= STAT_MIN:
+                        if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= STAT_MIN :
                             fast_processes = True
                             for pn in [pn1, pn2]:
                                 old_rc = kmos_model.rate_constants.by_name(pn)
@@ -768,6 +948,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     if  all([ s >= SAMPLE_MIN for r, _, _, s in equilibration_data ]):
                         fast_processes = False
                         update_outstring = True
+                        outfile.write('\n\nFinal pair-sampling statistic\n\n')
+                        for r, pn1, pn2, s in equilibration_data:
+                            outfile.write('\n\t- {s} events for ({pn1}; {pn2})'.format(**locals()))
                         outfile.write("\n\nObtained well-sampled statistics for every process-pair, no further sampling needed. Done.\n")
                     else:
                         outfile.write('\n\nProcess pairs that are not sufficiently sampled :\n')
@@ -811,8 +994,7 @@ def sort_catmap_maps_inplace(data):
             data[key] = sorted(data[key], key=lambda x: x[0])
 
 
-def run_model(seed, init_steps, sample_steps,
-              call_path=None, options=None):
+def run_model(seed, call_path=None, options=None):
     import kmos.run
     # a path we need to add to make sure kmc model import works
     if call_path is not None:
@@ -1078,6 +1260,49 @@ def set_rate_constants_from_procstat_logfile(model, log_filename, step=0):
             process_name = elements[1]
             rate_constant = float(elements[4])
             model.rate_constants.set(process_name, rate_constant)
+
+def get_rates_from_procstat_logfile(model, log_filename, output='str'):
+    rates_list = []
+    with open(log_filename) as infile:
+        while True:
+            line = infile.readline()
+
+            if line.startswith('datapoint'):
+                infile.readline()
+                datapoint_line = infile.readline()
+                data_point, descriptor0, descriptor1 = map(float,
+                                                           datapoint_line.strip()
+                                                           .replace('[', '')
+                                                           .replace(']', '')
+                                                           .replace(',', '')
+                                                           .split())
+                data_point = int(data_point)
+                
+            if line == '':
+                break
+            if 'Sampled rates and coverages' in line:
+                rates = ''
+                while True:
+                    line = infile.readline()
+                    if line.strip() == '':
+                        break
+                    rates += line
+                rates = eval(rates)
+                rates['data_point'] = data_point
+                rates['descriptor0'] = descriptor0
+                rates['descriptor1'] = descriptor1
+                if output == 'dict':
+                    rates_list.append(rates)
+                elif output == 'str':
+                    format_str = ' '.join(map(lambda x: '{{{x:s}:.5e}}'.format(x=x), model.get_std_header()[1:].split()))
+                    data = format_str.format(**rates)
+                    descriptors = [descriptor0, descriptor1]
+
+                    rates_list.append(_get_outstring(data_point, descriptors, data) + '\n')
+                else:
+                    raise UserWarning("Don't know this format, should be either str or dict")
+
+    return rates_list
 
 
 def find_pairs(project):
