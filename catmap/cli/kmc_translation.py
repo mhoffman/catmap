@@ -3,6 +3,8 @@
 
 import itertools
 
+EMPTY_SPECIES = 'empty'
+
 class MemoizeMutable:
     """Memoize(fn) - an instance which acts like fn but memoizes its arguments
        Will work on functions with mutable arguments (slower than Memoize)
@@ -65,6 +67,28 @@ def translate_model_file(mkm_filename, options):
         kmos_model.save('{seed}_kmc_i{options.interaction}.ini'.format(**locals()))
 
 
+def get_canonical_intermediates(step, site_names=None, empty_species=EMPTY_SPECIES):
+    surface_intermediates = []
+    print('step = {step}'.format(**locals()))
+    for intermediate in step:
+        print(
+            'intermediate = {intermediate}'.format(**locals()))
+        if '_' in intermediate:
+            species, site = intermediate.split('_')
+            print(
+                'SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
+            print(
+                [s.startswith('{site}_'.format(**locals())) for s in site_names])
+            if any([s.startswith('{site}_'.format(**locals())) for s in site_names]):
+                surface_intermediates.append([species, site])
+        elif any([s.startswith('{intermediate}_'.format(**locals())) for s in site_names]):
+            surface_intermediates.append(
+                [EMPTY_SPECIES, intermediate])
+        else:
+            print('NOTHING MATCHED!!!')
+    return surface_intermediates
+
+
 def surface_intermediates_to_process_names(initial_intermediates, final_intermediates):
     """Canonical function that translates a CatMAP reaction expression (rxn_expression) into
     a unique string that can serve as a variable or column name
@@ -112,8 +136,6 @@ def catmap2kmos(cm_model,
     import kmos.utils
     import ase.atoms
     from ase.atoms import Atoms
-
-    EMPTY_SPECIES = 'empty'
 
     # initialize model
     pt = Project()
@@ -275,24 +297,7 @@ def catmap2kmos(cm_model,
                 surface_intermediates[Y] = []
 
                 for x in [X, Y]:
-                    print('x = {x}'.format(**locals()))
-                    for intermediate in step[x]:
-                        print(
-                            'intermediate = {intermediate}'.format(**locals()))
-                        if '_' in intermediate:
-                            species, site = intermediate.split('_')
-                            print(
-                                'SPECIES {species}, SITE {site}, SITE_NAMES {site_names}'.format(**locals()))
-                            print(
-                                [s.startswith('{site}_'.format(**locals())) for s in site_names])
-                            if any([s.startswith('{site}_'.format(**locals())) for s in site_names]):
-                                surface_intermediates[
-                                    x].append([species, site])
-                        elif any([s.startswith('{intermediate}_'.format(**locals())) for s in site_names]):
-                            surface_intermediates[x].append(
-                                [EMPTY_SPECIES, intermediate])
-                        else:
-                            print('NOTHING MATCHED!!!')
+                    surface_intermediates[x] = get_canonical_intermediates(step[x], site_names=site_names, empty_species=EMPTY_SPECIES)
 
                 print('Elementary Rxn: {elementary_rxn}, Surface intermediates {surface_intermediates}'.format(
                     **locals()))
