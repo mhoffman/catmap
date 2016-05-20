@@ -111,6 +111,10 @@ class MidpointNormalize(matplotlib.colors.Normalize):
         # I'm ignoring masked values and all kinds of edge cases to make a
         # simple example...
         x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        if self.midpoint - self.vmin > self.vmax - self.midpoint:
+            y = [0, .5, .5 + .5 * float(self.vmax - self.midpoint) / float(self.midpoint - self.vmin)]
+        else:
+            y = [.5 - .5 * float(self.midpoint - self.vmin) / float(self.vmax - self.midpoint) , .5, 1.]
         print("Mid point normalize vmin = {self.vmin}, vmax = {self.vmax}, midpoint = {self.midpoint}, ({x}, {y})".format(**locals()))
         return np.ma.masked_array(np.interp(value, x, y))
 
