@@ -73,11 +73,11 @@ def get_options(args=None, get_parser=False):
         + ') [options]',
         version=catmap.__version__)
 
+    parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-E', '--equilibration-steps', type='float', dest='equilibration_threshold', default=1e-2, help="The number of kmc steps before it starts sampling averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-S', '--sampling-min', type='int', dest='sampling_min', default=int(1e3), help="The number of kmc steps used to calculate averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
     parser.add_option('-b', '--batch-size', dest='batch_size', default=int(1e6), type='float', help="The default number of steps per batch for determinining the steady-state and sampling averages of rates and coverages")
-    parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
     parser.add_option('-d', '--diffusion-factor', dest='diffusion_factor', default=None, help="Parameter to tune the rate-constant of diffusion processes. The rationale is that for transition metal surfaces diffusion barriers are typically quite low, leading to fast surface diffusion processes. If no factor is specified the diffusion barrier is derived from whatever scaling relation is specified. If a diffusion factor X is specified all diffusion rate constants are set to k_max*X where k_max is the faster rate-constant among all non-diffusion elementary processes. If X < 10, the factor is interpreted as 10**X")
     parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
@@ -85,6 +85,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
     parser.add_option('-m', '--simulation-size', dest='simulation_size', default=20, type='int', help="The lattice size of the kMC lattice")
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
+    parser.add_option('-o', '--lowering-factor', dest='lowering_factor', default=2, help="Maximum lowering factor if process pair is equilibrated")
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
     parser.add_option('-t', '--bias-threshold', dest='bias_threshold', default=0.1, type='float', help="Sample trajectory until it has been determined that this amount or less is in transient part")
