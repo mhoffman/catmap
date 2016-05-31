@@ -1,6 +1,5 @@
-import os
 import pprint
-import shutil
+import os
 
 usage = {}
 
@@ -63,23 +62,21 @@ usage['run_kmc'] = """{SCRIPT} run_kmc -E <N> -S <N>
 
 def get_options(args=None, get_parser=False):
     import optparse
-    import os
-    from glob import glob
     import catmap
 
     parser = optparse.OptionParser(
-        'Usage: %prog [help] ('
-        + '|'.join(sorted(usage.keys()))
-        + ') [options]',
+        'Usage: %prog [help] (' +
+        '|'.join(sorted(usage.keys())) +
+        ') [options]',
         version=catmap.__version__)
 
     parser.add_option('-C', '--coverage-samples', dest='coverage_samples', default=100, help="Set how many sample are taken of the coverage during the sampling run [100]", type='int')
     parser.add_option('-E', '--equilibration-steps', type='float', dest='equilibration_threshold', default=1e-2, help="The number of kmc steps before it starts sampling averages. If < 100, will be interpreted as 10**x.")
-    parser.add_option('-S', '--sampling-min', type='int', dest='sampling_min', default=int(1e3), help="The number of kmc steps used to calculate averages. If < 100, will be interpreted as 10**x.")
+    parser.add_option('-S', '--sampling-min', type='int', dest='sampling_min', default=500, help="The number of kmc steps used to calculate averages. If < 100, will be interpreted as 10**x.")
     parser.add_option('-a', '--author-name', dest='author_name', default='CatMAP User', help="Specify your name for the translated kMC model (catmap to_kmc -a 'Joe Blow' ..")
-    parser.add_option('-b', '--batch-size', dest='batch_size', default=int(1e6), type='float', help="The default number of steps per batch for determinining the steady-state and sampling averages of rates and coverages")
+    parser.add_option('-b', '--batch-size', dest='batch_size', default=int(1e5), type='float', help="The default number of steps per batch for determinining the steady-state and sampling averages of rates and coverages")
     parser.add_option('-c', '--initial-configuration', dest='initial_configuration', default='probabilistic', help="Pick how the kmc model runner initializes the lattice. Currently implemented are: probabilistic [default], empty, species:<species_name>, and majority")
-    parser.add_option('-d', '--diffusion-factor', dest='diffusion_factor', default=None, help="Parameter to tune the rate-constant of diffusion processes. The rationale is that for transition metal surfaces diffusion barriers are typically quite low, leading to fast surface diffusion processes. If no factor is specified the diffusion barrier is derived from whatever scaling relation is specified. If a diffusion factor X is specified all diffusion rate constants are set to k_max*X where k_max is the faster rate-constant among all non-diffusion elementary processes. If X < 10, the factor is interpreted as 10**X")
+    parser.add_option('-d', '--diffusion-factor', dest='diffusion_factor', default=1, help="Parameter to tune the rate-constant of diffusion processes. The rationale is that for transition metal surfaces diffusion barriers are typically quite low, leading to fast surface diffusion processes. If no factor is specified the diffusion barrier is derived from whatever scaling relation is specified. If a diffusion factor X is specified all diffusion rate constants are set to k_max*X where k_max is the faster rate-constant among all non-diffusion elementary processes. If X < 10, the factor is interpreted as 10**X")
     parser.add_option('-e', '--author-email', dest='author_email', default='mkm-developers-request@lists.stanford.edu', help="Specify your email address for the kmc translated model (catmap to_kmc -e ...)")
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
@@ -92,7 +89,6 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
     parser.add_option('-w', '--ewma-plots', dest='make_plots', action='store_true', default=False, help="Have the steady-state runner create EWMA plots at every evaluation step.")
 
-
     if args is not None:
         options, args = parser.parse_args(args.split())
     else:
@@ -103,21 +99,10 @@ def get_options(args=None, get_parser=False):
     if options.plot:
         options.dontrun = True
 
-    ## Interpret sampling steps and equilibration steps < 100 as 10^x
+    # Interpret sampling steps and equilibration steps < 100 as 10^x
 
-    if options.batch_size < 100 :
+    if options.batch_size < 100:
         options.batch_size = int(10.**options.batch_size)
-    #else:
-        #options.sampling_steps = int(options.sampling_steps)
-    #if options.sampling_steps < 100 :
-        #options.sampling_steps = int(10.**options.sampling_steps)
-    #else:
-        #options.sampling_steps = int(options.sampling_steps)
-
-    #if options.equilibration_steps < 100 :
-        #options.equilibration_steps = int(10.**options.equilibration_steps)
-    #else:
-        #options.equilibration_steps = int(options.equilibration_steps)
 
     if options.diffusion_factor is not None:
         options.diffusion_factor = float(options.diffusion_factor)
@@ -164,7 +149,6 @@ def main(args=None):
     otherwise args will be taken from STDIN.
 
     """
-    from glob import glob
 
     options, args, parser = get_options(args, get_parser=True)
 
@@ -222,7 +206,6 @@ def sh(banner):
 
     """
 
-    from distutils.version import LooseVersion
     import IPython
     if hasattr(IPython, 'release'):
         try:
