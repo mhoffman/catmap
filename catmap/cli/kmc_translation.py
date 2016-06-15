@@ -4,7 +4,7 @@
 import itertools
 
 EMPTY_SPECIES = 'empty'
-MFT_SPECIES = 'MFT'
+MFT_SPECIES = 'MFT_'
 
 
 class MemoizeMutable:
@@ -520,8 +520,8 @@ def add_mft_processes(pt):
             mft_process = copy.deepcopy(process)
             mft_species = condition.species
             mft_site = condition.coord.name
-            mft_process.condition_list[c_i].species = 'MFT'
-            mft_process.action_list[c_i].species = 'MFT'
+            mft_process.condition_list[c_i].species = MFT_SPECIES
+            mft_process.action_list[c_i].species = MFT_SPECIES
             mft_process.rate_constant += '*Theta_{mft_site}_{mft_species}'.format(**locals())
             mft_process.name += '_mft_{c_i}'.format(**locals())
             pt.process_list.append(mft_process)
