@@ -389,6 +389,7 @@ def line_plot_data(x, y, filename,
 def plot_mft_coverages(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
     for i, adsorbate_name in enumerate(catmap_model.adsorbate_names):
         xs, ys, zs = [], [], []
+        zs_log = []
         zraw = []
         zMFT_dict = {}
 
@@ -400,6 +401,7 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
             ys.append(y)
             zraw.append(float(rates[i]))
             zs.append((float(rates[i])))
+            zs_log.append(np.log10(float(rates[i])))
             zMFT_dict.setdefault(round(x, ROUND_DIGITS), {})[round(y, ROUND_DIGITS)] = float(rates[i])
             if float(rates[i]) != 0.:
                 mft_signal = True
@@ -412,6 +414,14 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
                           colorbar_label=colorbar_label,
                           title=title,
                           normalized=True,
+                          catmap_model=catmap_model,
+                          )
+
+        contour_plot_data(xs, ys, zs_log,
+                          'kMC_plot_MFT_coverage_log_{i}.pdf'.format(**locals()),
+                          colorbar_label=colorbar_label,
+                          title=title,
+                          normalized=False,
                           catmap_model=catmap_model,
                           )
 
@@ -986,12 +996,18 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     # fast_processes = False
                     outfile.write("\nEvaluating equilibration report\n")
 
+                    fastest_nondiff_unsampled_rconstant = float('-inf')
+                    fastest_nondiff_unsampled_pname = ''
+
                     fastest_nondiff_rconstant = float('-inf')
                     fastest_nondiff_pname = ''
+
+                    # First loop: test for equilibrated pairs of elementary processes
+                    # that have been sampled many times and adjust those rate constants
                     for ratio, pn1, pn2, left_right_sum, _ in equilibration_data:
                         outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
                         # Minimum number of events, to produce statistically meaningful results
-                        if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= SAMPLE_MIN:
+                        if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * SAMPLE_MIN:
                             fast_processes = True
                             for pn in [pn1, pn2]:
                                 if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
@@ -1038,7 +1054,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     outfile.write("\n\nFastest non-diff process k({fastest_nondiff_pname}) = {fastest_nondiff_rconstant:.2e}\n".format(**locals()))
 
-                    # if non-diff processes where not sampled, reduce all diffusion rate-constants consistently
+                    # if non-diff processes where not sampled at all, reduce all diffusion rate-constants consistently
                     if fastest_nondiff_pname == '':
                         outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
                         for ratio, pn1, pn2, left_right_sum, _ in equilibration_data:
@@ -1055,6 +1071,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     outfile.write("\n\nFastest diff process k({fastest_nondiff_pname}) = {fastest_nondiff_rconstant:.2e}\n".format(**locals()))
 
+                    # Bracket the maximum change of the fastest non-diff rate-constant
                     if np.isfinite(old_nondiff):
                         if fastest_nondiff_rconstant < old_nondiff / 10.:
                             fastest_nondiff_rconstant = old_nondiff / 10.
@@ -1404,12 +1421,12 @@ def setup_mft_edges_2d(model):
     """
     X, Y, Z = model.lattice.system_size
     for x in range(X):
-        model._put([x, Y - 1, 0, 1], model.proclist.mft)
-        model._put([x, 0, 0, 1], model.proclist.mft)
+        model._put([x, Y - 1, 0, 1], model.proclist.mft_)
+        model._put([x, 0, 0, 1], model.proclist.mft_)
 
     for y in range(Y):
-        model._put([0, y, 0, 1], model.proclist.mft)
-        model._put([X - 1, y, 0, 1], model.proclist.mft)
+        model._put([0, y, 0, 1], model.proclist.mft_)
+        model._put([X - 1, y, 0, 1], model.proclist.mft_)
     model._adjust_database()
 
 
