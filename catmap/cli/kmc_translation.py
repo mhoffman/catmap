@@ -6,7 +6,6 @@ import itertools
 EMPTY_SPECIES = 'empty'
 MFT_SPECIES = 'MFT_'
 
-
 class MemoizeMutable:
     """Memoize(fn) - an instance which acts like fn but memoizes its arguments
        Will work on functions with mutable arguments (slower than Memoize)
@@ -24,13 +23,11 @@ class MemoizeMutable:
             self.memo[str] = self.fn(*args)
         return self.memo[str]
 
-
 def itertools_product_no_repetition(*vectors):
     n = len(vectors)
     for out in itertools.product(*vectors):
         if len(set(out)) == n:
             yield out
-
 
 def sum_edge_length_metric(sites):
     import itertools
@@ -40,7 +37,6 @@ def sum_edge_length_metric(sites):
         for (site_A, site_B) in itertools.combinations(sites, 2)
     ])
 
-
 def sum_edge_length_squared_metric(sites):
     import itertools
     import numpy.linalg
@@ -49,14 +45,12 @@ def sum_edge_length_squared_metric(sites):
         for (site_A, site_B) in itertools.combinations(sites, 2)
     ])
 
-
 def get_color(string):
     """Generate a color from any string using the hexdigest of
     the md5 hash
     """
     import md5
     return '#{}'.format(md5.md5(string).hexdigest()[:6])
-
 
 def translate_model_file(mkm_filename, options):
     import catmap
@@ -73,7 +67,6 @@ def translate_model_file(mkm_filename, options):
         kmos_model.save('{seed}_kmc.ini'.format(**locals()))
     else:
         kmos_model.save('{seed}_kmc_i{options.interaction}.ini'.format(**locals()))
-
 
 def get_canonical_intermediates(step, site_names=None, empty_species=EMPTY_SPECIES):
     surface_intermediates = []
@@ -96,7 +89,6 @@ def get_canonical_intermediates(step, site_names=None, empty_species=EMPTY_SPECI
             print('NOTHING MATCHED!!!')
     return surface_intermediates
 
-
 def surface_intermediates_to_process_names(initial_intermediates, final_intermediates):
     """Canonical function that translates a CatMAP reaction expression (rxn_expression) into
     a unique string that can serve as a variable or column name
@@ -109,7 +101,6 @@ def surface_intermediates_to_process_names(initial_intermediates, final_intermed
 
     return forward_name_root, reverse_name_root
 
-
 def catmap2kmos(cm_model,
                 unit_cell=None,
                 site_positions=None,
@@ -119,6 +110,7 @@ def catmap2kmos(cm_model,
                 model_name='CatMAP_translated_model',
                 options=None,
                 mft_processes=True,
+                one_particle_processes=True,
                 ):
     # TODO : write function which finds nearest neighbors shell for adsorbate interaction
     # test for more than one site per unit cell
@@ -495,8 +487,119 @@ def catmap2kmos(cm_model,
 
     if mft_processes:
         add_mft_processes(pt)
+    if one_particle_processes:
+        add_one_particle_processes(pt)
+
     return pt
 
+def get_stoichiometry(pt, process):
+    import numpy as np
+    species = sorted([x.name for x in pt.species_list])
+    #print(species)
+    stoichiometry = np.zeros((len(species, )))
+
+    for action in process.action_list:
+        stoichiometry[species.index(action.species)] = stoichiometry[species.index(action.species)] + 1
+
+    for condition in process.condition_list:
+        stoichiometry[species.index(condition.species)] = stoichiometry[species.index(condition.species)] - 1
+    return stoichiometry
+
+def get_stoichiometries(pt):
+    stoichiometries = {}
+    for process in pt.process_list:
+        tof_count = process.tof_count.keys()[0]
+        if tof_count in stoichiometries:
+            continue
+
+        stoichiometry = get_stoichiometry(pt, process)
+        stoichiometries[tof_count] = stoichiometry
+
+    return stoichiometries
+
+def stoichiometry_is_multiple(stoichA, stoichB):
+    import numpy as np
+    return np.isclose(np.dot(stoichA, stoichB) /
+                      np.linalg.norm(stoichA) /
+                      np.linalg.norm(stoichB),
+                      1.)
+
+def stoichiometry_get_multiple(stoichA, stoichB):
+    import numpy as np
+    if stoichiometry_is_multiple(stoichA, stoichB):
+        arg_max = np.abs(stoichA).argmax()
+        return stoichA[arg_max] / stoichB[arg_max]
+    else:
+        raise UserWarning("Stoichiometries are not parallel, cannot determine multiple")
+
+def add_one_particle_processes(pt):
+    """
+    In order to sample kinetics ultra low coverage regimes we modify the kMC algorithm
+    such that we avoid the completely empty state since this empty state would add a
+    prohobitive burden to the total number of steps required. Thus special rules
+    in base.update_accum_rate avoid the empty state. This however leads to a distortion
+    of the kinetics since the system is never found find the empty state. E.g. imagine
+    particle A adsorbs. The no-empty-state-rule means that at least one other particle
+    is already on the surface, e.g. A or B. This will lead to a faster rate of reactions
+    A-A or A-B respectively.
+
+    Therefore this methods splits processes into two processes: one that replaces the
+    old one-particle state and one that adds to one-particle state. The first describes
+    the situation that the other particle desorbed some time before (most often the case)
+    and the latter is the (rare) case that two-particle are actually on the surface.
+
+    """
+    import copy
+    stoichiometries = get_stoichiometries(pt)
+    pt.add_parameter(name='N_sites', value=400)
+    default_species = pt.species_list.default_species
+    for p_i, process in enumerate(copy.deepcopy(pt.process_list)):
+        for site in pt.layer_list[0].sites:
+            added_1p_process = False
+            for species in pt.species_list:
+                if '_' in species.name:
+                    continue
+                if '2' in species.name:
+                    continue # TODO: Quick hack to keep gas phase species out, should be generalized
+                if species.name == pt.species_list.default_species:
+                    continue
+                if process.rate_constant.startswith('diff'):
+                    # skip diffusion processes
+                    # also skips MFT processes if present
+                    continue
+
+                condition_speciess = [condition.species for condition in process.condition_list]
+                condition_sites = [condition.coord.name for condition in process.condition_list]
+
+                if not all([_x == pt.species_list.default_species for _x in condition_speciess]):
+                    continue
+
+                for c_i, condition in enumerate(process.condition_list):
+                    site.name = condition.coord.name
+                    if site.name == condition.coord.name:
+                        process_1p = copy.deepcopy(process)
+                        process_1p.name += '_1p_{species.name}_{site.name}'.format(**locals())
+                        process_1p.condition_list[c_i].species = species.name
+                        pt.process_list.append(process_1p)
+                        added_1p_process = True
+                        # to correctly account for rates of this replacement process, we need to create
+                        # a mock process and determine its stoichiometry
+                        condition_site = process_1p.condition_list[c_i].coord._get_genstring()
+                        mock_stoichiometry = get_stoichiometry(pt, pt.parse_process('mock; {species.name}@{condition_site} ->;'.format(**locals())))
+                        for tof_count, stoichiometry in stoichiometries.items():
+                            if stoichiometry_is_multiple(mock_stoichiometry, stoichiometry):
+                                process_1p.tof_count[tof_count] = stoichiometry_get_multiple(mock_stoichiometry, stoichiometry)
+                                break
+                        break
+
+                if added_1p_process:
+                    process_1p = copy.deepcopy(process)
+                    process_1p.name += '_1p_{species.name}_{site.name}_default'.format(**locals())
+                    process_1p.rate_constant += '*N_sites*Theta_{site.name}_{species.name}*Theta_{site.name}_{default_species}**(N_sites-1)'.format(**locals())
+                    pt.process_list.append(process_1p)
+                    parameter_name = 'p1_{species.name}_{site.name}'.format(**locals())
+                    if parameter_name not in [parameter.name for parameter in pt.parameter_list]:
+                        pt.add_parameter(name=parameter_name)
 
 def add_mft_processes(pt):
     import copy
@@ -507,6 +610,7 @@ def add_mft_processes(pt):
 
     # add proxy species representing a dummy (i.e. always true condition)
     pt.add_species(name=MFT_SPECIES, color='#cccccc', representation='Atoms("Si")')
+    stoichiometries = get_stoichiometries(pt)
     # add MFT processes
     for p_i, process in enumerate(copy.deepcopy(pt.process_list)):
         print(process.name, process.condition_list)
@@ -524,4 +628,14 @@ def add_mft_processes(pt):
             mft_process.action_list[c_i].species = MFT_SPECIES
             mft_process.rate_constant += '*Theta_{mft_site}_{mft_species}'.format(**locals())
             mft_process.name += '_mft_{c_i}'.format(**locals())
+            mft_process.tof_count.clear()
+            for tof_count, stoichiometry in stoichiometries.items():
+                mft_stoichiometry = get_stoichiometry(pt, mft_process)
+                print(mft_stoichiometry, stoichiometry, tof_count)
+                if stoichiometry_is_multiple(mft_stoichiometry, stoichiometry):
+                    mft_process.tof_count[tof_count] = stoichiometry_get_multiple(mft_stoichiometry, stoichiometry)
+                    break
+            else:
+                print("Warning: Need to add (fractional) tof_counts for adsorption/desorption process coresponding to this diffusion process {mft_process.name}".format(**locals()))
+                print("Consider adding tof_count's manually in order to balance rate statistics")
             pt.process_list.append(mft_process)
