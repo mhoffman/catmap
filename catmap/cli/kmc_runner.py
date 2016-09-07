@@ -944,7 +944,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         # update_mft_parameters(kmos_model, data_dict)
 
                         paired_procstat = np.zeros(kmos_model.proclist.nr_of_proc.item(), )
-                        for r, p0, p1, s, _ in equilibration_data:
+                        for r, p0, p1, s, _, _, _ in equilibration_data:
                             paired_procstat[getattr(kmos_model.proclist, p0.lower()) - 1] = s
                             paired_procstat[getattr(kmos_model.proclist, p1.lower()) - 1] = s
                         reduced_procstat = np.dot(kmos_model.tof_matrix, paired_procstat)
@@ -980,9 +980,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     SAMPLE_MIN = options.sampling_min
                     STAT_MIN = SAMPLE_MIN * 10
 
-                    sums0 = [s for r, _, _, s, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
-                    ratios = [r for r, _, _, s, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
-                    sums = [EQUIB_THRESHOLD * STAT_MIN / s for r, _, _, s, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    sums0 = [s for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    ratios = [r for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    sums = [EQUIB_THRESHOLD * STAT_MIN / s for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
 
                     rescale_factor = 1. / float(options.lowering_factor)
 
@@ -1004,7 +1004,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     # First loop: test for equilibrated pairs of elementary processes
                     # that have been sampled many times and adjust those rate constants
-                    for ratio, pn1, pn2, left_right_sum, _ in equilibration_data:
+                    for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
                         outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
                         # Minimum number of events, to produce statistically meaningful results
                         if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * SAMPLE_MIN:
@@ -1038,7 +1038,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     # if no equilibrium non-diff processes have been found
                     if fastest_nondiff_pname == '':
                         outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
-                        for ratio, pn1, pn2, left_right_sum, _ in equilibration_data:
+                        for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
                             if left_right_sum > SAMPLE_MIN / 10.:
                                 # outfile.write("Could be {pn1} or {pn2}".format(**locals()))
                                 # outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
@@ -1057,7 +1057,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     # if non-diff processes where not sampled at all, reduce all diffusion rate-constants consistently
                     if fastest_nondiff_pname == '':
                         outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
-                        for ratio, pn1, pn2, left_right_sum, _ in equilibration_data:
+                        for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
                             if left_right_sum > 0:
                                 outfile.write("Could be {pn1} or {pn2}".format(**locals()))
                                 outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
@@ -1124,22 +1124,22 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write(pprint.pformat(renormalizations))
 
                     # Check if every process has been touched in this round
-                    if all([rate < EQUIB_THRESHOLD for (rate, _, _, _, _) in equilibration_data]):
+                    if all([rate < EQUIB_THRESHOLD for (rate, _, _, _, _, _, _) in equilibration_data]):
                         fast_processes = False
                         update_outstring = True
                         outfile.write("\nFound all processes, to be equilibrated. So further adjustments will not help. Quit.\n")
 
                     # Check if we have sufficient sampling for every process pair
-                    if all([s >= SAMPLE_MIN for r, pn1, pn2, s, pair in equilibration_data if 'mft' not in pn1 and 'mft' not in pn2 and not pair[0].rate_constant.startswith('diff')]):
+                    if all([s >= SAMPLE_MIN for r, pn1, pn2, s, pair, _, _ in equilibration_data if 'mft' not in pn1 and 'mft' not in pn2 and not pair[0].rate_constant.startswith('diff')]):
                         fast_processes = False
                         update_outstring = True
                         outfile.write('\n\nFinal pair-sampling statistic\n\n')
-                        for r, pn1, pn2, s, _ in equilibration_data:
+                        for r, pn1, pn2, s, _, _, _ in equilibration_data:
                             outfile.write('\n\t- {s} events for ({pn1}; {pn2})'.format(**locals()))
                         outfile.write("\n\nObtained well-sampled statistics for every process-pair, no further sampling needed. Done.\n")
                     else:
                         outfile.write('\n\nProcess pairs that are not sufficiently sampled :\n')
-                        for r, pn1, pn2, s, _ in equilibration_data:
+                        for r, pn1, pn2, s, _, _, _ in equilibration_data:
                             if 'mft' in pn1 or 'mft' in pn2:
                                 continue
                             if s < SAMPLE_MIN:
