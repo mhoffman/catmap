@@ -574,32 +574,31 @@ def add_one_particle_processes(pt):
                 if not all([_x == pt.species_list.default_species for _x in condition_speciess]):
                     continue
 
-                for c_i, condition in enumerate(process.condition_list):
-                    site.name = condition.coord.name
-                    if site.name == condition.coord.name:
-                        process_1p = copy.deepcopy(process)
-                        process_1p.name += '_1p_{species.name}_{site.name}'.format(**locals())
-                        process_1p.condition_list[c_i].species = species.name
-                        pt.process_list.append(process_1p)
-                        added_1p_process = True
-                        # to correctly account for rates of this replacement process, we need to create
-                        # a mock process and determine its stoichiometry
-                        condition_site = process_1p.condition_list[c_i].coord._get_genstring()
-                        mock_stoichiometry = get_stoichiometry(pt, pt.parse_process('mock; {species.name}@{condition_site} ->;'.format(**locals())))
-                        for tof_count, stoichiometry in stoichiometries.items():
-                            if stoichiometry_is_multiple(mock_stoichiometry, stoichiometry):
-                                process_1p.tof_count[tof_count] = stoichiometry_get_multiple(mock_stoichiometry, stoichiometry)
-                                break
-                        break
+                #for c_i, condition in enumerate(process.condition_list):
+                    #site.name = condition.coord.name
+                    #if site.name == condition.coord.name:
+                        #process_1p = copy.deepcopy(process)
+                        #process_1p.name += '_1p_{species.name}_{site.name}'.format(**locals())
+                        #process_1p.condition_list[c_i].species = species.name
+                        #pt.process_list.append(process_1p)
+                        #added_1p_process = True
+                        ## to correctly account for rates of this replacement process, we need to create
+                        ## a mock process and determine its stoichiometry
+                        #condition_site = process_1p.condition_list[c_i].coord._get_genstring()
+                        #mock_stoichiometry = get_stoichiometry(pt, pt.parse_process('mock; {species.name}@{condition_site} ->;'.format(**locals())))
+                        #for tof_count, stoichiometry in stoichiometries.items():
+                            #if stoichiometry_is_multiple(mock_stoichiometry, stoichiometry):
+                                #process_1p.tof_count[tof_count] = stoichiometry_get_multiple(mock_stoichiometry, stoichiometry)
+                                #break
+                        #break
 
-                if added_1p_process:
-                    process_1p = copy.deepcopy(process)
-                    process_1p.name += '_1p_{species.name}_{site.name}_default'.format(**locals())
-                    process_1p.rate_constant += '*N_sites*Theta_{site.name}_{species.name}*Theta_{site.name}_{default_species}**(N_sites-1)'.format(**locals())
-                    pt.process_list.append(process_1p)
-                    parameter_name = 'p1_{species.name}_{site.name}'.format(**locals())
-                    if parameter_name not in [parameter.name for parameter in pt.parameter_list]:
-                        pt.add_parameter(name=parameter_name)
+                process_1p = copy.deepcopy(process)
+                process_1p.name += '_1p_{species.name}_{site.name}_default'.format(**locals())
+                process_1p.rate_constant += '*N_sites*Theta_{site.name}_{species.name}*Theta_{site.name}_{default_species}**(N_sites-1)'.format(**locals())
+                pt.process_list.append(process_1p)
+                parameter_name = 'p1_{species.name}_{site.name}'.format(**locals())
+                if parameter_name not in [parameter.name for parameter in pt.parameter_list]:
+                    pt.add_parameter(name=parameter_name)
 
 def add_mft_processes(pt):
     import copy
