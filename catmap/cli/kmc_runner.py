@@ -959,53 +959,53 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
                             _current_coverages.append(value)
 
-                    if not sum(_current_coverages) == 0.:
+                    #if not sum(_current_coverages) == 0.:
 
-                        normalize_coverage_data(kmos_model, data_dict)
-                        # update_mft_parameters(kmos_model, data_dict)
+                        #normalize_coverage_data(kmos_model, data_dict)
+                        ## update_mft_parameters(kmos_model, data_dict)
 
-                        paired_procstat = np.zeros(kmos_model.proclist.nr_of_proc.item(), )
-                        for r, p0, p1, s, _, _, _ in equilibration_data:
-                            paired_procstat[getattr(kmos_model.proclist, p0.lower()) - 1] = s
-                            paired_procstat[getattr(kmos_model.proclist, p1.lower()) - 1] = s
-                        reduced_procstat = np.dot(kmos_model.tof_matrix, paired_procstat)
-                        reduced_procstat /= reduced_procstat.sum()
+                        #paired_procstat = np.zeros(kmos_model.proclist.nr_of_proc.item(), )
+                        #for r, p0, s, _, _, _ in equilibration_data:
+                            #paired_procstat[getattr(kmos_model.proclist, p0.lower()) - 1] = s
+                            ##paired_procstat[getattr(kmos_model.proclist, p1.lower()) - 1] = s
+                        #reduced_procstat = np.dot(kmos_model.tof_matrix, paired_procstat)
+                        #reduced_procstat /= reduced_procstat.sum()
 
-                        for key, value in data_dict.items():
-                            if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
-                                coverages_history.setdefault(key, []).append(value)
-                            elif 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key:
-                                rates_history.setdefault(key, []).append(value)
-                                tof_index = kmos_model.tofs.index(key)
-                                if reduced_procstat[tof_index] > sampled_rates.get(key, {}).get('stat_weight', 0.):
-                                    sampled_rates.setdefault(key, {}).update({'stat_weight': reduced_procstat[tof_index], 'rate': value})
+                        #for key, value in data_dict.items():
+                            #if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
+                                #coverages_history.setdefault(key, []).append(value)
+                            #elif 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key:
+                                #rates_history.setdefault(key, []).append(value)
+                                #tof_index = kmos_model.tofs.index(key)
+                                #if reduced_procstat[tof_index] > sampled_rates.get(key, {}).get('stat_weight', 0.):
+                                    #sampled_rates.setdefault(key, {}).update({'stat_weight': reduced_procstat[tof_index], 'rate': value})
 
-                        outfile.write("\ncoverages history: updated\n")
-                        outfile.write(pprint.pformat(coverages_history))
-                        outfile.write('\n\n')
+                        #outfile.write("\ncoverages history: updated\n")
+                        #outfile.write(pprint.pformat(coverages_history))
+                        #outfile.write('\n\n')
 
-                        outfile.write("\nrates history: updated\n")
-                        outfile.write(pprint.pformat(rates_history))
-                        outfile.write('\n\n')
+                        #outfile.write("\nrates history: updated\n")
+                        #outfile.write(pprint.pformat(rates_history))
+                        #outfile.write('\n\n')
 
-                        outfile.write("\nrates differences history: updated\n")
-                        printed_rates = []
-                        for rate in rates_history:
-                            if not rate in printed_rates:
-                                reverse_rate = '_2_'.join(reversed(rate.split('_2_')))
-                                printed_rates.extend([rate, reverse_rate])
-                                outfile.write('{rate} <=> {reverse_rate}\n'.format(**locals()))
-                                outfile.write('========================================================\n')
-                                for a, b in zip(rates_history[rate], rates_history[reverse_rate]):
-                                    outfile.write(str(a - b) + '\n')
-                                outfile.write('\n')
-                        outfile.write(pprint.pformat(rates_history))
-                        outfile.write('\n\n')
-                    else:
-                        outfile.write("\ncoverages history: skipped\n")
-                        if data_dict['kmc_time'] == 0.:
-                            outfile.write('\n\tNo time progress recorded resetting kmc_time\n')
-                            kmos_model.base.set_kmc_time(0.)
+                        #outfile.write("\nrates differences history: updated\n")
+                        #printed_rates = []
+                        #for rate in rates_history:
+                            #if not rate in printed_rates:
+                                #reverse_rate = '_2_'.join(reversed(rate.split('_2_')))
+                                #printed_rates.extend([rate, reverse_rate])
+                                #outfile.write('{rate} <=> {reverse_rate}\n'.format(**locals()))
+                                #outfile.write('========================================================\n')
+                                #for a, b in zip(rates_history[rate], rates_history[reverse_rate]):
+                                    #outfile.write(str(a - b) + '\n')
+                                #outfile.write('\n')
+                        #outfile.write(pprint.pformat(rates_history))
+                        #outfile.write('\n\n')
+                    #else:
+                        #outfile.write("\ncoverages history: skipped\n")
+                        #if data_dict['kmc_time'] == 0.:
+                            #outfile.write('\n\tNo time progress recorded resetting kmc_time\n')
+                            #kmos_model.base.set_kmc_time(0.)
 
                     # EQUIB_THRESHOLD = 1e-2
                     # STAT_MIN = int(1/EQUIB_THRESHOLD**2)
@@ -1015,9 +1015,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     SAMPLE_MIN = options.sampling_min
                     STAT_MIN = SAMPLE_MIN * 10
 
-                    sums0 = [s for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
-                    ratios = [r for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
-                    sums = [EQUIB_THRESHOLD * STAT_MIN / s for r, _, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    sums0 = [s for r, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    ratios = [r for r, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
+                    sums = [EQUIB_THRESHOLD * STAT_MIN / s for r, _, s, _, _, _ in equilibration_data if s >= SAMPLE_MIN and abs(r) < EQUIB_THRESHOLD]
 
                     rescale_factor = 1. / float(options.lowering_factor)
 
@@ -1039,17 +1039,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     # Extra step: if least_sampled_pair > 0, increase batch size but don't adjust rate-constants
                     least_sampled_pair = float('inf')
-                    if not all([s >= SAMPLE_MIN for r, pn1, pn2, s, pair, _, _ in equilibration_data if
+                    if not all([s >= SAMPLE_MIN for r, pn1, s, pair, _, _ in equilibration_data if
                         'mft' not in pn1 and
-                        'mft' not in pn2 and
+                        #'mft' not in pn2 and
                         '_1p_' not in pn1 and
-                        '_1p_' not in pn2 and
+                        #'_1p_' not in pn2 and
                         not pair[0].rate_constant.startswith('diff')]):
-                        for r, pn1, pn2, s, pair, _, _ in equilibration_data:
+                        for r, pn1, s, pair, _, _ in equilibration_data:
                             if 'mft' in pn1 or \
-                               'mft' in pn2 or \
                                '_1p_' in pn1 or \
-                               '_1p_' in pn2 or \
                                pair[0].rate_constant.startswith('diff'):
                                 continue
                             if s < SAMPLE_MIN:
@@ -1058,29 +1056,32 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     if least_sampled_pair == 0:
                         # First loop: test for equilibrated pairs of elementary processes
                         # that have been sampled many times and adjust those rate constants
-                        for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
-                            outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
+                        for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
+                            outfile.write("{pn1}  : {ratio}\n".format(**locals()))
                             # Minimum number of events, to produce statistically meaningful results
                             if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * SAMPLE_MIN:
                                 fast_processes = True
-                                for pn in [pn1, pn2]:
-                                    if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
-                                        old_rc = kmos_model.rate_constants.by_name(pn)
-                                        rc_tuple = kmos_model.settings.rate_constants[pn]
-                                        # rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
-                                        # rescale_factor = max(EQUIB_THRESHOLD, (abs(ratio) / EQUIB_THRESHOLD))
-                                        rescale_multiplication = '*%.2e' % rescale_factor
-                                        rescale_division = '/%.2e' % rescale_factor
-                                        renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
-                                        # Hackish way of producing the same normalizations for 2 significant digits
-                                        numeric_renormalizations[elementary_process_index[pn]] /= eval('{:.2e}'.format(rescale_factor))
-                                        rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
-                                        kmos_model.settings.rate_constants[pn] = rc_tuple
-                                        new_rc = kmos_model.rate_constants.by_name(pn)
-                                        kmos_model.rate_constants.set(pn, new_rc)
-                                        outfile.write("Found a fast equilibrated process {ratio}: {pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n".format(**locals()))
+                                #for pn in [pn1, pn2]:
+                                #for pn in [pn1]:
+                                pn = pair[0].name
+                                if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
+                                    old_rc = kmos_model.rate_constants.by_name(pn)
+                                    rc_tuple = kmos_model.settings.rate_constants[pn]
+                                    # rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
+                                    # rescale_factor = max(EQUIB_THRESHOLD, (abs(ratio) / EQUIB_THRESHOLD))
+                                    rescale_multiplication = '*%.2e' % rescale_factor
+                                    rescale_division = '/%.2e' % rescale_factor
+                                    renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
+                                    # Hackish way of producing the same normalizations for 2 significant digits
+                                    numeric_renormalizations[elementary_process_index[pn]] /= eval('{:.2e}'.format(rescale_factor))
+                                    rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
+                                    kmos_model.settings.rate_constants[pn] = rc_tuple
+                                    new_rc = kmos_model.rate_constants.by_name(pn)
+                                    kmos_model.rate_constants.set(pn, new_rc)
+                                    outfile.write("Found a fast equilibrated process {ratio}: {pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n".format(**locals()))
 
-                                pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
+                                #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
+                                #pn = pn1
                                 if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
                                     new_rc = kmos_model.rate_constants.by_name(pn)
                                     if new_rc > fastest_nondiff_rconstant:
@@ -1092,13 +1093,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         # if no equilibrium non-diff processes have been found
                         if fastest_nondiff_pname == '':
                             outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
-                            for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
+                            for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
                                 if left_right_sum > SAMPLE_MIN / 10.:
                                     # outfile.write("Could be {pn1} or {pn2}".format(**locals()))
                                     # outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
 
                                     #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) < kmos_model.rate_constants.by_name(pn2)) else pn2
-                                    pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
+                                    #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
+                                    #pn = pn1
+                                    pn = pair[0].name
 
                                     new_rc = kmos_model.rate_constants.by_name(pn)
                                     if new_rc > fastest_nondiff_rconstant:
@@ -1113,18 +1116,20 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         # if non-diff processes where not sampled at all, reduce all diffusion rate-constants consistently
                         if fastest_nondiff_pname == '':
                             outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
-                            for ratio, pn1, pn2, left_right_sum, _, _, _ in equilibration_data:
+                            for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
                                 if left_right_sum > 0:
-                                    outfile.write("Could be {pn1} or {pn2}".format(**locals()))
-                                    outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
-                                    for pn in [pn1, pn2]:
-                                        new_rc = kmos_model.rate_constants.by_name(pn)
-                                        if new_rc > fastest_nondiff_rconstant:
-                                            if 'mft' not in pn and  \
-                                               kmos_model.settings.rate_constants[pn][0].startswith('diff'):
-                                                outfile.write(' - found k({pn}) = {new_rc}\n'.format(**locals()))
-                                                fastest_nondiff_rconstant = new_rc / options.diffusion_factor ** 2
-                                                fastest_nondiff_pname = pn
+                                    #outfile.write("Could be {pn1} or {pn2}".format(**locals()))
+                                    #outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
+                                    #for pn in [pn1, pn2]:
+                                    #for pn in [pn1]:
+                                    pn = pair[0].name
+                                    new_rc = kmos_model.rate_constants.by_name(pn)
+                                    if new_rc > fastest_nondiff_rconstant:
+                                        if 'mft' not in pn and  \
+                                           kmos_model.settings.rate_constants[pn][0].startswith('diff'):
+                                            outfile.write(' - found k({pn}) = {new_rc}\n'.format(**locals()))
+                                            fastest_nondiff_rconstant = new_rc / options.diffusion_factor ** 2
+                                            fastest_nondiff_pname = pn
 
                         outfile.write("\n\nFastest diff process k({fastest_nondiff_pname}) = {fastest_nondiff_rconstant:.2e}\n".format(**locals()))
 
@@ -1185,35 +1190,33 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write(pprint.pformat(renormalizations))
 
                     # Check if every process has been touched in this round
-                    if all([rate < EQUIB_THRESHOLD for (rate, _, _, _, _, _, _) in equilibration_data]):
+                    if all([rate < EQUIB_THRESHOLD for (rate, _, _, _, _, _) in equilibration_data]):
                         fast_processes = False
                         update_outstring = True
                         outfile.write("\nFound all processes, to be equilibrated. So further adjustments will not help. Quit.\n")
 
                     # Check if we have sufficient sampling for every process pair
-                    if all([s >= SAMPLE_MIN for r, pn1, pn2, s, pair, _, _ in equilibration_data if
+                    if all([s >= SAMPLE_MIN for r, pn1, _, pair, s, _ in equilibration_data if
                         'mft' not in pn1 and
-                        'mft' not in pn2 and
+                        #'mft' not in pn2 and
                         '_1p_' not in pn1 and
-                        '_1p_' not in pn2 and
+                        #'_1p_' not in pn2 and
                         not pair[0].rate_constant.startswith('diff')]):
                         fast_processes = False
                         update_outstring = True
                         outfile.write('\n\nFinal pair-sampling statistic\n\n')
-                        for r, pn1, pn2, s, _, _, _ in equilibration_data:
-                            outfile.write('\n\t- {s} events for ({pn1}; {pn2})'.format(**locals()))
+                        for r, pn1, _, _, s, _ in equilibration_data:
+                            outfile.write('\n\t- {s} events for ({pn1})'.format(**locals()))
                         outfile.write("\n\nObtained well-sampled statistics for every process-pair, no further sampling needed. Done.\n")
                     else:
                         outfile.write('\n\nProcess pairs that are not sufficiently sampled :\n')
-                        for r, pn1, pn2, s, pair, _, _ in equilibration_data:
+                        for r, pn1, _, pair, s, _ in equilibration_data:
                             if 'mft' in pn1 or \
-                               'mft' in pn2 or \
                                '_1p_' in pn1 or \
-                               '_1p_' in pn2 or \
                                pair[0].rate_constant.startswith('diff'):
                                 continue
                             if s < SAMPLE_MIN:
-                                outfile.write('\n\t- only {s} events for ({pn1}; {pn2})'.format(**locals()))
+                                outfile.write('\n\t- only {s} events for ({pn1})'.format(**locals()))
                         outfile.write('\n')
 
                     # Check if we have obtained meaningful data at all
