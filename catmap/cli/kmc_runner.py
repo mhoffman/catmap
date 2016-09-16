@@ -215,6 +215,10 @@ def contour_plot_data(x, y, z, filename,
             levels = np.linspace(zmin * (1 - 1e-2 * np.sign(zmin)), zmin * (1 + 1e-2 * np.sign(zmin)), 6)
         else:
             print(zmin, zmax)
+            if np.abs(zmax - zmin) > 1e6:
+                print("Linear plots goes over range > 1e6, refusing to plot.")
+                return
+
             attempt_list = np.abs((np.array(map(lambda x: (zmax - zmin) / x, range(1, int(zmax - zmin) + 1))) - 50))
             if len(attempt_list) > 0:
                 divider = attempt_list.argmin() + 1
@@ -225,6 +229,9 @@ def contour_plot_data(x, y, z, filename,
             print(divider, levels)
 
     print("Levels {levels}".format(**locals()))
+    if levels[0] == levels[-1]:
+        print("Somehow levels, are not increasing, nothing to plot.")
+        return
 
     if centered_norm:
         norm = MidpointNormalize(midpoint=0.)
@@ -471,10 +478,17 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5)
         for x, y, z0, z1 in zip(kmos_data['descriptor0'], kmos_data['descriptor1'], kmos_data[process_names[i][0]], kmos_data[process_names[i][1]]):
 
             x, y = round(x, ROUND_DIGITS), round(y, ROUND_DIGITS)
-            if np.isfinite(np.log(z0 - z1)):
+            if np.isfinite(np.log10(np.abs(z0 - z1))):
                 x_kMC.append(x)
                 y_kMC.append(y)
-                z_kMC.append(np.log10(z0 - z1))
+                z_kMC.append(np.log10(np.abs(z0 - z1)))
+            elif np.isfinite(np.log10(- (z0 - z1))):
+                x_kMC.append(x)
+                y_kMC.append(y)
+                z_kMC.append(np.log10(-(z0 - z1)))
+            else:
+                process_names_i_ = process_names[i]
+                print("Check {process_names_i_} {i} {z0} {z1}".format(**locals()))
 
             if mft_signal:
                 ztest = - np.log10((z0 - z1) / zMFT_dict[x][y])
@@ -570,6 +584,7 @@ def main(options, call_path=None):
 
         # plot in reverse to that we start with the coverages
         for name in reversed(data.dtype.names):
+            print("COLUMN {name}".format(**locals()))
             if name.startswith('descriptor') or name == 'T':
                 continue
             elif name.startswith('datapoint'):
@@ -874,6 +889,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
             coverages_history = {}
             rates_history = {}
             sampled_rates = {}
+            increased_batch = False
 
             numeric_renormalizations = np.ones([kmos_model.proclist.nr_of_proc])
 
@@ -937,8 +953,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write("fast-process adaption step {fast_processes_adaption}\n".format(**locals()))
                     outfile.write("\n\nProcstat (number of executed processes)\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False))
+                    outfile.write("\n\nProcstat (number of sampled processes)\n")
+                    outfile.write(kmos_model.print_procstat(to_stdout=False, integ=True))
                     outfile.write("\n\nCoverages, lattice-size {kmos_model.lattice.system_size}\n".format(**locals()))
                     outfile.write(kmos_model.print_coverages(to_stdout=False))
+                    outfile.write("\n\nkMC state\n")
+                    outfile.write(kmos_model.print_kmc_state(to_stdout=False))
                     outfile.write('\n\nRate Constants\n')
                     outfile.write(kmos_model.rate_constants())
                     outfile.write('\n\nParameters\n')
@@ -1053,7 +1073,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             if s < SAMPLE_MIN:
                                 least_sampled_pair = min(s, least_sampled_pair)
 
-                    if least_sampled_pair == 0:
+                    if least_sampled_pair == 0 and not increased_batch:
                         # First loop: test for equilibrated pairs of elementary processes
                         # that have been sampled many times and adjust those rate constants
                         for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
@@ -1176,6 +1196,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     else:
                         options.batch_size *= 2
+                        #increased_batch = True
                         outfile.write('Ok, we have a signal from every processes pair, will just increase batch-size to {options.batch_size:.3f}'.format(**locals()))
 
                     # Reset procstat and kmc steps
@@ -1508,6 +1529,7 @@ def setup_mft_edges_2d(model, grid_size=None):
         for y in range(Y):
             if x % grid_size == 0 or y % grid_size == 0:
                 model._put([x, y, 0, 1], model.proclist.mft_)
+                pass
 
     model._adjust_database()
 
