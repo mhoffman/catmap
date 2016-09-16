@@ -563,15 +563,18 @@ def add_one_particle_processes(pt):
                     continue # TODO: Quick hack to keep gas phase species out, should be generalized
                 if species.name == pt.species_list.default_species:
                     continue
-                if process.rate_constant.startswith('diff'):
-                    # skip diffusion processes
-                    # also skips MFT processes if present
+                if process.rate_constant.startswith('diff') and not '_mft_' in process.name.lower():
+                    # skip diffusion regular processes
+                    # but split the MFT diffusion processes
                     continue
 
                 condition_speciess = [condition.species for condition in process.condition_list]
                 condition_sites = [condition.coord.name for condition in process.condition_list]
 
-                if not all([_x == pt.species_list.default_species for _x in condition_speciess]):
+                if not all([(_x == pt.species_list.default_species
+                            or _x.endswith('_')
+                    )for _x in condition_speciess]):
+                    # take  only those processes that add species
                     continue
 
                 #for c_i, condition in enumerate(process.condition_list):
@@ -595,6 +598,7 @@ def add_one_particle_processes(pt):
                 process_1p = copy.deepcopy(process)
                 process_1p.name += '_1p_{species.name}_{site.name}_default'.format(**locals())
                 process_1p.rate_constant += '*N_sites*Theta_{site.name}_{species.name}*Theta_{site.name}_{default_species}**(N_sites-1)'.format(**locals())
+                print(process_1p.name)
                 pt.process_list.append(process_1p)
                 parameter_name = 'p1_{species.name}_{site.name}'.format(**locals())
                 if parameter_name not in [parameter.name for parameter in pt.parameter_list]:
