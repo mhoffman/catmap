@@ -894,6 +894,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
             numeric_renormalizations = np.ones([kmos_model.proclist.nr_of_proc])
 
             old_nondiff = float('-inf')
+            setup_edged_model_at_datapoint(kmos_model, data_point, reset_configuration=True)
             while fast_processes:
                 update_outstring = True
 
