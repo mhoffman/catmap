@@ -1077,9 +1077,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         # First loop: test for equilibrated pairs of elementary processes
                         # that have been sampled many times and adjust those rate constants
                         for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
-                            outfile.write("{pn1}  : {ratio}\n".format(**locals()))
+                            #outfile.write("{pn1}  : {ratio}\n".format(**locals()))
                             # Minimum number of events, to produce statistically meaningful results
-                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * SAMPLE_MIN:
+                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
                                 fast_processes = True
                                 #for pn in [pn1, pn2]:
                                 #for pn in [pn1]:
@@ -1098,7 +1098,13 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                     kmos_model.settings.rate_constants[pn] = rc_tuple
                                     new_rc = kmos_model.rate_constants.by_name(pn)
                                     kmos_model.rate_constants.set(pn, new_rc)
-                                    outfile.write("Found a fast equilibrated process {ratio}: {pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n".format(**locals()))
+                                    outfile.write(("Found a fast equilibrated process {ratio}:"
+                                                   "\t{pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n"
+                                                   "\tleft-right sum {left_right_sum}\n"
+                                                   "\tconst. sample-min {SAMPLE_MIN}\n"
+                                                   "\tconst. equib-threshol {EQUIB_THRESHOLD}\n\n"
+
+                                        ).format(**locals()))
 
                                 #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
                                 #pn = pn1
@@ -1167,19 +1173,27 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             # options.batch_size = batch_size0
                             for pn in kmos_model.settings.rate_constants:
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
-                                    rc_tuple = kmos_model.settings.rate_constants[pn]
-                                    diff_const = rc_tuple[0].split('*')[0]
-                                    theta_terms = '*'.join([term for term in rc_tuple[0].split('*') if term.startswith('Theta_')])
-                                    safe_rc = (options.diffusion_factor * fastest_nondiff_rconstant)
-                                    diff_rconst = '{diff_const}*{diff_const}**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
-                                    if theta_terms:
-                                        diff_rconst += '*' + theta_terms
-                                    # we filter the diffusion processes by checking which rate constants start with 'diff', thus
-                                    # we need this weird way of writing "1*" to keep the 'diff' prefix throughout adaptations
-                                    ndiff_rconst = options.diffusion_factor * fastest_nondiff_rconstant
-                                    rc_tuple = (diff_rconst, rc_tuple[1])
-                                    # outfile.write("\t- reset k({pn}) = {diff_rconst} = {ndiff_rconst:.3e}\n".format(**locals()))
-                                    kmos_model.settings.rate_constants[pn] = rc_tuple
+                                    for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
+                                        if pn in [pair[0].name, pair[1].name] and left_right_sum >= 10 * SAMPLE_MIN :
+                                            rc_tuple = kmos_model.settings.rate_constants[pn]
+                                            diff_const = rc_tuple[0].split('*')[0]
+                                            #theta_terms = '*'.join([term for term in rc_tuple[0].split('*') if term.startswith('Theta_')])
+                                            # we need the `re` version of split to make sure we only split on '*' but not on '**'
+                                            theta_terms = '*'.join([term for term in re.split("(?<![*])[*](?![*])", rc_tuple[0])
+                                                if 'Theta_' in term
+                                                or 'N_sites' in term
+                                                ])
+                                            safe_rc = (options.diffusion_factor * fastest_nondiff_rconstant)
+                                            diff_rconst = '{diff_const}*{diff_const}**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
+                                            if theta_terms:
+                                                diff_rconst += '*' + theta_terms
+                                            # we filter the diffusion processes by checking which rate constants start with 'diff', thus
+                                            # we need this weird way of writing "1*" to keep the 'diff' prefix throughout adaptations
+                                            ndiff_rconst = options.diffusion_factor * fastest_nondiff_rconstant
+                                            rc_tuple = (diff_rconst, rc_tuple[1])
+                                            # outfile.write("\t- reset k({pn}) = {diff_rconst} = {ndiff_rconst:.3e}\n".format(**locals()))
+                                            kmos_model.settings.rate_constants[pn] = rc_tuple
+                                            break
 
                         else:
                             options.batch_size *= 2
@@ -1204,8 +1218,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         kmos_model.base.set_procstat(proc + 1, 0)
                     kmos_model.base.set_kmc_step(0)
 
-                    outfile.write("\n\nReset Procstat (number of executed processes)\n")
-                    outfile.write(kmos_model.print_procstat(to_stdout=False))
+                    #outfile.write("\n\nReset Procstat (number of executed processes)\n")
+                    #outfile.write(kmos_model.print_procstat(to_stdout=False))
 
                     outfile.write("\nRenormalizations\n")
                     outfile.write(pprint.pformat(renormalizations))
