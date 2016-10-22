@@ -1119,6 +1119,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 if (
                                         not kmos_model.settings.rate_constants[pn][0].startswith('diff')
                                         or ('mft' in pn and '1p' not in pn)
+                                        #(not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                                        #or 'mft' in pn)
+                                        #and '1p' not in pn
                                         ):
                                     old_rc = kmos_model.rate_constants.by_name(pn)
                                     rc_tuple = kmos_model.settings.rate_constants[pn]
@@ -1230,8 +1233,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
                                         #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * SAMPLE_MIN or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
-                                            and (left_right_sum >= options.batch_size * SAMPLE_MIN
-                                            and left_right_sum > most_sampled_pair)):
+                                            and left_right_sum >= options.batch_size * SAMPLE_MIN
+                                            and left_right_sum >= most_sampled_pair
+                                            #and not '_1p_' in pn
+                                            ):
+                                            outfile.write('\t- adapting {pn}, bc. ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
                                             # Note: the fast_process_adaption < 1 condition
                                             # makes sure that the diffusion factor gets applied at least
                                             # once in the begining, even if the corresponding process is
@@ -1259,6 +1265,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             outfile.write("\t- diff reset k({pn}) = {diff_rconst} = {rc_tuple}\n".format(**locals()))
                                             kmos_model.settings.rate_constants[pn] = rc_tuple
                                             break
+                                        else:
+                                            pass
+                                            #outfile.write('\t\t- not touching {pn}, bc. not ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
 
                         else:
                             options.batch_size *= 2
