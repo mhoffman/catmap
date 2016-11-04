@@ -530,6 +530,9 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5)
             contour_plot_data(xs, ys, np.clip(zs_lin, -10, 10),
                               'kMC_plot_delta_kMC_MFT_lin_clipped_{i}.pdf'.format(**locals()),
                               colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
+            contour_plot_data(xs, ys, np.clip(zs_lin, -5, 5),
+                              'kMC_plot_delta_kMC_MFT_lin_clipped5_{i}.pdf'.format(**locals()),
+                              colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
         except:
             process_name = process_names[i]
             print("Trouble plotting delta {process_name}".format(**locals()))
@@ -905,6 +908,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 else:
                     outfile = log_target
 
+                mft_rates = ('\n'.join(map(lambda x: str(float(x)), sorted(catmap_data['rate_map'])[data_point][1])))
+                outfile.write('\nMFT Rates Benchmark\n{mft_rates}\n\n'.format(**locals()))
                 outfile.write("\n\nInitial coverages, lattice-size {kmos_model.lattice.system_size}\n".format(**locals()))
                 outfile.write("Sampling started at {}.\n\n".format(start_time.isoformat()))
                 outfile.write(kmos_model.print_coverages(to_stdout=False))
@@ -1051,19 +1056,19 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     # Extra step: if least_sampled_pair > 0, increase batch size but don't adjust rate-constants
                     least_sampled_pair = float('inf')
                     least_sampled_pair_name = ''
-                    if not all([s >= SAMPLE_MIN and data_dict[pn1] > 0. for r, pn1, _, pair, s, _ in equilibration_data if
+                    if not all([lr_sum >= SAMPLE_MIN and data_dict[pn1] > 0. for r, pn1, lr_sum, pair, left, right in equilibration_data if
                         'mft' not in pn1 and
                         #'mft' not in pn2 and
                         '_1p_' not in pn1 and
                         #'_1p_' not in pn2 and
                         not pair[0].rate_constant.startswith('diff')]):
-                        for r, pn1, _, pair, s, _ in equilibration_data:
+                        for r, pn1, lr_sum, pair, left, right in equilibration_data:
                             if 'mft' in pn1 or \
                                '_1p_' in pn1 or \
                                pair[0].rate_constant.startswith('diff'):
                                 continue
-                            if s < least_sampled_pair:
-                                least_sampled_pair = s
+                            if lr_sum < least_sampled_pair:
+                                least_sampled_pair = lr_sum
                                 least_sampled_pair_name = pn1
 
                         #outfile.write("\nLeast sampled pair is {least_sampled_pair_name} with {least_sampled_pair} events.\n".format(**locals()))
@@ -1101,7 +1106,16 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     ####################################################################
                     #if least_sampled_pair <= .5 * SAMPLE_MIN:
                     #if least_sampled_pair < 1e-3 * SAMPLE_MIN and integ_least_sampled_pair == 0 :
-                    if least_sampled_pair < 1e-3 * SAMPLE_MIN:
+                    reset_non_diff = False
+                    #if integ_least_sampled_pair > 0 and least_sampled_pair < 1:
+                        #options.lowering_factor = math.pow(float(options.lowering_factor), .2)
+
+                    biggest_left_right_sum = float('-inf')
+                    for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
+                        if left_right_sum > biggest_left_right_sum:
+                            biggest_left_right_sum = left_right_sum
+
+                    if least_sampled_pair < 1e-3 * SAMPLE_MIN  :
                         ####################################################################
                         # 4.a  ... of non-diff events
                         ####################################################################
@@ -1111,18 +1125,19 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             # Minimum number of events, to produce statistically meaningful results
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 100 * SAMPLE_MIN:
-                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 1000 * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
-                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
+                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
+                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10000 * SAMPLE_MIN:
+                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= biggest_left_right_sum :
                                 fast_processes = True
                                 pn = pair[0].name
                                 if (
-                                        not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        or ('mft' in pn and '1p' not in pn)
-                                        #(not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        #or 'mft' in pn)
+                                        #not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                                        #or ('mft' in pn and '1p' not in pn)
+                                        (not kmos_model.settings.rate_constants[pn][0].startswith('diff') or 'mft' in pn)
                                         #and '1p' not in pn
                                         ):
+                                    reset_non_diff = True
                                     old_rc = kmos_model.rate_constants.by_name(pn)
                                     rc_tuple = kmos_model.settings.rate_constants[pn]
                                     # rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
@@ -1138,8 +1153,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                     kmos_model.rate_constants.set(pn, new_rc)
                                     outfile.write(("Found a fast equilibrated process {ratio}:"
                                                    "\t{pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n"
-                                                   "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum}\n"
-                                                   "\tconst. equib-threshol {EQUIB_THRESHOLD}, ratio {ratio}\n\n"
+                                                   "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum} >= {biggest_left_right_sum}\n"
+                                                   "\tconst.  ratio {ratio} < equib-threshol {EQUIB_THRESHOLD},\n\n"
 
                                         ).format(**locals()))
 
@@ -1153,7 +1168,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             fastest_nondiff_pname = pn
                             else:
                                 pn = pair[0].name
-                                outfile.write("Not touching {pn}, because ratio = {ratio} < {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {SAMPLE_MIN}\n".format(**locals()))
+                                outfile.write("Not touching {pn}, because ratio = {ratio} > {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {biggest_left_right_sum}\n".format(**locals()))
 
                         # also determine most sampled non-diff elementary process
                         # to determine if it is justified to adjust diffusion processes
@@ -1225,7 +1240,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 outfile.write("\n\nReducing maximum non-diff factor by minimum of factor {options.lowering_factor} to {fastest_nondiff_rconstant:.3e}\n".format(**locals()))
 
                         # Loop again for preserving the fast diffusion rate constants
-                        if fastest_nondiff_rconstant > float('-inf') and options.diffusion_factor is not None:
+                        if reset_non_diff:
+                            outfile.write('\nI just reset a non-diffusion rate constant, so I wont check diffusion this time.\n\n')
+                        if not reset_non_diff and fastest_nondiff_rconstant > float('-inf') and options.diffusion_factor is not None:
                             # options.batch_size = batch_size0
                             for pn in kmos_model.settings.rate_constants:
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
@@ -1235,6 +1252,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         if (pn in [pair[0].name, pair[1].name]
                                             and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
+                                            #EXPERIMENTAL, DEBUGGING, TODO !!!
+                                            and 'mft' not in pn
                                             #and not '_1p_' in pn
                                             ):
                                             outfile.write('\t- adapting {pn}, bc. ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
@@ -1263,6 +1282,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             lowering_factor = float(options.lowering_factor)
                                             rc_tuple = ('{rc_tuple[0]}/{lowering_factor:5.3e}'.format(**locals()), rc_tuple[1])
                                             outfile.write("\t- diff reset k({pn}) = {diff_rconst} = {rc_tuple}\n".format(**locals()))
+                                            outfile.write("\t\tmost sampled pair {most_sampled_pair}, lr-sum {left_right_sum}\n".format(**locals()))
+                                            outfile.write("\t\tbatch-size {options.batch_size}, sample min {SAMPLE_MIN}\n".format(**locals()))
                                             kmos_model.settings.rate_constants[pn] = rc_tuple
                                             break
                                         else:
@@ -1270,15 +1291,16 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             #outfile.write('\t\t- not touching {pn}, bc. not ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
 
                         else:
-                            options.batch_size *= 2
-                            outfile.write("\n\nDidn't sample non-diff processes, doubling batch-size to {options.batch_size:.3e}\n".format(**locals()))
+                            #options.batch_size *= 2
+                            #outfile.write("\n\nDidn't sample non-diff processes, doubling batch-size to {options.batch_size:.3e}\n".format(**locals()))
+                            outfile.write("\n\nDidn't sample non-diff processes, but that is okay.".format(**locals()))
 
                         # outfile.write("\n\nRate constants after all adjustments\n")
                         # outfile.write(kmos_model.rate_constants())
 
-                        if old_nondiff == fastest_nondiff_rconstant:
-                            options.batch_size *= 2
-                            outfile.write("Fastest non-diff rate-constant unchanged, doubling batch size to {options.batch_size:.3e}\n".format(**locals()))
+                        #if old_nondiff == fastest_nondiff_rconstant:
+                            #options.batch_size *= 2
+                            #outfile.write("Fastest non-diff rate-constant unchanged, doubling batch size to {options.batch_size:.3e}\n".format(**locals()))
 
                         old_nondiff = fastest_nondiff_rconstant
 
@@ -1291,6 +1313,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         #increased_batch = True
                         outfile.write("Least sampled pair signal from {least_sampled_pair_name} is {least_sampled_pair}. (SAMPLEMIN = {SAMPLE_MIN})\n".format(**locals()))
                         outfile.write('Ok, we have a signal from every processes pair, will just increase batch-size to {options.batch_size:.3f}\n'.format(**locals()))
+                        outfile.write('least_sampled_pair = {least_sampled_pair}, integ_least_sampled_pair = {integ_least_sampled_pair}\n'.format(**locals()))
 
                     ####################################################################
                     # 6. Final checks if we are done sampling, and prepare next loop
@@ -1330,6 +1353,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                     outfile.write("\nRenormalizations\n")
                     outfile.write(pprint.pformat(renormalizations))
+                    outfile.write("\n\nEvaluated Renormalizations\n")
+                    for key, value in renormalizations.items():
+                        value = eval(value)
+                        outfile.write('\t- {key}: {value:5.3e}\n'.format(**locals()))
+                    outfile.write('\n\n')
 
                     # Check if every process has been touched in this round
                     if all([rate < EQUIB_THRESHOLD for (rate, _, _, _, _, _) in equilibration_data]):
@@ -1338,7 +1366,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile.write("\nFound all processes, to be equilibrated. So further adjustments will not help. Quit.\n")
 
                     # Check if we have sufficient sampling for every process pair
-                    if all([s >= SAMPLE_MIN for r, pn1, _, pair, s, _ in equilibration_data if
+                    if all([lr_sum >= SAMPLE_MIN for r, pn1, lr_sum, pair, left, right in equilibration_data if
                         'mft' not in pn1 and
                         #'mft' not in pn2 and
                         '_1p_' not in pn1 and
@@ -1347,18 +1375,18 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         fast_processes = False
                         update_outstring = True
                         outfile.write('\n\nFinal pair-sampling statistic\n\n')
-                        for r, pn1, _, _, s, _ in equilibration_data:
-                            outfile.write('\n\t- {s} events for ({pn1})'.format(**locals()))
+                        for r, pn1, lr_sum, _, left, right in equilibration_data:
+                            outfile.write('\n\t- {lr_sum} ({left}; {right}) events for ({pn1})'.format(**locals()))
                         outfile.write("\n\nObtained well-sampled statistics for every process-pair, no further sampling needed. Done.\n")
                     else:
                         outfile.write('\n\nProcess pairs that are not sufficiently sampled :\n')
-                        for r, pn1, _, pair, s, _ in equilibration_data:
+                        for r, pn1, lr_sum, pair, left, right in equilibration_data:
                             if 'mft' in pn1 or \
                                '_1p_' in pn1 or \
                                pair[0].rate_constant.startswith('diff'):
                                 continue
-                            if s < SAMPLE_MIN:
-                                outfile.write('\n\t- only {s} events for ({pn1})'.format(**locals()))
+                            if lr_sum < SAMPLE_MIN:
+                                outfile.write('\n\t- only {lr_sum} ({left}; {right}) events for ({pn1})'.format(**locals()))
                         outfile.write('\n')
 
                     # Check if we have obtained meaningful data at all
@@ -1376,6 +1404,15 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 fast_processes = False
                                 update_outstring = False
                                 outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Exiting!\n".format(**locals()))
+
+                    # catch overflow 
+                    if not np.isfinite(data_dict['kmc_time']):
+                        _kmc_time = data_dict['kmc_time']
+                        options.batch_size *= .375
+                        outfile.write("Warning: Caught overflow in kmc time =  {_kmc_time}, will give it another go-around.\n".format(**locals()))
+                        outfile.write("Will shorten batch-size again to {options.batch_size}.\n\n".format(**locals()))
+                        update_outstring = False
+                        fast_processes = True
 
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
@@ -1653,7 +1690,11 @@ def setup_mft_edges_2d(model, grid_size=None):
     # newer version: create finer grid of MFT processes
     for x in  range(X):
         for y in range(Y):
-            if x % grid_size == 0 or y % grid_size == 0:
+            if ((
+                x == 0 and y % 3
+                ) or (
+                y == 0 and x % 3
+                )):
                 model._put([x, y, 0, 1], model.proclist.mft_)
                 pass
 
