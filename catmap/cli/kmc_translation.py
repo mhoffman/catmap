@@ -345,9 +345,9 @@ def catmap2kmos(cm_model,
                         if ((si['A'][0][0] == EMPTY_SPECIES) and (si['C'][1][0] == EMPTY_SPECIES) and (si['A'][1][0] == si['C'][0][0])) \
                            or ((si['A'][1][0] == EMPTY_SPECIES) and (si['C'][0][0] == EMPTY_SPECIES) and (si['A'][0][0] == si['C'][1][0])):
                             diff_prefix = 'diff_'
-                            # also avoid double-counting here
-                            if s_i % 2 == 1:
-                                continue
+                            ## also avoid double-counting here
+                            #if s_i % 2 == 1:
+                                #continue
                         else:
                             diff_prefix = ''
 
@@ -367,13 +367,22 @@ def catmap2kmos(cm_model,
                                                      tof_count={reverse_name_root: 1},
                                                      )
 
-                    # If the process has internal symmetry, e.g. O2 Adsorption
-                    # only add every other process
-                    if len(sites_vectors) == 2:
+                    # For adsorption/desorption events avoid over-counting per unit cell
+                    if len(sites_vectors) == 1:
                         si = surface_intermediates
-                        if si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]:
+                        if si['A'][0][0] == EMPTY_SPECIES or si['C'][0][0] == EMPTY_SPECIES:
                             process.rate_constant += '/' + str(len(sites_list))
-                            revere_process.rate_constant += '/' + str(len(sites_list))
+                            reverse_process.rate_constant += '/' + str(len(sites_list))
+
+                    # If the process has internal symmetry, e.g. O2 Adsorption
+                    # compensate for that
+                    elif len(sites_vectors) == 2:
+                        si = surface_intermediates
+                        if (si['A'][0][0] == EMPTY_SPECIES and si['A'][1][0] == EMPTY_SPECIES) \
+                            or (si['C'][0][0] == EMPTY_SPECIES and si['C'][1][0] == EMPTY_SPECIES) \
+                            and (si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]):
+                            process.rate_constant += '/' + str(len(sites_list))
+                            reverse_process.rate_constant += '/' + str(len(sites_list))
 
                     if options.interaction > 0:
                         import dbmi
