@@ -335,14 +335,6 @@ def catmap2kmos(cm_model,
                     conditions = [Condition(species=_species, coord=coord) for (_species, coord) in zip(ads_initial, sites)]
                     diff_prefix = ''
 
-                    # If the process has internal symmetry, e.g. O2 Adsorption
-                    # only add every other process
-                    if len(sites_vectors) == 2:
-                        si = surface_intermediates
-                        if si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]:
-                            if s_i % 2 == 1:
-                                continue
-
 
                     # if the process is a diffusion process
                     # mark it as such in the rate constant
@@ -374,6 +366,14 @@ def catmap2kmos(cm_model,
                                                          **locals()),
                                                      tof_count={reverse_name_root: 1},
                                                      )
+
+                    # If the process has internal symmetry, e.g. O2 Adsorption
+                    # only add every other process
+                    if len(sites_vectors) == 2:
+                        si = surface_intermediates
+                        if si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]:
+                            process.rate_constant += '/' + str(len(sites_list))
+                            revere_process.rate_constant += '/' + str(len(sites_list))
 
                     if options.interaction > 0:
                         import dbmi
