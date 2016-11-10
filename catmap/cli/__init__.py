@@ -86,6 +86,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
     parser.add_option('-t', '--bias-threshold', dest='bias_threshold', default=0.1, type='float', help="Sample trajectory until it has been determined that this amount or less is in transient part")
+    parser.add_option('-u', '--unit-rate-constants', dest='unit_rate_constants', action='store_true', default=False, help="Set all rate constants to 1.")
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
     parser.add_option('-w', '--ewma-plots', dest='make_plots', action='store_true', default=False, help="Have the steady-state runner create EWMA plots at every evaluation step.")
 

@@ -976,6 +976,14 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     else:
                         outfile = log_target
 
+                    if options.unit_rate_constants:
+                        for pn in kmos_model.settings.rate_constants:
+                            rc_tuple = kmos_model.settings.rate_constants[pn]
+                            rc_tuple = ('1.', rc_tuple[1])
+                            kmos_model.settings.rate_constants[pn] = rc_tuple
+                        for i in range(1, kmos_model.proclist.nr_of_proc + 1):
+                            kmos_model.base.set_rate_const(i, 1.)
+
                     ####################################################################
                     # 2. Retrieve and log other data
                     ####################################################################
