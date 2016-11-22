@@ -828,6 +828,15 @@ def set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_
         kmos_model.print_coverages()
 
 
+def set_all_rate_constants(kmos_model, value):
+    for pn in kmos_model.settings.rate_constants:
+        rc_tuple = kmos_model.settings.rate_constants[pn]
+        rc_tuple = (str(value), rc_tuple[1])
+        kmos_model.settings.rate_constants[pn] = rc_tuple
+    for i in range(1, kmos_model.proclist.nr_of_proc + 1):
+        kmos_model.base.set_rate_const(i, value)
+
+
 def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 make_plots=None,
                                 log_target=None,
@@ -977,12 +986,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile = log_target
 
                     if options.unit_rate_constants:
-                        for pn in kmos_model.settings.rate_constants:
-                            rc_tuple = kmos_model.settings.rate_constants[pn]
-                            rc_tuple = ('1.', rc_tuple[1])
-                            kmos_model.settings.rate_constants[pn] = rc_tuple
-                        for i in range(1, kmos_model.proclist.nr_of_proc + 1):
-                            kmos_model.base.set_rate_const(i, 1.)
+                        set_all_rate_constant(kmos_model, 1.)
 
                     ####################################################################
                     # 2. Retrieve and log other data
@@ -1260,8 +1264,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         if (pn in [pair[0].name, pair[1].name]
                                             and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
+                                            #and left_right_sum >= options.batch_size * SAMPLE_MIN / 10.
+                                            #and left_right_sum >= most_sampled_pair / 10.
                                             #EXPERIMENTAL, DEBUGGING, TODO !!!
-                                            and 'mft' not in pn
+                                            #and 'mft' not in pn
                                             #and not '_1p_' in pn
                                             ):
                                             outfile.write('\t- adapting {pn}, bc. ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
@@ -1278,7 +1284,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                 or 'N_sites' in term
                                                 ])
                                             safe_rc = (options.diffusion_factor * fastest_nondiff_rconstant)
-                                            diff_rconst = '{diff_const}*{diff_const}**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
+                                            diff_rconst = '{diff_const}*({diff_const})**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
                                             if theta_terms:
                                                 diff_rconst += '*' + theta_terms
                                             # we filter the diffusion processes by checking which rate constants start with 'diff', thus
