@@ -89,6 +89,8 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-u', '--unit-rate-constants', dest='unit_rate_constants', action='store_true', default=False, help="Set all rate constants to 1.")
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
     parser.add_option('-w', '--ewma-plots', dest='make_plots', action='store_true', default=False, help="Have the steady-state runner create EWMA plots at every evaluation step.")
+    parser.add_option('--no-one-particle', dest='no_one_particle', action='store_true', default=False, help='Do not add one-particle processes')
+    parser.add_option('--no-mft', dest='no_mft', action='store_true', default=False, help='Do not add MFT (mean-field theory) processes')
 
     if args is not None:
         options, args = parser.parse_args(args.split())

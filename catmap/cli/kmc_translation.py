@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
+import pprint
 import itertools
 
 EMPTY_SPECIES = 'empty'
@@ -62,7 +63,7 @@ def translate_model_file(mkm_filename, options):
                              options=options,
                              model_name=seed,
                              )
-    kmos_model.print_statistics()
+    #kmos_model.print_statistics()
     if options.interaction == 0:
         kmos_model.save('{seed}_kmc.ini'.format(**locals()))
     else:
@@ -110,7 +111,6 @@ def catmap2kmos(cm_model,
                 model_name='CatMAP_translated_model',
                 options=None,
                 mft_processes=True,
-                one_particle_processes=True,
                 ):
     # TODO : write function which finds nearest neighbors shell for adsorbate interaction
     # test for more than one site per unit cell
@@ -239,6 +239,11 @@ def catmap2kmos(cm_model,
     print('SITE NAMES {site_names}'.format(**locals()))
     # WARNING: Even though usually a good idea do not sort this
     # or the rate constants and processes will get garbled !!!
+
+    # a dictionary to collect geometry factor
+    # for each elementary process
+    geometry_factors = {}
+
     for ri, elementary_rxn in enumerate((cm_model.elementary_rxns)):
         step = {}
         surface_intermediates = {}
@@ -367,22 +372,27 @@ def catmap2kmos(cm_model,
                                                      tof_count={reverse_name_root: 1},
                                                      )
 
-                    # For adsorption/desorption events avoid over-counting per unit cell
-                    if len(sites_vectors) == 1:
-                        si = surface_intermediates
-                        if si['A'][0][0] == EMPTY_SPECIES or si['C'][0][0] == EMPTY_SPECIES:
-                            process.rate_constant += '/' + str(len(sites_list))
-                            reverse_process.rate_constant += '/' + str(len(sites_list))
+                    ## DEBUGGING try with overcounting
+                    #process.rate_constant += '/' + str(len(sites_list))
+                    #reverse_process.rate_constant += '/' + str(len(sites_list))
 
-                    # If the process has internal symmetry, e.g. O2 Adsorption
-                    # compensate for that
-                    elif len(sites_vectors) == 2:
-                        si = surface_intermediates
-                        if (si['A'][0][0] == EMPTY_SPECIES and si['A'][1][0] == EMPTY_SPECIES) \
-                            or (si['C'][0][0] == EMPTY_SPECIES and si['C'][1][0] == EMPTY_SPECIES) \
-                            and (si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]):
-                            process.rate_constant += '/' + str(len(sites_list))
-                            reverse_process.rate_constant += '/' + str(len(sites_list))
+
+                    ## For adsorption/desorption events avoid over-counting per unit cell
+                    #if len(sites_vectors) == 1:
+                        #si = surface_intermediates
+                        #if si['A'][0][0] == EMPTY_SPECIES or si['C'][0][0] == EMPTY_SPECIES:
+                            #process.rate_constant += '/' + str(len(sites_list))
+                            #reverse_process.rate_constant += '/' + str(len(sites_list))
+
+                    ## If the process has internal symmetry, e.g. O2 Adsorption
+                    ## compensate for that
+                    #elif len(sites_vectors) == 2:
+                        #si = surface_intermediates
+                        #if (si['A'][0][0] == EMPTY_SPECIES and si['A'][1][0] == EMPTY_SPECIES) \
+                            #or (si['C'][0][0] == EMPTY_SPECIES and si['C'][1][0] == EMPTY_SPECIES) \
+                            #and (si['A'][0][0] == si['A'][1][0] and si['C'][0][0] == si['C'][1][0]):
+                            #process.rate_constant += '/' + str(len(sites_list))
+                            #reverse_process.rate_constant += '/' + str(len(sites_list))
 
                     if options.interaction > 0:
                         import dbmi
@@ -502,15 +512,27 @@ def catmap2kmos(cm_model,
                         {otf_rate}
                         otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
                         """.format(**locals())
+                geometry_factors[forward_name_root] = len(sites_list)
 
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1., adjustable=True)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1., adjustable=True)
 
-    if mft_processes:
+    if not options.no_mft:
+        print("Adding MFT edge processes")
         add_mft_processes(pt)
-    if one_particle_processes:
-        add_one_particle_processes(pt)
+    else:
+        print("Skipping MFT edge processes")
 
+
+    if not options.no_one_particle:
+        print("Adding one-particle state processes.")
+        add_one_particle_processes(pt)
+    else:
+        print("Skipping one-particle state processes")
+
+    print("\nGeometry Factors")
+    print("================")
+    pprint.pprint(geometry_factors)
     return pt
 
 def get_stoichiometry(pt, process):
