@@ -377,6 +377,8 @@ def catmap2kmos(cm_model,
                     #reverse_process.rate_constant += '/' + str(len(sites_list))
 
 
+                    process.rate_constant += '/' + str(len(sites_list))
+                    reverse_process.rate_constant += '/' + str(len(sites_list))
                     ## For adsorption/desorption events avoid over-counting per unit cell
                     #if len(sites_vectors) == 1:
                         #si = surface_intermediates
