@@ -1148,7 +1148,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 pn = pair[0].name
                                 if (
                                         not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        or ('mft' in pn and '1p' not in pn)
+                                        #or ('mft' in pn and '1p' not in pn)
                                         #(not kmos_model.settings.rate_constants[pn][0].startswith('diff') or 'mft' in pn)
                                         #and '1p' not in pn
                                         ):
