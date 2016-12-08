@@ -1158,7 +1158,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10000 * SAMPLE_MIN:
-                            lr_sum_threshold = .5 * data_dict['kmc_steps']
+                            lr_sum_threshold = .3 * data_dict['kmc_steps']
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= biggest_left_right_sum :
                             if abs(ratio) < EQUIB_THRESHOLD and (
                                 left_right_sum >= lr_sum_threshold
@@ -1166,13 +1166,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 ):
                                 fast_processes = True
                                 pn = pair[0].name
-                                if (
-                                        not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        or 'mft' in pn
-                                        #or ('mft' in pn and '1p' not in pn)
-                                        #(not kmos_model.settings.rate_constants[pn][0].startswith('diff') or 'mft' in pn)
-                                        #and '1p' not in pn
-                                        ):
+                                if ( not kmos_model.settings.rate_constants[pn][0].startswith('diff') or 'mft' in pn ):
                                     reset_non_diff = True
                                     old_rc = kmos_model.rate_constants.by_name(pn)
                                     rc_tuple = kmos_model.settings.rate_constants[pn]
@@ -1268,17 +1262,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             for pn in kmos_model.settings.rate_constants:
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
                                     #for ratio, pn1, left_right_sum, pair, s, _ in integ_equilibration_data:
-                                    lr_sum_threshold = .3 * data_dict['kmc_steps']
+                                    lr_sum_threshold = .0001 * data_dict['kmc_steps']
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
                                         #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * SAMPLE_MIN or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
-                                            #and left_right_sum >= options.batch_size * SAMPLE_MIN
-                                            and left_right_sum >= most_sampled_pair
-                                            #and left_right_sum >= options.batch_size * SAMPLE_MIN / 10.
-                                            #and left_right_sum >= most_sampled_pair / 10.
-                                            #EXPERIMENTAL, DEBUGGING, TODO !!!
-                                            #and ('mft' not in pn or '_1p_' in pn)
-                                            #and not '_1p_' in pn
+                                            and (left_right_sum >= most_sampled_pair or left_right_sum >= lr_sum_threshold)
+                                            and 'mft' not in pn
                                             ):
                                             outfile.write('\t- adapting {pn}, bc. ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
                                             # Note: the fast_process_adaption < 1 condition
