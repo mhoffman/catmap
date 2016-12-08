@@ -1115,6 +1115,21 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                            ##"{options.lowering_factor}.\n\n"
                                     ##).format(**locals()))
 
+                    # also determine most sampled non-diff elementary process
+                    # to determine if it is justified to adjust diffusion processes
+                    most_sampled_pair = float('-inf')
+                    most_sampled_pair_name = ''
+                    for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
+                        pn = pair[0].name
+                        if (not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                            or 'mft' in pn
+                               ):
+                            if left_right_sum > most_sampled_pair:
+                                most_sampled_pair = left_right_sum
+                                most_sampled_pair_name = pn
+                    outfile.write('\nMost sampled pair is {most_sampled_pair_name} with {most_sampled_pair}.\n\n'.format(**locals()))
+
+
 
                     ####################################################################
                     # 4. If necessary adjust rate constants 
@@ -1143,9 +1158,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10000 * SAMPLE_MIN:
-                            lr_sum_threshold = .3 * data_dict['kmc_steps']
+                            lr_sum_threshold = .5 * data_dict['kmc_steps']
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= biggest_left_right_sum :
-                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= lr_sum_threshold :
+                            if abs(ratio) < EQUIB_THRESHOLD and (
+                                left_right_sum >= lr_sum_threshold
+                                #or left_right_sum >= .5 * most_sampled_pair
+                                ):
                                 fast_processes = True
                                 pn = pair[0].name
                                 if (
@@ -1187,21 +1205,6 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             else:
                                 pn = pair[0].name
                                 outfile.write("Not touching {pn}, because ratio = {ratio} > {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {lr_sum_threshold}\n".format(**locals()))
-
-                        # also determine most sampled non-diff elementary process
-                        # to determine if it is justified to adjust diffusion processes
-                        most_sampled_pair = float('-inf')
-                        most_sampled_pair_name = ''
-                        for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
-                            pn = pair[0].name
-                            if (not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                or 'mft' in pn
-                                   ):
-                                if left_right_sum > most_sampled_pair:
-                                    most_sampled_pair = left_right_sum
-                                    most_sampled_pair_name = pn
-                        outfile.write('\nMost sampled pair is {most_sampled_pair_name} with {most_sampled_pair}.\n\n'.format(**locals()))
-
 
                         ####################################################################
                         # 4.b  ... of diff events
