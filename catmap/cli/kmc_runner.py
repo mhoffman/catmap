@@ -1143,11 +1143,14 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
                             #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10000 * SAMPLE_MIN:
-                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= biggest_left_right_sum :
+                            lr_sum_threshold = .3 * data_dict['kmc_steps']
+                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= biggest_left_right_sum :
+                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= lr_sum_threshold :
                                 fast_processes = True
                                 pn = pair[0].name
                                 if (
                                         not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                                        or 'mft' in pn
                                         #or ('mft' in pn and '1p' not in pn)
                                         #(not kmos_model.settings.rate_constants[pn][0].startswith('diff') or 'mft' in pn)
                                         #and '1p' not in pn
@@ -1168,7 +1171,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                     kmos_model.rate_constants.set(pn, new_rc)
                                     outfile.write(("Found a fast equilibrated process {ratio}:"
                                                    "\t{pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n"
-                                                   "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum} >= {biggest_left_right_sum}\n"
+                                                   "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum} >= {lr_sum_threshold}\n"
                                                    "\tconst.  ratio {ratio} < equib-threshol {EQUIB_THRESHOLD},\n\n"
 
                                         ).format(**locals()))
@@ -1183,7 +1186,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             fastest_nondiff_pname = pn
                             else:
                                 pn = pair[0].name
-                                outfile.write("Not touching {pn}, because ratio = {ratio} > {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {biggest_left_right_sum}\n".format(**locals()))
+                                outfile.write("Not touching {pn}, because ratio = {ratio} > {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {lr_sum_threshold}\n".format(**locals()))
 
                         # also determine most sampled non-diff elementary process
                         # to determine if it is justified to adjust diffusion processes
@@ -1262,10 +1265,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             for pn in kmos_model.settings.rate_constants:
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
                                     #for ratio, pn1, left_right_sum, pair, s, _ in integ_equilibration_data:
+                                    lr_sum_threshold = .3 * data_dict['kmc_steps']
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
                                         #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * SAMPLE_MIN or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
-                                            and left_right_sum >= options.batch_size * SAMPLE_MIN
+                                            #and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
                                             #and left_right_sum >= options.batch_size * SAMPLE_MIN / 10.
                                             #and left_right_sum >= most_sampled_pair / 10.
