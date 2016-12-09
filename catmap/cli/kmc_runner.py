@@ -24,7 +24,7 @@ SAMPLE_STEPS = INIT_STEPS
 SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = None
-
+ROUND_DIGITS = 1
 
 def process_name_to_latex(pname, arrow=r' \rightarrow '):
     """Translate the name of an elementary processes as used inside the kMC model
@@ -395,7 +395,7 @@ def line_plot_data(x, y, filename,
     print("Plotted {filename}".format(**locals()))
 
 
-def plot_mft_coverages(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
+def plot_mft_coverages(catmap_model, kmos_data, seed=None):
     for i, adsorbate_name in enumerate(catmap_model.adsorbate_names):
         xs, ys, zs = [], [], []
         zs_log = []
@@ -435,7 +435,7 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
                           )
 
 
-def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5):
+def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
     process_names = (get_canonical_process_names(catmap_model))
     for i, elementary_rxn in enumerate(catmap_model.elementary_rxns):
         print(elementary_rxn)
@@ -493,11 +493,11 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None, ROUND_DIGITS=5)
                 print("Check {process_names_i_} {i} {z0} {z1}".format(**locals()))
 
             if mft_signal:
-                ztest = - np.log10((z0 - z1) / zMFT_dict[x][y])
+                ztest = - np.log10((z0 - z1) / zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)])
                 if (z0 - z1) > zMFT_dict[x][y]:
-                    ztest_lin = - (z0 - z1) / zMFT_dict[x][y]
+                    ztest_lin = - (z0 - z1) / zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)]
                 else:
-                    ztest_lin =  zMFT_dict[x][y] / (z0 - z1)
+                    ztest_lin =  zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)] / (z0 - z1)
             else:
                 ztest = - np.log10((z0 - z1))
                 ztest_lin = - (z0 - z1)
