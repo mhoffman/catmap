@@ -905,6 +905,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 else:
                     outfile = log_target
 
+                mft_rates = ('\n'.join(map(lambda x: str(float(x)), sorted(catmap_data['rate_map'])[data_point][1])))
+                outfile.write('\nMFT Rates Benchmark\n{mft_rates}\n\n'.format(**locals()))
                 outfile.write("\n\nInitial coverages, lattice-size {kmos_model.lattice.system_size}\n".format(**locals()))
                 outfile.write("Sampling started at {}.\n\n".format(start_time.isoformat()))
                 outfile.write(kmos_model.print_coverages(to_stdout=False))
