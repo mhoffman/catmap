@@ -1377,6 +1377,16 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 update_outstring = False
                                 outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Exiting!\n".format(**locals()))
 
+                    # Check if time is overrun
+                    if (math.isinf(data_dict['kmc_time']) 
+                            or math.isnan(data_dict['kmc_time'])
+                            or math.isinf(data_dict['simulated_time']) 
+                            or math.isnan(data_dict['simulated_time'])
+                        ):
+                        outfile.write("kMC time overrun. Will give it another round")
+                        fast_processes = True
+                        update_outstring = False
+
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
                         best_sampled_rates = {}
