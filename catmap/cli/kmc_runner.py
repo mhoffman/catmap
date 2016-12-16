@@ -1097,84 +1097,35 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                            ##"{options.lowering_factor}.\n\n"
                                     ##).format(**locals()))
 
+                    # determine most sampled non-diff elementary process
+                    # to determine if it is justified to adjust diffusion processes
+                    most_sampled_pair = float('-inf')
+                    most_sampled_pair_name = ''
+                    for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
+                        pn = pair[0].name
+                        if (not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                            or 'mft' in pn
+                               ):
+                            if left_right_sum > most_sampled_pair:
+                                most_sampled_pair = left_right_sum
+                                most_sampled_pair_name = pn
+                    outfile.write('\nMost sampled pair is {most_sampled_pair_name} with {most_sampled_pair}.\n\n'.format(**locals()))
+
 
                     ####################################################################
                     # 4. If necessary adjust rate constants 
                     ####################################################################
-                    #if least_sampled_pair <= .5 * SAMPLE_MIN:
-                    #if least_sampled_pair < 1e-3 * SAMPLE_MIN and integ_least_sampled_pair == 0 :
                     if least_sampled_pair < 1e-3 * SAMPLE_MIN:
-                        ####################################################################
-                        # 4.a  ... of non-diff events
-                        ####################################################################
-                        # First loop: test for equilibrated pairs of elementary processes
-                        # that have been sampled many times and adjust those rate constants
-                        for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
-                            # Minimum number of events, to produce statistically meaningful results
-                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
-                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 100 * SAMPLE_MIN:
-                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 1000 * SAMPLE_MIN:
-                            #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
-                            if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
-                                fast_processes = True
-                                pn = pair[0].name
-                                if (
-                                        not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        or ('mft' in pn and '1p' not in pn)
-                                        #(not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                        #or 'mft' in pn)
-                                        #and '1p' not in pn
-                                        ):
-                                    old_rc = kmos_model.rate_constants.by_name(pn)
-                                    rc_tuple = kmos_model.settings.rate_constants[pn]
-                                    # rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
-                                    # rescale_factor = max(EQUIB_THRESHOLD, (abs(ratio) / EQUIB_THRESHOLD))
-                                    rescale_multiplication = '*%.2e' % rescale_factor
-                                    rescale_division = '/%.2e' % rescale_factor
-                                    renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
-                                    # Hackish way of producing the same normalizations for 2 significant digits
-                                    numeric_renormalizations[elementary_process_index[pn]] /= eval('{:.2e}'.format(rescale_factor))
-                                    rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
-                                    kmos_model.settings.rate_constants[pn] = rc_tuple
-                                    new_rc = kmos_model.rate_constants.by_name(pn)
-                                    kmos_model.rate_constants.set(pn, new_rc)
-                                    outfile.write(("Found a fast equilibrated process {ratio}:"
-                                                   "\t{pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n"
-                                                   "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum}\n"
-                                                   "\tconst. equib-threshol {EQUIB_THRESHOLD}, ratio {ratio}\n\n"
 
-                                        ).format(**locals()))
 
-                                #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
-                                #pn = pn1
-                                if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
-                                    new_rc = kmos_model.rate_constants.by_name(pn)
-                                    if new_rc > fastest_nondiff_rconstant:
-                                        if 'mft' not in pn:
-                                            fastest_nondiff_rconstant = new_rc
-                                            fastest_nondiff_pname = pn
-                            else:
-                                pn = pair[0].name
-                                outfile.write("Not touching {pn}, because ratio = {ratio} < {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {SAMPLE_MIN}\n".format(**locals()))
 
-                        # also determine most sampled non-diff elementary process
-                        # to determine if it is justified to adjust diffusion processes
-                        most_sampled_pair = float('-inf')
-                        most_sampled_pair_name = ''
-                        for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
-                            pn = pair[0].name
-                            if (not kmos_model.settings.rate_constants[pn][0].startswith('diff')
-                                or 'mft' in pn
-                                   ):
-                                if left_right_sum > most_sampled_pair:
-                                    most_sampled_pair = left_right_sum
-                                    most_sampled_pair_name = pn
-                        outfile.write('\nMost sampled pair is {most_sampled_pair_name} with {most_sampled_pair}.\n\n'.format(**locals()))
+
 
 
                         ####################################################################
                         # 4.b  ... of diff events
                         ####################################################################
+                        touched_diff_events = False
                         if True or fastest_nondiff_pname == '':
                             outfile.write("\n\nChecking for alternative fastest non-diff rate-constants\n")
                             for ratio, pn1, left_right_sum, pair, s, _ in integ_equilibration_data:
@@ -1199,10 +1150,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                         # if non-diff processes where not sampled at all, reduce all diffusion rate-constants consistently
                         if True or fastest_nondiff_pname == '':
-                            outfile.write("\n\nChecking alternatively for fastest diff rate-constants\n")
+                            outfile.write("\n\nchecking alternatively for fastest diff rate-constants\n")
                             for ratio, pn1, left_right_sum, pair, _, _ in integ_equilibration_data:
                                 if left_right_sum > 0:
-                                    #outfile.write("Could be {pn1} or {pn2}".format(**locals()))
+                                    #outfile.write("could be {pn1} or {pn2}".format(**locals()))
                                     #outfile.write("{pn1} <=> {pn2} : {ratio}\n".format(**locals()))
                                     #for pn in [pn1, pn2]:
                                     #for pn in [pn1]:
@@ -1215,42 +1166,43 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             fastest_nondiff_rconstant = new_rc
                                             fastest_nondiff_pname = pn
 
-                        outfile.write("\n\nFastest diff process k({fastest_nondiff_pname}) = {fastest_nondiff_rconstant:.2e}\n".format(**locals()))
+                        outfile.write("\n\nfastest diff process k({fastest_nondiff_pname}) = {fastest_nondiff_rconstant:.2e}\n".format(**locals()))
 
-                        # Bracket the maximum change of the fastest non-diff rate-constant
+                        # bracket the maximum change of the fastest non-diff rate-constant
                         if np.isfinite(old_nondiff):
                             if fastest_nondiff_rconstant < old_nondiff / 10.:
                                 fastest_nondiff_rconstant = old_nondiff / 10.
-                                outfile.write('\n\nThrottling non-diff reduction, to a maximum factor of 10. to {fastest_nondiff_rconstant:.3e}\n'.format(**locals()))
+                                outfile.write('\n\nthrottling non-diff reduction, to a maximum factor of 10. to {fastest_nondiff_rconstant:.3e}\n'.format(**locals()))
                             if fastest_nondiff_rconstant >=  old_nondiff:
                                 fastest_nondiff_rconstant = old_nondiff / float(options.lowering_factor)
-                                outfile.write("\n\nReducing maximum non-diff factor by minimum of factor {options.lowering_factor} to {fastest_nondiff_rconstant:.3e}\n".format(**locals()))
+                                outfile.write("\n\nreducing maximum non-diff factor by minimum of factor {options.lowering_factor} to {fastest_nondiff_rconstant:.3e}\n".format(**locals()))
 
-                        # Loop again for preserving the fast diffusion rate constants
+                        # loop again for preserving the fast diffusion rate constants
                         if fastest_nondiff_rconstant > float('-inf') and options.diffusion_factor is not None:
                             # options.batch_size = batch_size0
                             for pn in kmos_model.settings.rate_constants:
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
                                     #for ratio, pn1, left_right_sum, pair, s, _ in integ_equilibration_data:
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
-                                        #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * SAMPLE_MIN or fast_processes_adaption < 1) :
+                                        #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * sample_min or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
                                             and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
-                                            #and not '_1p_' in pn
+                                            and not '_1p_' in pn
+                                            and not 'mft' in pn
                                             ):
                                             outfile.write('\t- adapting {pn}, bc. ((lr_sum = {left_right_sum})>(ms_pair={most_sampled_pair}))\n'.format(**locals()))
-                                            # Note: the fast_process_adaption < 1 condition
+                                            # note: the fast_process_adaption < 1 condition
                                             # makes sure that the diffusion factor gets applied at least
                                             # once in the begining, even if the corresponding process is
                                             # not sufficiently sampled
                                             rc_tuple = kmos_model.settings.rate_constants[pn]
                                             diff_const = rc_tuple[0].split('*')[0]
-                                            #theta_terms = '*'.join([term for term in rc_tuple[0].split('*') if term.startswith('Theta_')])
+                                            #theta_terms = '*'.join([term for term in rc_tuple[0].split('*') if term.startswith('theta_')])
                                             # we need the `re` version of split to make sure we only split on '*' but not on '**'
                                             theta_terms = '*'.join([term for term in re.split("(?<![*])[*](?![*])", rc_tuple[0])
-                                                if 'Theta_' in term
-                                                or 'N_sites' in term
+                                                if 'theta_' in term
+                                                or 'n_sites' in term
                                                 ])
                                             safe_rc = (options.diffusion_factor * fastest_nondiff_rconstant)
                                             diff_rconst = '{diff_const}*{diff_const}**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
@@ -1260,11 +1212,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             # we need this weird way of writing "1*" to keep the 'diff' prefix throughout adaptations
                                             ndiff_rconst = options.diffusion_factor * fastest_nondiff_rconstant
                                             rc_tuple = (diff_rconst, rc_tuple[1])
-                                            # EXPERIMENTAL
+                                            # experimental
                                             #lowering_factor = math.pow(float(options.lowering_factor), 0.1)
                                             lowering_factor = float(options.lowering_factor)
                                             rc_tuple = ('{rc_tuple[0]}/{lowering_factor:5.3e}'.format(**locals()), rc_tuple[1])
                                             outfile.write("\t- diff reset k({pn}) = {diff_rconst} = {rc_tuple}\n".format(**locals()))
+                                            touched_diff_events = True
                                             kmos_model.settings.rate_constants[pn] = rc_tuple
                                             break
                                         else:
@@ -1273,16 +1226,73 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
                         else:
                             options.batch_size *= 2
-                            outfile.write("\n\nDidn't sample non-diff processes, doubling batch-size to {options.batch_size:.3e}\n".format(**locals()))
+                            outfile.write("\n\ndidn't sample non-diff processes, doubling batch-size to {options.batch_size:.3e}\n".format(**locals()))
 
-                        # outfile.write("\n\nRate constants after all adjustments\n")
+                        # outfile.write("\n\nrate constants after all adjustments\n")
                         # outfile.write(kmos_model.rate_constants())
 
                         if old_nondiff == fastest_nondiff_rconstant:
                             options.batch_size *= 2
-                            outfile.write("Fastest non-diff rate-constant unchanged, doubling batch size to {options.batch_size:.3e}\n".format(**locals()))
+                            outfile.write("fastest non-diff rate-constant unchanged, doubling batch size to {options.batch_size:.3e}\n".format(**locals()))
 
                         old_nondiff = fastest_nondiff_rconstant
+
+
+                        ####################################################################
+                        # 4.a  ... of non-diff events
+                        ####################################################################
+                        # First loop: test for equilibrated pairs of elementary processes
+                        # that have been sampled many times and adjust those rate constants
+                        if touched_diff_events == True:
+                            outfile.write('\nJust adapted diffusion rate constant. Will skip non-diff adaption for the rest of this round.\n')
+                        else:
+                            for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
+                                # Minimum number of events, to produce statistically meaningful results
+                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
+                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 100 * SAMPLE_MIN:
+                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 1000 * SAMPLE_MIN:
+                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
+                                if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
+                                    fast_processes = True
+                                    pn = pair[0].name
+                                    if (
+                                            not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                                            or ('mft' in pn and '1p' not in pn)
+                                            #(not kmos_model.settings.rate_constants[pn][0].startswith('diff')
+                                            #or 'mft' in pn)
+                                            #and '1p' not in pn
+                                            ):
+                                        old_rc = kmos_model.rate_constants.by_name(pn)
+                                        rc_tuple = kmos_model.settings.rate_constants[pn]
+                                        # rc_tuple = (rc_tuple[0] + '*.5', rc_tuple[1])
+                                        # rescale_factor = max(EQUIB_THRESHOLD, (abs(ratio) / EQUIB_THRESHOLD))
+                                        rescale_multiplication = '*%.2e' % rescale_factor
+                                        rescale_division = '/%.2e' % rescale_factor
+                                        renormalizations[pn] = renormalizations.get(pn, '1.') + '/{:.2e}'.format(rescale_factor)
+                                        # Hackish way of producing the same normalizations for 2 significant digits
+                                        numeric_renormalizations[elementary_process_index[pn]] /= eval('{:.2e}'.format(rescale_factor))
+                                        rc_tuple = (rc_tuple[0] + rescale_multiplication, rc_tuple[1])
+                                        kmos_model.settings.rate_constants[pn] = rc_tuple
+                                        new_rc = kmos_model.rate_constants.by_name(pn)
+                                        kmos_model.rate_constants.set(pn, new_rc)
+                                        outfile.write(("Found a fast equilibrated process {ratio}:"
+                                                       "\t{pn}, reduced rate constant from {old_rc:.2e} to {new_rc:.2e}\n"
+                                                       "\tconst. sample-min {SAMPLE_MIN}, left-right sum {left_right_sum}\n"
+                                                       "\tconst. equib-threshol {EQUIB_THRESHOLD}, ratio {ratio}\n\n"
+
+                                            ).format(**locals()))
+
+                                    #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
+                                    #pn = pn1
+                                    if not kmos_model.settings.rate_constants[pn][0].startswith('diff'):
+                                        new_rc = kmos_model.rate_constants.by_name(pn)
+                                        if new_rc > fastest_nondiff_rconstant:
+                                            if 'mft' not in pn:
+                                                fastest_nondiff_rconstant = new_rc
+                                                fastest_nondiff_pname = pn
+                                else:
+                                    pn = pair[0].name
+                                    outfile.write("Not touching {pn}, because ratio = {ratio} < {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {SAMPLE_MIN}\n".format(**locals()))
 
 
                     ####################################################################
