@@ -379,8 +379,10 @@ def line_plot_data(x, y, filename,
         # we are plotting a rate constant, do it on a log-scale
         # plot = plt.semilogy(x, y)
         plot = plt.plot(x, y)
+        plot = plt.plot(x, y, 'o')
     else:
         plot = plt.plot(x, y)
+        plot = plt.plot(x, y, 'o')
 
     if 'Theta' in title:
         plt.ylabel('coverage [ML]')
@@ -520,20 +522,52 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
         colorbar_label = '$\\log_{{10}}(R_{{\\rm MFT}}/R_{{\\rm kMC}})$ ({pname})'.format(**locals())
         colorbar_label_lin = '$(R_{{\\rm MFT}}/R_{{\\rm kMC}})$ ({pname})'.format(**locals())
         print("Colorbar label {colorbar_label}".format(**locals()))
-        try:
-            contour_plot_data(xs, ys, zs,
-                              'kMC_plot_delta_kMC_MFT_{i}.pdf'.format(**locals()),
-                              colorbar_label=colorbar_label, catmap_model=catmap_model, seed=seed, cmap='seismic')
-            contour_plot_data(xs, ys, zs_lin,
-                              'kMC_plot_delta_kMC_MFT_lin_{i}.pdf'.format(**locals()),
-                              colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
-            contour_plot_data(xs, ys, np.clip(zs_lin, -10, 10),
-                              'kMC_plot_delta_kMC_MFT_lin_clipped_{i}.pdf'.format(**locals()),
-                              colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
-        except:
-            process_name = process_names[i]
-            print("Trouble plotting delta {process_name}".format(**locals()))
-            print("PLOTTED DELTA KMC_MFT {process_names}".format(**locals()))
+
+        def diff(x):
+            return x[1] - x[0]
+
+        if diff(catmap_model.descriptor_ranges[0]) == 0 or diff(catmap_model.descriptor_ranges[1]) == 0:
+            if diff(catmap_model.descriptor_ranges[0]) == 0:
+                iv = independent_variable = 1
+                x_data = ys
+            else:
+                iv = independent_variable = 0
+                x_data = xs
+            y_data = zs
+            y_lin_data = zs_lin
+
+            line_plot_data(x_data,
+                           y_data,
+                           'kMC_plot_delta_{i}.pdf'.format(**locals()),
+                           catmap_model=catmap_model,
+                           normalized=False,
+                           title='log net rate delta {i}'.format(**locals()),
+                           xlabel=catmap_model.descriptor_names[iv],
+                           )
+
+            line_plot_data(x_data,
+                           y_lin_data,
+                           'kMC_plot_delta_lin_{i}.pdf'.format(**locals()),
+                           catmap_model=catmap_model,
+                           normalized=False,
+                           title='lin net rate delta {i}'.format(**locals()),
+                           xlabel=catmap_model.descriptor_names[iv],
+                           )
+        else:
+            try:
+                contour_plot_data(xs, ys, zs,
+                                  'kMC_plot_delta_kMC_MFT_{i}.pdf'.format(**locals()),
+                                  colorbar_label=colorbar_label, catmap_model=catmap_model, seed=seed, cmap='seismic')
+                contour_plot_data(xs, ys, zs_lin,
+                                  'kMC_plot_delta_kMC_MFT_lin_{i}.pdf'.format(**locals()),
+                                  colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
+                contour_plot_data(xs, ys, np.clip(zs_lin, -10, 10),
+                                  'kMC_plot_delta_kMC_MFT_lin_clipped_{i}.pdf'.format(**locals()),
+                                  colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
+            except:
+                process_name = process_names[i]
+                print("Trouble plotting delta {process_name}".format(**locals()))
+                print("PLOTTED DELTA KMC_MFT {process_names}".format(**locals()))
 
         pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
         colorbar_label = '$\\log_{{10}}(R_{{\\rm kMC}})$ ({pname})'.format(**locals())
@@ -677,7 +711,6 @@ def main(options, call_path=None):
             elif diff(catmap_model.descriptor_ranges[0]) == 0 or diff(catmap_model.descriptor_ranges[1]) == 0:
                 if diff(catmap_model.descriptor_ranges[0]) == 0:
                     iv = independent_variable = 1
-
                 else:
                     iv = independent_variable = 0
 
@@ -1113,9 +1146,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
 
                     ####################################################################
-                    # 4. If necessary adjust rate constants 
+                    # 4. If necessary adjust rate constants
                     ####################################################################
-                    if least_sampled_pair < 1e-3 * SAMPLE_MIN:
+                    if least_sampled_pair < .5 * SAMPLE_MIN:
 
 
 
@@ -1186,7 +1219,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
                                         #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * sample_min or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
-                                            and left_right_sum >= options.batch_size * SAMPLE_MIN
+                                            #and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
                                             and not '_1p_' in pn
                                             and not 'mft' in pn
@@ -1205,7 +1238,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                 or 'n_sites' in term
                                                 ])
                                             safe_rc = (options.diffusion_factor * fastest_nondiff_rconstant)
-                                            diff_rconst = '{diff_const}*{diff_const}**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
+                                            diff_rconst = '{diff_const}*({diff_const})**(-1.)*{options.diffusion_factor}*{fastest_nondiff_rconstant}'.format(**locals())
                                             if theta_terms:
                                                 diff_rconst += '*' + theta_terms
                                             # we filter the diffusion processes by checking which rate constants start with 'diff', thus
@@ -1248,11 +1281,11 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         else:
                             for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
                                 # Minimum number of events, to produce statistically meaningful results
-                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
+                                if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 10 * SAMPLE_MIN:
                                 #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 100 * SAMPLE_MIN:
                                 #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 1000 * SAMPLE_MIN:
                                 #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= options.batch_size * SAMPLE_MIN:
-                                if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
+                                #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
                                     fast_processes = True
                                     pn = pair[0].name
                                     if (
@@ -1393,12 +1426,13 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Exiting!\n".format(**locals()))
 
                     # Check if time is overrun
-                    if (math.isinf(data_dict['kmc_time']) 
+                    if (math.isinf(data_dict['kmc_time'])
                             or math.isnan(data_dict['kmc_time'])
-                            or math.isinf(data_dict['simulated_time']) 
+                            or math.isinf(data_dict['simulated_time'])
                             or math.isnan(data_dict['simulated_time'])
                         ):
-                        outfile.write("kMC time overrun. Will give it another round")
+                        options.batch_size *= .3
+                        outfile.write("kMC time overrun. Will give it another round and reduce batch-size to {options.batch_size:.3e}.\n".format(**locals()))
                         fast_processes = True
                         update_outstring = False
 
