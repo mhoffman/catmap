@@ -362,6 +362,22 @@ def catmap2kmos(cm_model,
                                                          **locals()),
                                                      tof_count={reverse_name_root: 1},
                                                      )
+                    ## DEBUGGING try with overcounting
+                    process.rate_constant += '/' + str(float(len(sites_list)))
+                    reverse_process.rate_constant += '/' + str(float(len(sites_list)))
+
+                    ## DEBUGGING Add additional prefactor .5 for diffusion processes
+                    if 'diff' in diff_prefix:
+                        process.rate_constant += '/2.'
+                        reverse_process.rate_constant += '/2.'
+
+                    # if reaction has internal symmetry add another factor /2.
+                    # TOD: Generalize later for reaction with more than 2 sites.
+                    if len(sites_vectors) == 2:
+                        si = surface_intermediates
+                        if ((si['A'][0][0] == si['A'][1][0] ) and (si['C'][1][0]  == si['C'][0][0])):
+                            process.rate_constant += '/2.'
+                            reverse_process.rate_constant += '/2.'
 
                     if options.interaction > 0:
                         import dbmi
@@ -550,6 +566,13 @@ def add_one_particle_processes(pt):
 
     """
     import copy
+    ## add parameters representing MFT coverages in rate-constants
+    #for species in pt.species_list:
+        #for site in pt.layer_list[0].sites:
+            #species_name = 'Theta_{site.name}_{species.name}'.format(**locals())
+            #if not species_name in [x.name for x in pt.species_list]:
+                #pt.add_parameter(name=species_name, value=1.)
+
     stoichiometries = get_stoichiometries(pt)
     pt.add_parameter(name='N_sites', value=400)
     default_species = pt.species_list.default_species
@@ -629,7 +652,8 @@ def add_mft_processes(pt):
             mft_site = condition.coord.name
             mft_process.condition_list[c_i].species = MFT_SPECIES
             mft_process.action_list[c_i].species = MFT_SPECIES
-            mft_process.rate_constant += '*Theta_{mft_site}_{mft_species}'.format(**locals())
+            # EXPERIMENTAL: Factor 2 due to breaking of symmetry
+            mft_process.rate_constant += '*2*Theta_{mft_site}_{mft_species}'.format(**locals())
             mft_process.name += '_mft_{c_i}'.format(**locals())
             mft_process.tof_count.clear()
             for tof_count, stoichiometry in stoichiometries.items():
