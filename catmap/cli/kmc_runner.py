@@ -8,6 +8,7 @@ import copy
 import re
 import math
 import datetime
+import bisect
 
 import catmap.cli.kmc_translation
 
@@ -24,7 +25,25 @@ SAMPLE_STEPS = INIT_STEPS
 SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = None
-ROUND_DIGITS = 1
+ROUND_DIGITS = 5
+
+def takeClosest(myList, myNumber):
+    """
+    Assumes myList is sorted. Returns closest value to myNumber.
+
+    If two numbers are equally close, return the smallest number.
+    """
+    pos = bisect.bisect_left(myList, myNumber)
+    if pos == 0:
+        return myList[0]
+    if pos == len(myList):
+        return myList[-1]
+    before = myList[pos - 1]
+    after = myList[pos]
+    if after - myNumber < myNumber - before:
+       return after
+    else:
+       return before
 
 def process_name_to_latex(pname, arrow=r' \rightarrow '):
     """Translate the name of an elementary processes as used inside the kMC model
@@ -470,13 +489,18 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
         print("PLOTTING DELTA")
         xs, ys, zs = [], [], []
         zs_lin = []
+        zs_forward = []
+        zs_reverse = []
+        zs_MFT = []
         x_kMC, y_kMC, z_kMC = [], [], []
         zs_kMC = np.array(kmos_data[process_names[i][0]]) - np.array(kmos_data[process_names[i][1]])
 
         zs_kMC_max = max(zs_kMC)
         z_ratio = zs_MFT_max / zs_kMC_max
 
-        print(zs_MFT_max, zs_kMC_max, z_ratio)
+        #print('zMFT dict')
+        #print(zMFT_dict)
+        #print(zs_MFT_max, zs_kMC_max, z_ratio)
 
         print(process_names[i])
         for x, y, z0, z1 in zip(kmos_data['descriptor0'], kmos_data['descriptor1'], kmos_data[process_names[i][0]], kmos_data[process_names[i][1]]):
@@ -494,12 +518,19 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                 process_names_i_ = process_names[i]
                 print("Check {process_names_i_} {i} {z0} {z1}".format(**locals()))
 
+            x_closest = takeClosest(sorted(zMFT_dict.keys()), x)
+            y_closest = takeClosest(sorted(zMFT_dict[x_closest].keys()), y)
+            #print('    {x} => {x_closest}'.format(**locals()))
+            #print('    {y} => {y_closest}'.format(**locals()))
+            zMFT_xy = zMFT_dict[x_closest][y_closest]
+            _correction = 1.
+            _correction = 0.
             if mft_signal:
-                ztest = - np.log10((z0 - z1) / zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)])
-                if (z0 - z1) > zMFT_dict[x][y]:
-                    ztest_lin = - (z0 - z1) / zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)]
+                ztest = - np.log10((z0 - z1) / zMFT_xy)
+                if (z0 - z1) > zMFT_xy :
+                    ztest_lin = - (z0 - z1) / zMFT_xy + _correction
                 else:
-                    ztest_lin =  zMFT_dict[round(x, ROUND_DIGITS)][round(y, ROUND_DIGITS)] / (z0 - z1)
+                    ztest_lin =  zMFT_xy / (z0 - z1) - _correction
             else:
                 ztest = - np.log10((z0 - z1))
                 ztest_lin = - (z0 - z1)
@@ -509,6 +540,10 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                 ys.append(y)
                 zs.append(ztest)
                 zs_lin.append(ztest_lin)
+
+            zs_forward.append(z0)
+            zs_reverse.append(z1)
+            zs_MFT.append(zMFT_xy)
         zs = np.array(zs)
         zs[np.logical_not(np.isfinite(zs))] = 0.
 
@@ -535,6 +570,17 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                 x_data = xs
             y_data = zs
             y_lin_data = zs_lin
+
+            print('DELTA {i}'.format(**locals()))
+            print(x_data)
+            print(y_data)
+            print(y_lin_data)
+            print('Zs forward')
+            print(zs_forward)
+            print('Zs reverse')
+            print(zs_reverse)
+            print('Zs MFT')
+            print(zs_MFT)
 
             line_plot_data(x_data,
                            y_data,
@@ -813,7 +859,8 @@ def setup_edged_model_at_datapoint(model, data_point, reset_configuration=False)
     set_rate_constants(model, data_point)
     if reset_configuration:
         setup_model_probabilistic(model, data_point)
-    setup_mft_edges_2d(model)
+    if hasattr(model.proclist, 'mft_'):
+        setup_mft_edges_2d(model)
     if hasattr(model.parameters, 'N_sites'):
         model.parameters.N_sites = model.lattice.system_size.prod()
 
@@ -852,7 +899,7 @@ def set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_
     else:
         raise UserWarning("Directions for initial configuration '{options.initial_configuration}' can not be processed".format(**locals()))
 
-    if hasattr(kmos_model.proclist, 'mft'):
+    if hasattr(kmos_model.proclist, 'mft_'):
         setup_mft_edges_2d(kmos_model)
         print("Added MFT boundary conditions")
         kmos_model.print_coverages()
@@ -1148,12 +1195,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     ####################################################################
                     # 4. If necessary adjust rate constants
                     ####################################################################
-                    if least_sampled_pair < .5 * SAMPLE_MIN:
-
-
-
-
-
+                    if least_sampled_pair < options.freezing_fraction * SAMPLE_MIN:
 
                         ####################################################################
                         # 4.b  ... of diff events
