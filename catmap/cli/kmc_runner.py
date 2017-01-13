@@ -1263,6 +1263,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         if (pn in [pair[0].name, pair[1].name]
                                             #and left_right_sum >= options.batch_size * SAMPLE_MIN
                                             and left_right_sum >= most_sampled_pair
+                                            ## EXPERIMENTAL
+                                            #and ((left_right_sum >= most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
                                             and not '_1p_' in pn
                                             and not 'mft' in pn
                                             ):
@@ -1428,7 +1430,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile.write("\nFound all processes, to be equilibrated. So further adjustments will not help. Quit.\n")
 
                     # Check if we have sufficient sampling for every process pair
-                    if all([s >= SAMPLE_MIN for r, pn1, _, pair, s, _ in equilibration_data if
+                    if all([s >= SAMPLE_MIN for r, pn1, _, pair, s, _ in integ_equilibration_data if
                         'mft' not in pn1 and
                         #'mft' not in pn2 and
                         '_1p_' not in pn1 and
@@ -1437,12 +1439,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         fast_processes = False
                         update_outstring = True
                         outfile.write('\n\nFinal pair-sampling statistic\n\n')
-                        for r, pn1, _, _, s, _ in equilibration_data:
+                        for r, pn1, _, _, s, _ in integ_equilibration_data:
                             outfile.write('\n\t- {s} events for ({pn1})'.format(**locals()))
                         outfile.write("\n\nObtained well-sampled statistics for every process-pair, no further sampling needed. Done.\n")
                     else:
                         outfile.write('\n\nProcess pairs that are not sufficiently sampled :\n')
-                        for r, pn1, _, pair, s, _ in equilibration_data:
+                        for r, pn1, _, pair, s, _ in integ_equilibration_data:
                             if 'mft' in pn1 or \
                                '_1p_' in pn1 or \
                                pair[0].rate_constant.startswith('diff'):
@@ -1477,6 +1479,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile.write("kMC time overrun. Will give it another round and reduce batch-size to {options.batch_size:.3e}.\n".format(**locals()))
                         fast_processes = True
                         update_outstring = False
+
 
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
