@@ -702,7 +702,7 @@ def main(options, call_path=None):
             if 'forward' in name or 'reverse' in name:
                 import kmc_settings
                 for pname, (param, _) in kmc_settings.rate_constants.items():
-                    if name == param:
+                    if name == param.split('/')[0]:
                         pname = '_'.join(pname.split('_')[:-1])
                         break
                 else:
