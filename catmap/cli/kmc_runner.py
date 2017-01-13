@@ -523,8 +523,8 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
             #print('    {x} => {x_closest}'.format(**locals()))
             #print('    {y} => {y_closest}'.format(**locals()))
             zMFT_xy = zMFT_dict[x_closest][y_closest]
-            _correction = 1.
             _correction = 0.
+            _correction = 1.
             if mft_signal:
                 ztest = - np.log10((z0 - z1) / zMFT_xy)
                 if (z0 - z1) > zMFT_xy :
