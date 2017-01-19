@@ -1014,20 +1014,20 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 ####################################################################
 
                 full_data = kmos.run.steady_state.sample_steady_state(kmos_model,
-                                                                            show_progress=True,
-                                                                            make_plots=make_plots,
-                                                                            start_batch=start_batch,
-                                                                            batch_size=options.batch_size,
-                                                                            bias_threshold=options.bias_threshold,
-                                                                            L=L,
-                                                                            alpha=alpha,
-                                                                            output='both',
-                                                                            tof_method='procrates',
-                                                                            seed='EWMA_{data_point:04d}'.format(**locals()),
-                                                                            renormalizations=numeric_renormalizations,
-                                                                            log_filename=log_filename,
-                                                                            sub_batches=1,
-                                                                            )
+                                                                      show_progress=True,
+                                                                      make_plots=make_plots,
+                                                                      start_batch=start_batch,
+                                                                      batch_size=options.batch_size,
+                                                                      bias_threshold=options.bias_threshold,
+                                                                      L=L,
+                                                                      alpha=alpha,
+                                                                      output='both',
+                                                                      tof_method='procrates',
+                                                                      seed='EWMA_{data_point:04d}'.format(**locals()),
+                                                                      renormalizations=numeric_renormalizations,
+                                                                      log_filename=log_filename,
+                                                                      sub_batches=1,
+                                                                      )
 
                 #data_dict, data = full_data['integ']
                 data_dict, data = full_data
@@ -1262,9 +1262,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         #if pn in [pair[0].name, pair[1].name] and (left_right_sum >= 1000 * sample_min or fast_processes_adaption < 1) :
                                         if (pn in [pair[0].name, pair[1].name]
                                             #and left_right_sum >= options.batch_size * SAMPLE_MIN
-                                            and left_right_sum >= most_sampled_pair
-                                            ## EXPERIMENTAL
+                                            #and left_right_sum >= most_sampled_pair
+                                            # EXPERIMENTAL
                                             #and ((left_right_sum >= most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
+                                            and ((left_right_sum >= 1. * most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
                                             and not '_1p_' in pn
                                             and not 'mft' in pn
                                             ):
@@ -1414,6 +1415,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     for proc in range(kmos_model.proclist.nr_of_proc.max()):
                         kmos_model.base.set_procstat(proc + 1, 0)
                         kmos_model.base.set_integ_rate(proc + 1, 0)
+                        kmos_model.base.set_integ_event(proc + 1, 0)
                     kmos_model.base.set_kmc_step(0)
 
                     #outfile.write("\n\nReset Procstat (number of executed processes)\n")
@@ -1480,6 +1482,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         fast_processes = True
                         update_outstring = False
 
+                    #if fast_processes_adaption <= 0:
+                        #outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
+                        #fast_processes = True
+                        #update_outstring = False
 
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
