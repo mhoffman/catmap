@@ -347,6 +347,15 @@ def catmap2kmos(cm_model,
                         else:
                             diff_prefix = ''
 
+                    # EXPERIMENTAL: alternative definition that also captures exchange diffusion
+                    if len(sites_vectors) == 2:
+                        si = surface_intermediates
+                        if ((si['A'][0][0] == si['C'][1][0]) and (si['A'][1][0] == si['C'][0][0])):
+                            diff_prefix = 'diff_'
+                        else:
+                            diff_prefix = ''
+
+
                     process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
                                              conditions=conditions,
                                              actions=actions,
@@ -498,8 +507,8 @@ def catmap2kmos(cm_model,
                         otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
                         """.format(**locals())
 
-            pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1., adjustable=True)
-            pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1., adjustable=True)
+            pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.e3, adjustable=True)
+            pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.e3, adjustable=True)
 
     if mft_processes:
         add_mft_processes(pt)
@@ -524,12 +533,14 @@ def get_stoichiometry(pt, process):
 def get_stoichiometries(pt):
     stoichiometries = {}
     for process in pt.process_list:
-        tof_count = process.tof_count.keys()[0]
-        if tof_count in stoichiometries:
-            continue
+        tof_counts = process.tof_count.keys()
+        if tof_counts:
+            tof_count = tof_counts[0]
+            if tof_count in stoichiometries:
+                continue
 
-        stoichiometry = get_stoichiometry(pt, process)
-        stoichiometries[tof_count] = stoichiometry
+            stoichiometry = get_stoichiometry(pt, process)
+            stoichiometries[tof_count] = stoichiometry
 
     return stoichiometries
 
@@ -646,6 +657,13 @@ def add_mft_processes(pt):
         if not process.rate_constant.startswith('diff'):
             # skip non-diffusion processes
             continue
+
+        if EMPTY_SPECIES not in [x.species for x in process.action_list] \
+                + [x.species for x in process.condition_list]:
+            # only do standard diffusion processes
+            # not exchange diffusion processese
+            continue
+
         for c_i, (condition, action) in enumerate(zip(process.condition_list, process.action_list)):
             mft_process = copy.deepcopy(process)
             mft_species = condition.species

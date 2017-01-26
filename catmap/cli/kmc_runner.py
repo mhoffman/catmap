@@ -27,6 +27,8 @@ TEMPERATURE = 500
 DIFFUSION_FACTOR = None
 ROUND_DIGITS = 5
 
+PLOT_SUFFIX = 'png'
+
 def takeClosest(myList, myNumber):
     """
     Assumes myList is sorted. Returns closest value to myNumber.
@@ -440,7 +442,7 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
         title = '{pname}'.format(**locals())
         colorbar_label = '{{\\rm ML}}'
         contour_plot_data(xs, ys, zs,
-                          'kMC_plot_MFT_coverage_{i}.pdf'.format(**locals()),
+                          'kMC_plot_MFT_coverage_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                           colorbar_label=colorbar_label,
                           title=title,
                           normalized=True,
@@ -448,7 +450,7 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
                           )
 
         contour_plot_data(xs, ys, zs_log,
-                          'kMC_plot_MFT_coverage_log_{i}.pdf'.format(**locals()),
+                          'kMC_plot_MFT_coverage_log_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                           colorbar_label=colorbar_label,
                           title=title,
                           normalized=False,
@@ -480,7 +482,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
         title = '(R_{{\\rm MFT}})$ ({pname})'.format(**locals())
         colorbar_label = '$\\log_{{10}}({{\\rm TOF}})$ [s$^{{-1}}$ cell$^{{-1}}$]'.format(**locals())
         contour_plot_data(xs, ys, zs,
-                          'kMC_plot_MFT_rate_{i}.pdf'.format(**locals()),
+                          'kMC_plot_MFT_rate_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                           colorbar_label=colorbar_label,
                           title=title,
                           catmap_model=catmap_model,
@@ -584,7 +586,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
 
             line_plot_data(x_data,
                            y_data,
-                           'kMC_plot_delta_{i}.pdf'.format(**locals()),
+                           'kMC_plot_delta_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                            catmap_model=catmap_model,
                            normalized=False,
                            title='log net rate delta {i}'.format(**locals()),
@@ -593,7 +595,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
 
             line_plot_data(x_data,
                            y_lin_data,
-                           'kMC_plot_delta_lin_{i}.pdf'.format(**locals()),
+                           'kMC_plot_delta_lin_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                            catmap_model=catmap_model,
                            normalized=False,
                            title='lin net rate delta {i}'.format(**locals()),
@@ -602,13 +604,13 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
         else:
             try:
                 contour_plot_data(xs, ys, zs,
-                                  'kMC_plot_delta_kMC_MFT_{i}.pdf'.format(**locals()),
+                                  'kMC_plot_delta_kMC_MFT_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                                   colorbar_label=colorbar_label, catmap_model=catmap_model, seed=seed, cmap='seismic')
                 contour_plot_data(xs, ys, zs_lin,
-                                  'kMC_plot_delta_kMC_MFT_lin_{i}.pdf'.format(**locals()),
+                                  'kMC_plot_delta_kMC_MFT_lin_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                                   colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
                 contour_plot_data(xs, ys, np.clip(zs_lin, -10, 10),
-                                  'kMC_plot_delta_kMC_MFT_lin_clipped_{i}.pdf'.format(**locals()),
+                                  'kMC_plot_delta_kMC_MFT_lin_clipped_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                                   colorbar_label=colorbar_label_lin, catmap_model=catmap_model, seed=seed, cmap='seismic')
             except:
                 process_name = process_names[i]
@@ -620,7 +622,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
         print(z_kMC)
         try:
             contour_plot_data(x_kMC, y_kMC, z_kMC,
-                              'kMC_plot_kMC_{i}.pdf'.format(**locals()),
+                              'kMC_plot_kMC_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                               colorbar_label=colorbar_label,
                               catmap_model=catmap_model,
                               seed=seed,
@@ -768,7 +770,7 @@ def main(options, call_path=None):
 
                 line_plot_data(x_data,
                                y_data,
-                               'kMC_plot_{name}.pdf'.format(**locals()),
+                               'kMC_plot_{name}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                                catmap_model=catmap_model,
                                normalized=normalized,
                                title=title,
@@ -791,7 +793,7 @@ def main(options, call_path=None):
                 contour_plot_data(data['descriptor0'],
                                   data['descriptor1'],
                                   plot_data,
-                                  'kMC_plot_{name}.pdf'.format(**locals()),
+                                  'kMC_plot_{name}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                                   seed=seed,
                                   catmap_model=catmap_model,
                                   normalized=normalized,
@@ -975,6 +977,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
             increased_batch = False
 
             numeric_renormalizations = np.ones([kmos_model.proclist.nr_of_proc])
+            old_simulated_time = 0.
 
             old_nondiff = float('-inf')
             setup_edged_model_at_datapoint(kmos_model, data_point, reset_configuration=True)
@@ -1022,7 +1025,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                                       L=L,
                                                                       alpha=alpha,
                                                                       output='both',
-                                                                      tof_method='procrates',
+                                                                      tof_method='integ',
                                                                       seed='EWMA_{data_point:04d}'.format(**locals()),
                                                                       renormalizations=numeric_renormalizations,
                                                                       log_filename=log_filename,
@@ -1095,9 +1098,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
                             _current_coverages.append(value)
 
-                    if not sum(_current_coverages) == 0.:
+                    skip_updates = False
+                    if data_dict['simulated_time'] < old_simulated_time:
+                        skip_updates = True
+                    old_simulated_time = data_dict['simulated_time']
 
-
+                    if not sum(_current_coverages) == 0. and not skip_updates :
                         for key, value in data_dict.items():
                             if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
                                 coverages_history.setdefault(key, []).append(value)
@@ -1296,6 +1302,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             rc_tuple = ('{rc_tuple[0]}/{lowering_factor:5.3e}'.format(**locals()), rc_tuple[1])
                                             outfile.write("\t- diff reset k({pn}) = {diff_rconst} = {rc_tuple}\n".format(**locals()))
                                             touched_diff_events = True
+                                            scaled_old_diff_const = kmos.evaluate_rate_expression(kmos_model.settings.rate_constants[pn][0], kmos_model.settings.parameters) / 10.
+                                            new_diff_const = kmos.evaluate_rate_expression(rc_tuple[0], kmos_model.settings.parameters)
+                                            if scaled_old_diff_const > new_diff_const:
+                                                rc_tuple = (kmos_model.settings.rate_constants[pn][0] + '/10.', rc_tuple[1])
                                             kmos_model.settings.rate_constants[pn] = rc_tuple
                                             break
                                         else:
@@ -1321,6 +1331,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         ####################################################################
                         # First loop: test for equilibrated pairs of elementary processes
                         # that have been sampled many times and adjust those rate constants
+                        touched_non_diff_events = False
                         if touched_diff_events == True:
                             outfile.write('\nJust adapted diffusion rate constant. Will skip non-diff adaption for the rest of this round.\n')
                         else:
@@ -1362,6 +1373,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                        "\tconst. equib-threshol {EQUIB_THRESHOLD}, ratio {ratio}\n\n"
 
                                             ).format(**locals()))
+                                        touched_non_diff_events = False
 
                                     #pn = pn1 if (kmos_model.rate_constants.by_name(pn1) > kmos_model.rate_constants.by_name(pn2)) else pn2
                                     #pn = pn1
@@ -1455,6 +1467,37 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 outfile.write('\n\t- only {s} events for ({pn1})'.format(**locals()))
                         outfile.write('\n')
 
+                    #if fast_processes == False:
+                        ## If integ based check cleared, check if we also have a minimum of 10 actual event per channel
+                        ## for MFT like processes
+                        #N = 100
+                        #if all([s >= N for r, pn1, _, pair, s, _ in equilibration_data
+                            ##if 'mft' in pair[0].name and pair[0].rate_constant.startswith('diff')
+                            #]):
+                            #_pn = pair[0].name
+                            ##'mft' not in pn2 and
+                            ##'_1p_' not in pn1 and
+                            ##'_1p_' not in pn2 and
+                            #fast_processes = False
+                            #update_outstring = True
+                            #outfile.write('\n\nFinal actual pair-sampling statistic\n\n')
+                            #for r, pn1, _, _, s, _ in equilibration_data:
+                                #outfile.write('\n\t- {s} actual events for {_pn} ({pn1})'.format(**locals()))
+                            #outfile.write("\n\nObtained well-sampled statistics for every actual MFT process-pair, no further sampling needed. Done.\n")
+                        #else:
+                            #fast_processes = True
+                            #update_outstring = False
+                            #outfile.write('\n\nProcess pairs that are  actually not sufficiently sampled :\n')
+                            #for r, pn1, _, pair, s, _ in equilibration_data:
+                                #if not 'mft' in pn1 or \
+                                   #not pair[0].rate_constant.startswith('diff'):
+                                   ##'_1p_' in pn1 or \
+                                    #continue
+                                #_pn = pair[0].name
+                                #if s < N :
+                                    #outfile.write('\n\t- only actual {s} events for {_pn} ({pn1})'.format(**locals()))
+                            #outfile.write('\n')
+
                     # Check if we have obtained meaningful data at all
                     if sum(_current_coverages) == 0.:
                         outfile.write("\nCould not obtain coverage data at all, will not update result.\n")
@@ -1472,20 +1515,59 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Exiting!\n".format(**locals()))
 
                     # Check if time is overrun
-                    if (math.isinf(data_dict['kmc_time'])
-                            or math.isnan(data_dict['kmc_time'])
-                            or math.isinf(data_dict['simulated_time'])
-                            or math.isnan(data_dict['simulated_time'])
-                        ):
-                        options.batch_size *= .3
-                        outfile.write("kMC time overrun. Will give it another round and reduce batch-size to {options.batch_size:.3e}.\n".format(**locals()))
+                    if not fast_processes:
+                        if (math.isinf(data_dict['kmc_time'])
+                                or math.isnan(data_dict['kmc_time'])
+                                or math.isinf(data_dict['simulated_time'])
+                                or math.isnan(data_dict['simulated_time'])
+                                or data_dict['simulated_time'] == 0
+                                or data_dict['kmc_time'] == 0
+                            ):
+                            #options.batch_size *= .3
+                            outfile.write("kMC time overrun. Will give it another round.\n".format(**locals()))
+                            fast_processes = True
+                            update_outstring = False
+
+                    if not fast_processes:
+                        if ( data_dict['simulated_time'] == 0
+                                or data_dict['kmc_time'] == 0
+                                ):
+                            outfile.write("kMC time reset. Will give it another round.\n".format(**locals()))
+                            fast_processes = True
+                            update_outstring = False
+
+
+                    if not fast_processes:
+                        if fast_processes_adaption <= 0:
+                            outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
+                            fast_processes = True
+                            update_outstring = False
+
+                    if True:
+                        diff_events = 0.
+                        non_diff_events = 0.
+                        for r, pn1, _, pair, s, _ in equilibration_data:
+                            if pair[0].rate_constant.startswith('diff'):
+                                diff_events += s
+                            else:
+                                non_diff_events += s
+                        _dr = diff_events / (diff_events + non_diff_events) 
+                        _mdr = 1 - _dr
+                        if _dr > .90 :
+                            if not fast_processes:
+                                outfile.write("\n# FINAL BLOCK: we practically only executed diffusion ({_dr:.2f}), look like we should run more ...\n".format(**locals()))
+                                if touched_diff_events or touched_non_diff_events:
+                                    fast_processes = True
+                                    update_outstring = False
+                                else:
+                                    outfile.write('\nSampling looks a bit meak, but didnt change rate since last round, so will give up ...\n')
+
+                        else:
+                            outfile.write("\n# FINAL BLOCK: we sampled a diffusion fraction of {_dr:.2f}, i.e. a non-diffusion fraction of {_mdr:.2f}\n".format(**locals()))
+                    if skip_updates:
+                        outfile.write('kmc time did not grow as excepted will give it another round.')
                         fast_processes = True
                         update_outstring = False
-
-                    #if fast_processes_adaption <= 0:
-                        #outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
-                        #fast_processes = True
-                        #update_outstring = False
 
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
