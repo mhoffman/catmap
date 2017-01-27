@@ -216,6 +216,7 @@ def contour_plot_data(x, y, z, filename,
     except Exception as e:
         import traceback
         print("Trouble printing {title} {colorbar_label}: {e}".format(**locals()))
+        print(z)
         traceback.print_stack()
         return
     zi = rbf(xi, yi)
@@ -334,6 +335,7 @@ def contour_plot_data(x, y, z, filename,
         import traceback
         traceback.print_stack()
         print("Had trouble saving {filename}".format(**locals()))
+        print(z)
 
 
 def get_seed_from_path(import_path):
@@ -456,6 +458,50 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
                           normalized=False,
                           catmap_model=catmap_model,
                           )
+
+
+def plot_kmc_coverages(catmap_model, data, seed=None):
+    for name in reversed(data.dtype.names):
+        if name.startswith('descriptor') or name == 'T':
+            continue
+        elif name.startswith('datapoint'):
+            continue
+        elif 'time' in name:
+            continue
+        elif '_2_' in name:  # we are plotting a rate
+            continue
+        elif 'forward' in name or 'reverse' in name:  # a rate-constant
+            continue
+        elif 'kmc_steps' in name:  # kmc_steps or kmc_time
+            continue
+        else:  # we are plotting a coverage
+            plot_data = np.log(data[name])
+            plot_data[np.logical_not(np.isfinite(plot_data))] = 0.
+            name = 'log_{name}'.format(**locals())
+            species = name.split('_')[1]
+            title = r'\log(\Theta_{{\rm {species} }})'.format(**locals())
+            normalized = False
+            zmin = min(plot_data)
+            zmax = max(plot_data)
+            contour_plot_data(data['descriptor0'],
+                              data['descriptor1'],
+                              plot_data,
+                              'kMC_plot_{name}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
+                              seed=seed,
+                              catmap_model=catmap_model,
+                              normalized=normalized,
+                              title=title,
+                              zmin=zmin,
+                              zmax=zmax,
+                              #ticks=ticks,
+                              xlabel_unit='eV',
+                              ylabel_unit='eV',
+                              #xlabel=xlabel,
+                              #ylabel=ylabel,
+                              #colorbar_label=colorbar_label,
+                              )
+
+
 
 
 def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
@@ -663,6 +709,7 @@ def main(options, call_path=None):
         catmap_model.run()
 
         # possible move further down
+        plot_kmc_coverages(catmap_model, data, seed=seed)
         plot_mft_kmc_differences(catmap_model, data, seed=seed)
         plot_mft_coverages(catmap_model, data, seed=seed)
 
