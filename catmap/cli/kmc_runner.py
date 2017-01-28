@@ -1150,6 +1150,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         skip_updates = True
                     old_simulated_time = data_dict['simulated_time']
 
+                    outfile.write('\n\nskip_updates = {skip_updates}\n'.format(**locals()))
+
                     if not sum(_current_coverages) == 0. and not skip_updates :
                         for key, value in data_dict.items():
                             if 'time' not in key and 'forward' not in key and 'reverse' not in key and key != 'T' and 'steps' not in key and '_2_' not in key:
@@ -1511,7 +1513,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                pair[0].rate_constant.startswith('diff'):
                                 continue
                             if s < SAMPLE_MIN:
-                                outfile.write('\n\t- only {s} events for ({pn1})'.format(**locals()))
+                                p_name = pair[0].name
+                                outfile.write('\n\t- only {s} events for {p_name} ({pn1})'.format(**locals()))
                         outfile.write('\n')
 
                     #if fast_processes == False:
@@ -1551,15 +1554,16 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         update_outstring = False
 
                     # Check if one or more coverages has become sensitive to adaptations
-                    for key, values in coverages_history.items():
-                        if len(values) >= 2:
-                            _vm1 = values[-1]
-                            _vm2 = values[-2]
-                            if abs(_vm2 - _vm1) > coverage_tolerance:
-                                outfile.write(kmos_model.print_coverages(to_stdout=False))
-                                fast_processes = False
-                                update_outstring = False
-                                outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Exiting!\n".format(**locals()))
+                    if not skip_updates:
+                        for key, values in coverages_history.items():
+                            if len(values) >= 2:
+                                _vm1 = values[-1]
+                                _vm2 = values[-2]
+                                if abs(_vm2 - _vm1) > coverage_tolerance:
+                                    outfile.write(kmos_model.print_coverages(to_stdout=False))
+                                    fast_processes = True
+                                    update_outstring = True
+                                    outfile.write("\nCoverage {key} changed from {_vm2} to {_vm1}, critical. Warning!\n".format(**locals()))
 
                     # Check if time is overrun
                     if not fast_processes:
