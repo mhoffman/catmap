@@ -475,11 +475,11 @@ def plot_kmc_coverages(catmap_model, data, seed=None):
         elif 'kmc_steps' in name:  # kmc_steps or kmc_time
             continue
         else:  # we are plotting a coverage
-            plot_data = np.log(data[name])
+            plot_data = np.log10(data[name])
             plot_data[np.logical_not(np.isfinite(plot_data))] = 0.
             name = 'log_{name}'.format(**locals())
             species = name.split('_')[1]
-            title = r'\log(\Theta_{{\rm {species} }})'.format(**locals())
+            title = r'\log(\Theta^{{\rm {{kMC }} }}_{{\rm {species} }})'.format(**locals())
             normalized = False
             zmin = min(plot_data)
             zmax = max(plot_data)
