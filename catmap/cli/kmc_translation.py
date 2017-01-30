@@ -679,6 +679,7 @@ def add_mft_processes(pt):
                 print(mft_stoichiometry, stoichiometry, tof_count)
                 if stoichiometry_is_multiple(mft_stoichiometry, stoichiometry):
                     mft_process.tof_count[tof_count] = stoichiometry_get_multiple(mft_stoichiometry, stoichiometry)
+                    mft_process.tof_count[tof_count + '_mft'] = stoichiometry_get_multiple(mft_stoichiometry, stoichiometry)
                     break
             else:
                 print("Warning: Need to add (fractional) tof_counts for adsorption/desorption process coresponding to this diffusion process {mft_process.name}".format(**locals()))
