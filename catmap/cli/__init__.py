@@ -81,6 +81,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-f', '--freezing-fraction', dest='freezing_fraction', default=.5, type='float', help='Fraction (0, 1] of SAMPLE_MIN aftre which solver will no longer change rate constants but merely sample longer.')
     parser.add_option('-i', '--interaction', dest='interaction', type='int', default=0)
     parser.add_option('-l', '--validate', dest='validate', action='store_false', default=True, help="Validate the kmos kMC model before writing it to INI")
+    parser.add_option('-M', '--mft_based_sample_min', dest='mft_based_sample_min', type='int', default=20, help="Hard sampling limit based on procstat")
     parser.add_option('-m', '--simulation-size', dest='simulation_size', default=20, type='int', help="The lattice size of the kMC lattice")
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
     parser.add_option('-o', '--lowering-factor', dest='lowering_factor', default=2, help="Maximum lowering factor if process pair is equilibrated")

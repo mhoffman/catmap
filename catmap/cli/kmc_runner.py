@@ -27,8 +27,6 @@ TEMPERATURE = 500
 DIFFUSION_FACTOR = None
 ROUND_DIGITS = 5
 
-MFT_BASED_SAMPLE_MIN = 6
-
 PLOT_SUFFIX = 'png'
 
 def takeClosest(myList, myNumber):
@@ -1402,7 +1400,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         mft_based_count[tof] = mft_based_count.get(tof, 0) + kmos_model.base.get_procstat(i+1)
 
                             for mft_tof, count in mft_based_count.items():
-                                if count < MFT_BASED_SAMPLE_MIN:
+                                if count < options.mft_based_sample_min:
                                     outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
                                     fast_processes = True
 
@@ -1557,7 +1555,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                         mft_count[mft_tof_count] = mft_count.get(mft_tof_count, 0) + kmos_model.base.get_procstat(i+1)
                         #print(pn, model.base.get_procstat(i+1))
                         for mft_tof, count in mft_based_count.items():
-                            if count < MFT_BASED_SAMPLE_MIN:
+                            if count < options.mft_based_sample_min:
                                 outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
                                 fast_processes = True
 
