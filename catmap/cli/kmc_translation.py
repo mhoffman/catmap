@@ -409,8 +409,14 @@ def catmap2kmos(cm_model,
                         base_final_adsorbates = [[INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
                                                  for condition in actions if condition.species != pt.species_list.default_species]
 
-                        base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
-                        base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                        if base_initial_adsorbates:
+                            base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                        else:
+                            base_initial_energy = 0
+                        if base_final_adsorbates:
+                            base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                        else:
+                            base_final_energy = 0
 
                         r = 1 * options.interaction + 4
                         # Collect the nearest-neighbor sites up to a certain cut-off
