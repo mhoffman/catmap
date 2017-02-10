@@ -371,9 +371,10 @@ def catmap2kmos(cm_model,
                                                          **locals()),
                                                      tof_count={reverse_name_root: 1},
                                                      )
-                    ## DEBUGGING try with overcounting
-                    process.rate_constant += '/' + str(float(len(sites_list)))
-                    reverse_process.rate_constant += '/' + str(float(len(sites_list)))
+                    if not options.geometry_factors:
+                        ## DEBUGGING try with overcounting
+                        process.rate_constant += '/' + str(float(len(sites_list)))
+                        reverse_process.rate_constant += '/' + str(float(len(sites_list)))
 
                     ## DEBUGGING Add additional prefactor .5 for diffusion processes
                     if 'diff' in diff_prefix:
