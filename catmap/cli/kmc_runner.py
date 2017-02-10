@@ -251,6 +251,9 @@ def contour_plot_data(x, y, z, filename,
 
             levels = np.linspace(round(zmin), round(zmax), max(round(zmax - zmin + 1), 2))[::divider]
             print(divider, levels)
+            if (max(levels) - min(levels)) < 6:
+                levels = range(-3, 4,  2)
+                #levels.remove(0)
 
     print("Levels {levels}".format(**locals()))
     if levels[0] == levels[-1]:
