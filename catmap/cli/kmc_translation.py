@@ -109,8 +109,6 @@ def catmap2kmos(cm_model,
                 surface_representation='None',
                 model_name='CatMAP_translated_model',
                 options=None,
-                mft_processes=True,
-                one_particle_processes=True,
                 ):
     # TODO : write function which finds nearest neighbors shell for adsorbate interaction
     # test for more than one site per unit cell
@@ -517,9 +515,9 @@ def catmap2kmos(cm_model,
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.e3, adjustable=True)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.e3, adjustable=True)
 
-    if mft_processes:
+    if options.mft_processes:
         add_mft_processes(pt)
-    if one_particle_processes:
+    if options.one_particle_processes:
         add_one_particle_processes(pt)
 
     return pt

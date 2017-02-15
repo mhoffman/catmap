@@ -85,6 +85,8 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-m', '--simulation-size', dest='simulation_size', default=20, type='int', help="The lattice size of the kMC lattice")
     parser.add_option('-n', '--dont-run', dest='dontrun', action='store_true', default=False, help="If 'catmap run_kmc' should only plot results")
     parser.add_option('-g', '--geometry-factors', dest='geometry_factors', action="store_true", default=False, help="Account for geometrical multiplicity depending on unit-cel")
+    parser.add_option('--no-mft-processes', dest='mft_processes', action='store_false', default=True, help="Suppress generation of MFT processes")
+    parser.add_option('--no-1p-processes', dest='one_particle_processes', action='store_false', default=True, help="Suppress generation of one-particle (for sampling ultra low coverages) processes")
     parser.add_option('-o', '--lowering-factor', dest='lowering_factor', default=2, help="Maximum lowering factor if process pair is equilibrated")
     parser.add_option('-p', '--plot', dest='plot', action='store_true', default=False, help="If 'catmap run_kmc' should plot results")
     parser.add_option('-s', '--single-point', dest='single_point', action='store_true', default=False, help="Force 'catmap run_kmc'  to only evalute one descriptor point and finish evaluation. Otherwise the model runner will keep evaluating descriptor points until they are all exhausted.")
