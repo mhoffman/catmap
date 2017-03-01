@@ -674,7 +674,11 @@ def add_mft_processes(pt):
             mft_species = condition.species
             mft_site = condition.coord.name
             mft_process.condition_list[c_i].species = MFT_SPECIES
-            mft_process.action_list[c_i].species = MFT_SPECIES
+            #mft_process.action_list[c_i].species = MFT_SPECIES
+
+            mft_process.action_list.pop(c_i) # don't need MFT action
+            # This is important because some backends (local_smart, otf) may actually choke on this ...
+
             # EXPERIMENTAL: Factor 2 due to breaking of symmetry
             mft_process.rate_constant += '*2*Theta_{mft_site}_{mft_species}'.format(**locals())
             mft_process.name += '_mft_{c_i}'.format(**locals())
