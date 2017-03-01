@@ -395,7 +395,7 @@ def catmap2kmos(cm_model,
 
                         INTERACTIONS_FILENAME = 'interactions.dat'
                         INTERACTIONS_SURFACE = 'Rh(111)'
-                        SITE_NAME = {'s_0': 'fcc'}
+                        SITE_NAME = {'s_0': 'fcc', 's_1': 'hcp'}
                         PBC = (4, 4)
                         INTERACTION = 'auto'  # automatically decide is transition or coinage metal
 
@@ -458,6 +458,7 @@ def catmap2kmos(cm_model,
                         otf_rate += "delta_E_initial = 0.\n"
                         otf_rate += "delta_E_final = 0.\n"
 
+
                         for allowed_species, interacting_coord in zip(species_options, interacting_coords):
                             _X, _Y, _ = interacting_coord.offset
                             flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
@@ -483,12 +484,13 @@ def catmap2kmos(cm_model,
 
                                 if deltaE_initial != 0.:
                                     otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * {deltaE_initial} \n'.format(**locals())
+
                                 if deltaE_final != 0.:
                                     otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * {deltaE_final} \n'.format(**locals())
                             try:
                                 bystander_list.append(kmos.types.Bystander(
                                     coord=interacting_coord,
-                                    allowed_species=allowed_species,
+                                    allowed_species=allowed_species + (['MFT_'] if options.mft_processes else []), # UGLY HACK
                                     flag=flag
                                 ))
                             except AttributeError as e:
