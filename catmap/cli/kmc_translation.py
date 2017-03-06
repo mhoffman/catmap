@@ -676,10 +676,8 @@ def add_mft_processes(pt):
             mft_species = condition.species
             mft_site = condition.coord.name
             mft_process.condition_list[c_i].species = MFT_SPECIES
-            #mft_process.action_list[c_i].species = MFT_SPECIES
+            mft_process.action_list[c_i].species = MFT_SPECIES
 
-            mft_process.action_list.pop(c_i) # don't need MFT action
-            # This is important because some backends (local_smart, otf) may actually choke on this ...
 
             # EXPERIMENTAL: Factor 2 due to breaking of symmetry
             mft_process.rate_constant += '*2*Theta_{mft_site}_{mft_species}'.format(**locals())
@@ -695,4 +693,10 @@ def add_mft_processes(pt):
             else:
                 print("Warning: Need to add (fractional) tof_counts for adsorption/desorption process coresponding to this diffusion process {mft_process.name}".format(**locals()))
                 print("Consider adding tof_count's manually in order to balance rate statistics")
+
+            # This is important because some backends (local_smart, otf) may actually choke on this ...
+            # And it is important, to keep it down here, so that stoichiometry
+            # and tof_count work
+            mft_process.action_list.pop(c_i) # don't need MFT action
+
             pt.process_list.append(mft_process)
