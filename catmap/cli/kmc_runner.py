@@ -909,10 +909,12 @@ def setup_edged_model_at_datapoint(model, data_point, reset_configuration=False)
     """
     set_mft_parameters_at_data_point(model, data_point)
     set_rate_constants(model, data_point)
-    if reset_configuration:
-        setup_model_probabilistic(model, data_point)
-    if hasattr(model.proclist, 'mft_'):
-        setup_mft_edges_2d(model)
+    # DEBUGGING
+    #if reset_configuration:
+        #setup_model_probabilistic(model, data_point)
+    if hasattr(model.proclist, 'mft_') or (hasattr(kmos_model, 'proclist_constants')
+                                                and hasattr(kmos_model.proclist.constants, 'mft_')):
+        setup_mft_edges_2d(model, grid_size=model.lattice.system_size[0]-1)
     if hasattr(model.parameters, 'N_sites'):
         model.parameters.N_sites = model.lattice.system_size.prod()
 
@@ -951,7 +953,8 @@ def set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_
     else:
         raise UserWarning("Directions for initial configuration '{options.initial_configuration}' can not be processed".format(**locals()))
 
-    if hasattr(kmos_model.proclist, 'mft_'):
+    if hasattr(kmos_model.proclist, 'mft_') or (hasattr(kmos_model, 'proclist_constants')
+                                                and hasattr(kmos_model.proclist_constants, 'mft_')):
         setup_mft_edges_2d(kmos_model)
         print("Added MFT boundary conditions")
         kmos_model.print_coverages()
@@ -1054,7 +1057,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 # print(kmos_model.rate_constants)
                 # set_kmc_model_coverage_at_data_point(kmos_model, catmap_data, options, data_point)
 
-                setup_edged_model_at_datapoint(kmos_model, data_point)
+                setup_edged_model_at_datapoint(kmos_model, data_point, )
 
                 # reset kmc_time and kmc_steps before going any further
                 kmos_model.base.set_kmc_time(0.)
@@ -1127,6 +1130,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write(kmos_model.rate_constants())
                     outfile.write('\n\nParameters\n')
                     outfile.write(kmos_model.parameters())
+                    outfile.write('\n\nLattice Snapshot\n')
+                    outfile.write(kmos_model.print_configuration(to_stdout=False))
                     outfile.write("\n\nEquilibration Report\n")
                     equilibration_report, equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='procrates')
                     integ_equilibration_report, integ_equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='integ')
@@ -1946,11 +1951,20 @@ def setup_mft_edges_2d(model, grid_size=None):
         #model._put([X - 1, y, 0, 1], model.proclist.mft_)
 
     # newer version: create finer grid of MFT processes
+    mft_ = model.proclist.mft_
+    if hasattr(model, 'proclist'):
+        mft_ = model.proclist.mft_
+    elif hasattr(model, 'proclist_constants'):
+        mft_ = model.proclist_constants.mft_
+
     for x in  range(X):
         for y in range(Y):
-            if x % grid_size == 0 or y % grid_size == 0:
-                model._put([x, y, 0, 1], model.proclist.mft_)
-                pass
+            #if x % grid_size in [0, 1, grid_size-1]:
+            #if x % grid_size in [0, 1] or y % grid_size in [0, 1]:
+            if x == 0 or y == 0:
+                for n in range(len(model.settings.site_names)):
+                    model._put([x, y, 0, n + 1], mft_)
+                    pass
 
     model._adjust_database()
 
