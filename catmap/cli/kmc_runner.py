@@ -910,8 +910,8 @@ def setup_edged_model_at_datapoint(model, data_point, reset_configuration=False)
     set_mft_parameters_at_data_point(model, data_point)
     set_rate_constants(model, data_point)
     # DEBUGGING
-    #if reset_configuration:
-        #setup_model_probabilistic(model, data_point)
+    if reset_configuration:
+        setup_model_probabilistic(model, data_point)
     if hasattr(model.proclist, 'mft_') or (hasattr(kmos_model, 'proclist_constants')
                                                 and hasattr(kmos_model.proclist.constants, 'mft_')):
         setup_mft_edges_2d(model, grid_size=model.lattice.system_size[0]-1)
