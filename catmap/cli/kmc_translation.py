@@ -393,8 +393,8 @@ def catmap2kmos(cm_model,
                         interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
                         interaction_energy = dbmi.calculate_interaction_energy
 
-                        INTERACTIONS_FILENAME = 'interactions.dat'
-                        INTERACTIONS_SURFACE = 'Rh(111)'
+                        INTERACTIONS_FILENAME = options.interaction_filename
+                        INTERACTIONS_SURFACE = options.interactions_surface
                         SITE_NAME = {'s_0': 'fcc', 's_1': 'hcp'}
                         PBC = (4, 4)
                         INTERACTION = 'auto'  # automatically decide is transition or coinage metal
