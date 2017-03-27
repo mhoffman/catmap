@@ -390,13 +390,15 @@ def catmap2kmos(cm_model,
                     if options.interaction > 0:
                         import dbmi
 
+                        INTERACTION_CUTOFF = 10
+
                         interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
                         interaction_energy = dbmi.calculate_interaction_energy
 
                         INTERACTIONS_FILENAME = options.interactions_filename
                         INTERACTIONS_SURFACE = options.interactions_surface
                         SITE_NAME = {'s_0': 'fcc', 's_1': 'hcp'}
-                        PBC = (4, 4)
+                        PBC = (INTERACTION_CUTOFF, INTERACTION_CUTOFF)
                         INTERACTION = 'auto'  # automatically decide is transition or coinage metal
 
                         with open(INTERACTIONS_FILENAME) as infile:
@@ -409,11 +411,12 @@ def catmap2kmos(cm_model,
                                                  for condition in actions if condition.species != pt.species_list.default_species]
 
                         if base_initial_adsorbates:
-                            base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                            base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
                         else:
                             base_initial_energy = 0
+
                         if base_final_adsorbates:
-                            base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                            base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
                         else:
                             base_final_energy = 0
 
@@ -459,12 +462,12 @@ def catmap2kmos(cm_model,
                         otf_rate += "delta_E_final = 0.\n"
 
 
-                        for allowed_species, interacting_coord in zip(species_options, interacting_coords):
+                        for c_i, (allowed_species, interacting_coord) in enumerate(zip(species_options, interacting_coords)):
                             _X, _Y, _ = interacting_coord.offset
                             flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
                             flag = flag.replace('-', 'm')
                             # DEBUGGING: TODO: Put accurate interaction energy here
-                            for species in allowed_species:
+                            for sp_i, species in enumerate(allowed_species):
                                 if species == pt.species_list.default_species:
                                     continue
                                 # DEBUGGING
@@ -479,14 +482,27 @@ def catmap2kmos(cm_model,
 
                                 print("----------------------------")
 
-                                deltaE_initial = interaction_energy(interaction_data, initial_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_initial_energy
-                                deltaE_final = interaction_energy(interaction_data, final_adsorbates, pbc=PBC, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_final_energy
+                                pinitial_name = 'pi_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
+                                deltaE_initial = interaction_energy(interaction_data, initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_initial_energy
+
+                                pfinal_name = 'pf_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
+                                deltaE_final = interaction_energy(interaction_data, final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_final_energy
+
+
 
                                 if deltaE_initial != 0.:
-                                    otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * {deltaE_initial} \n'.format(**locals())
+                                    pt.add_parameter(name=pinitial_name,
+                                                    value=deltaE_initial,
+                                                    adjustable=False,)
+
+                                    otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * pi_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
 
                                 if deltaE_final != 0.:
-                                    otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * {deltaE_final} \n'.format(**locals())
+                                    pt.add_parameter(name=pfinal_name,
+                                                    value=deltaE_final,
+                                                    adjustable=False,)
+
+                                    otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * pf_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
                             try:
                                 bystander_list.append(kmos.types.Bystander(
                                     coord=interacting_coord,
