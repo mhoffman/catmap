@@ -11,4 +11,5 @@ Topics
   electrochemistry
   kmc_translation
   output_variables
+  custom_gasses
   developer_info
