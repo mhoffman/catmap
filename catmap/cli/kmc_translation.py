@@ -390,6 +390,13 @@ def catmap2kmos(cm_model,
                     if options.interaction > 0:
                         import dbmi
 
+                        pt.add_parameter(
+                                name='alpha',
+                                value=1.,
+                                adjustable=True,
+                                )
+
+
                         INTERACTION_CUTOFF = 10
 
                         interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
@@ -516,7 +523,7 @@ def catmap2kmos(cm_model,
 
                         print('Process {process} Bystanders {bystander_list}'.format(**locals()))
 
-                        otf_rate += 'delta_E = delta_E_final - delta_E_initial\n'
+                        otf_rate += 'delta_E = alpha * (delta_E_final - delta_E_initial)\n'
 
                         process.bystander_list = bystander_list
                         reverse_process.bystander_list = bystander_list
