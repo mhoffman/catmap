@@ -56,6 +56,11 @@ def translate_model_file(mkm_filename, options):
     import catmap
     import os.path
     seed, _ = os.path.splitext(mkm_filename)
+    if options.outfile_seed is None:
+        outfile_seed = seed
+    else:
+        outfile_seed = options.outfile_seed
+
     catmap_model = catmap.ReactionModel(setup_file=mkm_filename)
     catmap_model.run()  # Running the model once is needed to initialize all model values
     kmos_model = catmap2kmos(catmap_model,
@@ -64,9 +69,9 @@ def translate_model_file(mkm_filename, options):
                              )
     kmos_model.print_statistics()
     if options.interaction == 0:
-        kmos_model.save('{seed}_kmc.ini'.format(**locals()))
+        kmos_model.save('{outfile_seed}_kmc.ini'.format(**locals()))
     else:
-        kmos_model.save('{seed}_kmc_i{options.interaction}.ini'.format(**locals()))
+        kmos_model.save('{outfile_seed}_kmc_i{options.interaction}.ini'.format(**locals()))
 
 def get_canonical_intermediates(step, site_names=None, empty_species=EMPTY_SPECIES):
     surface_intermediates = []
