@@ -26,6 +26,8 @@ SEED = None
 TEMPERATURE = 500
 DIFFUSION_FACTOR = None
 ROUND_DIGITS = 5
+ZMIN = -20
+ZMAX = 5
 
 PLOT_SUFFIX = 'png'
 
@@ -535,6 +537,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                           colorbar_label=colorbar_label,
                           title=title,
                           catmap_model=catmap_model,
+                          zmin=ZMIN,
                           )
 
         print("PLOTTING DELTA")
@@ -825,6 +828,8 @@ def main(options, call_path=None):
                                normalized=normalized,
                                title=title,
                                xlabel=catmap_model.descriptor_names[iv],
+                               zmin=ZMIN,
+                               zmax=ZMAX,
                                )
 
             else:
@@ -836,7 +841,7 @@ def main(options, call_path=None):
                 if name == 'CO_s_n_O_s_2_empty_s_n_empty_s_0':
                     xlabel = 'O reactivity [eV]'
                     ylabel = 'CO reactivity [eV]'
-                    zmin = -48
+                    zmin = ZMIN
                     zmax = 2
                     ticks = range(zmin, zmax + 1, 6)
 
@@ -848,8 +853,8 @@ def main(options, call_path=None):
                                   catmap_model=catmap_model,
                                   normalized=normalized,
                                   title=title,
-                                  zmin=zmin,
-                                  zmax=zmax,
+                                  zmin=ZMIN,
+                                  zmax=ZMAX,
                                   ticks=ticks,
                                   xlabel_unit='eV',
                                   ylabel_unit='eV',
