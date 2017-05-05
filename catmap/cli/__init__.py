@@ -96,6 +96,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-u', '--outfile-seed', dest='outfile_seed', default=None, type='str', help="Seed of generated kmos input file.  Will be generated from CatMAP input file by default.")
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
     parser.add_option('-w', '--ewma-plots', dest='make_plots', action='store_true', default=False, help="Have the steady-state runner create EWMA plots at every evaluation step.")
+    parser.add_option('--alpha', dest='alpha', default=1.0, type='float', help="Scaling factor for scaling adsorbate-adsorbate interaction.")
 
     if args is not None:
         options, args = parser.parse_args(args.split())
