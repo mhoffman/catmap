@@ -19,6 +19,7 @@ from matplotlib import pyplot as plt
 import matplotlib.ticker
 import matplotlib.colors
 
+import catmap.cli.overlayers_rdf_111
 
 INIT_STEPS = int(1e6)
 SAMPLE_STEPS = INIT_STEPS
@@ -984,6 +985,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 alpha=0.05,
                                 coverage_tolerance=0.1,
                                 tof_method='procrates',
+                                log_overlayers=True,
                                 ):
         """
             Evaluate a kMC model at a given data-point using initial bias detection and
@@ -1180,6 +1182,45 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write(equilibration_report)
                     #outfile.write("\n\nDEBUG\n\n")
                     #outfile.write(pprint.pformat(equilibration_data))
+
+                    outfile.write("\n\nMatching w/ reference overlayers:\n")
+                    atoms = kmos_model.get_atoms()
+                    outfile.write("evaluate crystallographic overlayer\n")
+                    outfile.write(atoms.get_chemical_formula() + '\n\n')
+                    import asap3.analysis.rdf
+
+                    unit_cell = atoms.cell / kmos_model.lattice.system_size
+                    atoms.cell *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
+                    atoms.positions *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
+
+                    del atoms[[a.index for a in atoms if a.symbol == 'Rh' ]]
+                    del atoms[[a.index for a in atoms if a.symbol == 'Si' ]]
+                    del atoms[[a.index for a in atoms if a.symbol == 'C' ]]
+                    rdf = asap3.analysis.rdf.RadialDistributionFunction(atoms,
+                                                                        rMax=catmap.cli.overlayers_rdf_111.rMax,
+                                                                        nBins=catmap.cli.overlayers_rdf_111.nBins,
+                                                                        ).get_rdf()
+                    n_rdf = rdf / np.sqrt((rdf**2).sum())
+                    outfile.write("N_RDF" + str(n_rdf) + '\n')
+                    best_match = 0
+                    best_match_rdf = 'None'
+                    if not np.any(np.isnan(n_rdf)):
+                        for reference_rdf in catmap.cli.overlayers_rdf_111.rdfs:
+                            match = np.dot(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf], n_rdf)
+                            outfile.write('\t- {reference_rdf} :\t{match}\n'.format(**locals()))
+                            #outfile.write("\t\tRDF" + str(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf]) + '\n')
+                            if match > best_match:
+                                best_match = match
+                                best_match_rdf = reference_rdf
+                    else:
+                        outfile.write('\nCould not determine RDF from kMC\n')
+                    outfile.write('\n\nBest Match RDF: {best_match_rdf} {best_match}\n'.format(**locals()))
+
+
+
+
+
+
 
                     # update coverages history if we have obtained meaningful sampling
                     _current_coverages = []
