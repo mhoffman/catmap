@@ -242,6 +242,12 @@ def catmap2kmos(cm_model,
     print('SITE NAMES {site_names}'.format(**locals()))
     # WARNING: Even though usually a good idea do not sort this
     # or the rate constants and processes will get garbled !!!
+    if options.interaction > 0:
+        pt.add_parameter(
+                name='alpha',
+                value=1.,
+                adjustable=True,
+                )
     for ri, elementary_rxn in enumerate((cm_model.elementary_rxns)):
         step = {}
         surface_intermediates = {}
@@ -395,13 +401,6 @@ def catmap2kmos(cm_model,
                     if options.interaction > 0:
                         import dbmi
 
-                        pt.add_parameter(
-                                name='alpha',
-                                value=1.,
-                                adjustable=True,
-                                )
-
-
                         INTERACTION_CUTOFF = 10
 
                         interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
@@ -545,6 +544,8 @@ def catmap2kmos(cm_model,
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.e3, adjustable=True)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.e3, adjustable=True)
 
+    if options.mft_processes or options.one_particle_processes:
+        add_mft_parameters(pt)
     if options.mft_processes:
         add_mft_processes(pt)
     if options.one_particle_processes:
@@ -646,24 +647,6 @@ def add_one_particle_processes(pt):
                     # take  only those processes that add species
                     continue
 
-                #for c_i, condition in enumerate(process.condition_list):
-                    #site.name = condition.coord.name
-                    #if site.name == condition.coord.name:
-                        #process_1p = copy.deepcopy(process)
-                        #process_1p.name += '_1p_{species.name}_{site.name}'.format(**locals())
-                        #process_1p.condition_list[c_i].species = species.name
-                        #pt.process_list.append(process_1p)
-                        #added_1p_process = True
-                        ## to correctly account for rates of this replacement process, we need to create
-                        ## a mock process and determine its stoichiometry
-                        #condition_site = process_1p.condition_list[c_i].coord._get_genstring()
-                        #mock_stoichiometry = get_stoichiometry(pt, pt.parse_process('mock; {species.name}@{condition_site} ->;'.format(**locals())))
-                        #for tof_count, stoichiometry in stoichiometries.items():
-                            #if stoichiometry_is_multiple(mock_stoichiometry, stoichiometry):
-                                #process_1p.tof_count[tof_count] = stoichiometry_get_multiple(mock_stoichiometry, stoichiometry)
-                                #break
-                        #break
-
                 process_1p = copy.deepcopy(process)
                 process_1p.name += '_1p_{species.name}_{site.name}_default'.format(**locals())
                 process_1p.rate_constant += '*N_sites*Theta_{site.name}_{species.name}*Theta_{site.name}_{default_species}**(N_sites-1)'.format(**locals())
@@ -673,13 +656,14 @@ def add_one_particle_processes(pt):
                 if parameter_name not in [parameter.name for parameter in pt.parameter_list]:
                     pt.add_parameter(name=parameter_name)
 
-def add_mft_processes(pt):
-    import copy
+def add_mft_parameters(pt):
     # add parameters representing MFT coverages in rate-constants
     for species in pt.species_list:
         for site in pt.layer_list[0].sites:
             pt.add_parameter(name='Theta_{site.name}_{species.name}'.format(**locals()), value=1.)
 
+def add_mft_processes(pt):
+    import copy
     # add proxy species representing a dummy (i.e. always true condition)
     pt.add_species(name=MFT_SPECIES, color='#cccccc', representation='Atoms("Si")')
     stoichiometries = get_stoichiometries(pt)
