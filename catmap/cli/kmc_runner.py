@@ -1169,8 +1169,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write('\n\nLattice Snapshot\n')
                     outfile.write(kmos_model.print_configuration(to_stdout=False))
                     outfile.write("\n\nEquilibration Report\n")
-                    equilibration_report, equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='procrates')
-                    integ_equilibration_report, integ_equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='integ')
+                    equilibration_report, equilibration_data, atoms = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='procrates', return_atoms=True)
+                    integ_equilibration_report, integ_equilibration_data = kmos.run.steady_state.report_equilibration(kmos_model, tof_method='integ', atoms=atoms)
                     outfile.write("\n\nNumpy Renormalizations\n{numeric_renormalizations}\n\n".format(**locals()))
                     outfile.write("\nSampled rates and coverages\n")
                     outfile.write(pprint.pformat(data_dict))
@@ -1329,40 +1329,6 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 most_sampled_pair_name = pn
                     outfile.write('\nMost sampled pair is {most_sampled_pair_name} with {most_sampled_pair}.\n\n'.format(**locals()))
 
-                    ####################################################################
-                    # Update MFT procstat
-                    ####################################################################
-                    if True:
-                        mft_count = {}
-                        mft_based_keys = set()
-                        for i, pn in enumerate(sorted(kmos_model.settings.rate_constants)):
-                            if 'mft' in unabridged[pn] and not '1p' in unabridged[pn]:
-                                for mft_tof_count in kmos_model.settings.tof_count[pn].keys():
-                                    if 'mft' in mft_tof_count:
-                                        mft_count[mft_tof_count] = mft_count.get(mft_tof_count, 0) + kmos_model.base.get_procstat(i+1)
-                                    else:
-                                        mft_based_keys.add(mft_tof_count)
-
-                        outfile.write('\n\tMFT Based Keys {mft_based_keys}\n'.format(**locals()))
-                        #for mft_tof, count in mft_count.items():
-                            #if count < MFT_BASED_SAMPLE_MIN:
-                                #outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
-                                #fast_processes = True
-
-                        #print(pn, model.base.get_procstat(i+1))
-                        mft_based_count = {}
-                        for i, pn in enumerate(sorted(kmos_model.settings.rate_constants)):
-                            for tof in kmos_model.settings.tof_count[pn].keys():
-                                if tof in mft_based_keys:
-                                    mft_based_count[tof] = mft_based_count.get(tof, 0) + kmos_model.base.get_procstat(i+1)
-
-                        for mft_tof, count in mft_based_count.items():
-                            if count < options.mft_based_sample_min:
-                                outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
-                                fast_processes = True
-
-
-
 
                     ####################################################################
                     # 4. If necessary adjust rate constants
@@ -1428,7 +1394,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         if fastest_nondiff_rconstant > float('-inf') and options.diffusion_factor is not None:
                             # options.batch_size = batch_size0
                             for pn in kmos_model.settings.rate_constants:
-                                pn_long = unabridged[pn]
+                                pn_long = unabridged.get(pn, pn)
                                 if kmos_model.settings.rate_constants[pn][0].startswith('diff'):
                                     #for ratio, pn1, left_right_sum, pair, s, _ in integ_equilibration_data:
                                     for ratio, pn1, left_right_sum, pair, s, _ in equilibration_data:
@@ -1510,7 +1476,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 #if abs(ratio) < EQUIB_THRESHOLD and left_right_sum >= 2 * options.batch_size * SAMPLE_MIN:
                                     fast_processes = True
                                     pn = pair[0].name
-                                    pn_long = unabridged[pn]
+                                    pn_long = unabridged.get(pn, pn)
                                     if (
                                             not kmos_model.settings.rate_constants[pn][0].startswith('diff')
                                             or 'mft' in pn_long
@@ -1558,7 +1524,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                 fastest_nondiff_pname = pn
                                 else:
                                     pn = pair[0].name
-                                    pn_long = unabridged[pn]
+                                    pn_long = unabridged.get(pn, pn)
                                     outfile.write("Not touching {pn_long}, because ratio = {ratio} < {EQUIB_THRESHOLD} or left_right_sum = {left_right_sum} < {SAMPLE_MIN}\n".format(**locals()))
 
 
@@ -1631,7 +1597,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 continue
                             if s < SAMPLE_MIN:
                                 p_name = pair[0].name
-                                p_name_long = unabridged[p_name]
+                                p_name_long = unabridged.get(p_name, p_name)
                                 outfile.write('\n\t- only {s} events for {p_name_long} ({pn1})'.format(**locals()))
                         outfile.write('\n')
 
@@ -1648,15 +1614,6 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             #if count < options.mft_based_sample_min:
                                 #outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
                                 #fast_processes = True
-
-                    # Reset procstat and kmc steps
-                    for proc in range(kmos_model.proclist.nr_of_proc.max()):
-                        kmos_model.base.set_procstat(proc + 1, 0)
-                        kmos_model.base.set_integ_rate(proc + 1, 0)
-                        kmos_model.base.set_integ_event(proc + 1, 0)
-
-
-                    kmos_model.base.set_kmc_step(0)
 
                     #if fast_processes == False:
                         ## If integ based check cleared, check if we also have a minimum of 10 actual event per channel
@@ -1729,6 +1686,40 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                             update_outstring = False
 
 
+                    ####################################################################
+                    # Update MFT procstat
+                    ####################################################################
+                    if True:
+                        mft_count = {}
+                        mft_based_keys = set()
+                        for i, pn in enumerate(sorted(kmos_model.settings.rate_constants)):
+                            if 'mft' in unabridged.get(pn, pn) and not '1p' in unabridged.get(pn, pn):
+                                for mft_tof_count in kmos_model.settings.tof_count[pn].keys():
+                                    if 'mft' in mft_tof_count:
+                                        mft_count[mft_tof_count] = mft_count.get(mft_tof_count, 0) + kmos_model.base.get_procstat(i+1)
+                                    else:
+                                        mft_based_keys.add(mft_tof_count)
+
+                        outfile.write('\n\tMFT Based Keys {mft_based_keys}\n'.format(**locals()))
+                        #for mft_tof, count in mft_count.items():
+                            #if count < MFT_BASED_SAMPLE_MIN:
+                                #outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
+                                #fast_processes = True
+
+                        #print(pn, model.base.get_procstat(i+1))
+                        mft_based_count = {}
+                        for i, pn in enumerate(sorted(kmos_model.settings.rate_constants)):
+                            for tof in kmos_model.settings.tof_count[pn].keys():
+                                if tof in mft_based_keys:
+                                    mft_based_count[tof] = mft_based_count.get(tof, 0) + kmos_model.base.get_procstat(i+1)
+
+                        for mft_tof, count in mft_based_count.items():
+                            if count < options.mft_based_sample_min:
+                                outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
+                                fast_processes = True
+
+
+
                     if not fast_processes:
                         if fast_processes_adaption <= 0:
                             outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
@@ -1760,6 +1751,13 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         outfile.write('kmc time did not grow as expected, will give it another round.')
                         fast_processes = True
                         update_outstring = False
+
+                    # Reset procstat and kmc steps
+                    for proc in range(kmos_model.proclist.nr_of_proc.max()):
+                        kmos_model.base.set_procstat(proc + 1, 0)
+                        kmos_model.base.set_integ_rate(proc + 1, 0)
+                        kmos_model.base.set_integ_event(proc + 1, 0)
+                    kmos_model.base.set_kmc_step(0)
 
                     if update_outstring:
                         outfile.write('\n\nUpdating outstring\n')
@@ -2155,7 +2153,7 @@ def set_rate_constants_from_procstat_logfile(model, log_filename, step=0):
                 print("Warning: Logfile {log_filename} ended before step {step0} was reached, pick an earlier step".format(**locals()))
                 return
 
-            line = log_file.readline().replace(':', '')
+            #line = log_file.readline().replace(':', '')
         for i in range(model.proclist.nr_of_proc):
             line = log_file.readline().replace(':', '')
             elements = line.split()
