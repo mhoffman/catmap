@@ -97,6 +97,7 @@ def get_options(args=None, get_parser=False):
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False, help="Make catmap CLI verbose about what it is doing")
     parser.add_option('-w', '--ewma-plots', dest='make_plots', action='store_true', default=False, help="Have the steady-state runner create EWMA plots at every evaluation step.")
     parser.add_option('--alpha', dest='alpha', default=1.0, type='float', help="Scaling factor for scaling adsorbate-adsorbate interaction.")
+    parser.add_option('--min-positive-loops', dest='min_positive_loops', default=1, type='int', help="Number of adaptation loops that need to match all criteria successively.")
 
     if args is not None:
         options, args = parser.parse_args(args.split())

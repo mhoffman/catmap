@@ -190,14 +190,19 @@ def contour_plot_data(x, y, z, filename,
     fig_height = fig_width * golden_mean       # height in inches
     fig_size = [fig_width, 1.3 * fig_height]
 
-    font_size = 10
-    tick_font_size = 10
+    font_size = 20
+    tick_font_size = 18
     xlabel_pad = 8
     ylabel_pad = 8
     matplotlib.rcParams['ps.usedistiller'] = 'xpdf'
     matplotlib.rcParams['font.family'] = 'serif'
     matplotlib.rcParams['font.serif'] = 'Gill Sans'
     matplotlib.rcParams['font.sans-serif'] = 'Gill Sans'
+    matplotlib.rcParams['font.size'] = font_size
+    matplotlib.rcParams['axes.labelsize'] = font_size
+    matplotlib.rcParams['legend.fontsize'] = font_size
+    matplotlib.rcParams['xtick.labelsize'] = tick_font_size
+    matplotlib.rcParams['ytick.labelsize'] = tick_font_size
     if os.system('which latex'):
         matplotlib.rcParams['text.usetex'] = 'false'
     else:
@@ -254,8 +259,12 @@ def contour_plot_data(x, y, z, filename,
 
             levels = np.linspace(round(zmin), round(zmax), max(round(zmax - zmin + 1), 2))[::divider]
             print(divider, levels)
+            if 0 in levels:
+                levels = list(levels)
+                levels.remove(0)
+                levels = np.array(levels)
             if (max(levels) - min(levels)) < 6:
-                levels = range(-3, 4,  2)
+                levels = range(-3, 4, 2)
                 #levels.remove(0)
 
     print("Levels {levels}".format(**locals()))
@@ -390,14 +399,19 @@ def line_plot_data(x, y, filename,
     fig_height = fig_width * golden_mean       # height in inches
     fig_size = [fig_width, 1.3 * fig_height]
 
-    font_size = 10
-    tick_font_size = 10
+    font_size = 20
+    tick_font_size = 18
     xlabel_pad = 8
     ylabel_pad = 8
     matplotlib.rcParams['ps.usedistiller'] = 'xpdf'
     matplotlib.rcParams['font.family'] = 'serif'
     matplotlib.rcParams['font.serif'] = 'Gill Sans'
     matplotlib.rcParams['font.sans-serif'] = 'Gill Sans'
+    matplotlib.rcParams['font.size'] = font_size
+    matplotlib.rcParams['axes.labelsize'] = font_size
+    matplotlib.rcParams['legend.fontsize'] = font_size
+    matplotlib.rcParams['xtick.labelsize'] = tick_font_size
+    matplotlib.rcParams['ytick.labelsize'] = tick_font_size
     if os.system('which latex'):
         matplotlib.rcParams['text.usetex'] = 'false'
     else:
@@ -427,6 +441,12 @@ def line_plot_data(x, y, filename,
 
 
 def plot_mft_coverages(catmap_model, kmos_data, seed=None):
+    zs_empty = []
+    zs_log_empty = []
+    zraw_empty = []
+    zMFT_dict_empty = {}
+    plotted_empty = False
+
     for i, adsorbate_name in enumerate(catmap_model.adsorbate_names):
         xs, ys, zs = [], [], []
         zs_log = []
@@ -441,14 +461,20 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
             ys.append(y)
             zraw.append(float(rates[i]))
             zs.append((float(rates[i])))
+            if not plotted_empty:
+                zs_empty.append(1 - sum(map(float, rates)))
+                zs_log_empty.append(np.log10(1 - sum(map(float, rates))))
+
             zs_log.append(np.log10(float(rates[i])))
             zMFT_dict.setdefault(round(x, ROUND_DIGITS), {})[round(y, ROUND_DIGITS)] = float(rates[i])
             if float(rates[i]) != 0.:
                 mft_signal = True
         zs_MFT_max = max(zraw)
         pname = process_name_to_latex(adsorbate_name, arrow=r' \rightleftharpoons ')
-        title = '{pname}'.format(**locals())
+        title = '\\Theta({pname})'.format(**locals())
+        log_title = '\\Theta({pname})'.format(**locals())
         colorbar_label = '{{\\rm ML}}'
+        log_colorbar_label = '\\log_{10}{{\\rm ML}}'
         contour_plot_data(xs, ys, zs,
                           'kMC_plot_MFT_coverage_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                           colorbar_label=colorbar_label,
@@ -459,11 +485,30 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
 
         contour_plot_data(xs, ys, zs_log,
                           'kMC_plot_MFT_coverage_log_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
-                          colorbar_label=colorbar_label,
-                          title=title,
+                          colorbar_label=log_colorbar_label,
+                          title=log_title,
                           normalized=False,
                           catmap_model=catmap_model,
                           )
+        if not plotted_empty:
+            plotted_empty = True
+            contour_plot_data(xs, ys, zs_empty,
+                              'kMC_plot_MFT_coverage_empty.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
+                              colorbar_label=colorbar_label,
+                              title='$*_{s}$',
+                              normalized=True,
+                              catmap_model=catmap_model,
+                              )
+
+            contour_plot_data(xs, ys, zs_log_empty,
+                              'kMC_plot_MFT_coverage_log_empty.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
+                              colorbar_label=log_colorbar_label,
+                              title='$*_{s}$',
+                              normalized=False,
+                              catmap_model=catmap_model,
+                          )
+
+
 
 
 def plot_kmc_coverages(catmap_model, data, seed=None):
@@ -531,7 +576,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                 mft_signal = True
         zs_MFT_max = max(zraw)
         pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
-        title = '(R_{{\\rm MFT}})$ ({pname})'.format(**locals())
+        title = 'R_{{\\rm MFT}}$ ({pname})'.format(**locals())
         colorbar_label = '$\\log_{{10}}({{\\rm TOF}})$ [s$^{{-1}}$ cell$^{{-1}}$]'.format(**locals())
         contour_plot_data(xs, ys, zs,
                           'kMC_plot_MFT_rate_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
@@ -610,7 +655,7 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
 
         pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
         colorbar_label = '$\\log_{{10}}(R_{{\\rm MFT}}/R_{{\\rm kMC}})$ ({pname})'.format(**locals())
-        colorbar_label_lin = '$(R_{{\\rm MFT}}/R_{{\\rm kMC}})$ ({pname})'.format(**locals())
+        colorbar_label_lin = '$R_{{\\rm MFT}}/R_{{\\rm kMC}}$ ({pname})'.format(**locals())
         print("Colorbar label {colorbar_label}".format(**locals()))
 
         def diff(x):
@@ -671,14 +716,18 @@ def plot_mft_kmc_differences(catmap_model, kmos_data, seed=None):
                 print("PLOTTED DELTA KMC_MFT {process_names}".format(**locals()))
 
         pname = process_name_to_latex(process_names[i][0], arrow=r' \rightleftharpoons ')
-        colorbar_label = '$\\log_{{10}}(R_{{\\rm kMC}})$ ({pname})'.format(**locals())
-        print(z_kMC)
+        colorbar_label = '$\\log_{{10}}(\\mathrm{{TOF}}) [\\mathrm{{s}}^{{-1}}\\mathrm{{cell}}^{{-1}}]$'.format(**locals())
+        title = r'\mathrm{{R}}_{{\mathrm{{kMC}} }}({pname})'.format(**locals())
+        #print(z_kMC)
         try:
             contour_plot_data(x_kMC, y_kMC, z_kMC,
                               'kMC_plot_kMC_{i}.{PLOT_SUFFIX}'.format(**dict(globals(), **locals())),
                               colorbar_label=colorbar_label,
                               catmap_model=catmap_model,
+                              title=title,
                               seed=seed,
+                              zmin=ZMIN,
+                              zmax=ZMAX,
                               )
         except:
             process_name = process_names[i]
@@ -738,7 +787,7 @@ def main(options, call_path=None):
                     print('MINIMUM {minimum}'.format(**locals()))
                     plot_data[np.logical_or(np.isnan(plot_data),
                                             np.isinf(plot_data))] = minimum
-                colorbar_label = r'$\log({\rm s}^{-1} {\rm cell}^{-1})$'
+                colorbar_label = r'$\log_{10}(\mathrm{TOF})[{\rm s}^{-1} {\rm cell}^{-1}]$'
             elif 'forward' in name or 'reverse' in name:  # a rate-constant
                 plot_data = np.log10(data[name])
                 # plot_data = data[name]
@@ -1060,6 +1109,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
             start_batch = 0
             fast_processes = True
             fast_processes_adaption = 0
+            positive_loops = 0
             renormalizations = {}
             coverages_history = {}
             rates_history = {}
@@ -1196,30 +1246,28 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     del atoms[[a.index for a in atoms if a.symbol == 'Rh' ]]
                     del atoms[[a.index for a in atoms if a.symbol == 'Si' ]]
                     del atoms[[a.index for a in atoms if a.symbol == 'C' ]]
-                    rdf = asap3.analysis.rdf.RadialDistributionFunction(atoms,
-                                                                        rMax=catmap.cli.overlayers_rdf_111.rMax,
-                                                                        nBins=catmap.cli.overlayers_rdf_111.nBins,
-                                                                        ).get_rdf()
-                    n_rdf = rdf / np.sqrt((rdf**2).sum())
-                    outfile.write("N_RDF" + str(n_rdf) + '\n')
-                    best_match = 0
-                    best_match_rdf = 'None'
-                    if not np.any(np.isnan(n_rdf)):
-                        for reference_rdf in catmap.cli.overlayers_rdf_111.rdfs:
-                            match = np.dot(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf], n_rdf)
-                            outfile.write('\t- {reference_rdf} :\t{match}\n'.format(**locals()))
-                            #outfile.write("\t\tRDF" + str(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf]) + '\n')
-                            if match > best_match:
-                                best_match = match
-                                best_match_rdf = reference_rdf
+                    if len(atoms) > 0:
+                        rdf = asap3.analysis.rdf.RadialDistributionFunction(atoms,
+                                                                            rMax=catmap.cli.overlayers_rdf_111.rMax,
+                                                                            nBins=catmap.cli.overlayers_rdf_111.nBins,
+                                                                            ).get_rdf()
+                        n_rdf = rdf / np.sqrt((rdf**2).sum())
+                        outfile.write("N_RDF" + str(n_rdf) + '\n')
+                        best_match = 0
+                        best_match_rdf = 'None'
+                        if not np.any(np.isnan(n_rdf)):
+                            for reference_rdf in catmap.cli.overlayers_rdf_111.rdfs:
+                                match = np.dot(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf], n_rdf)
+                                outfile.write('\t- {reference_rdf} :\t{match}\n'.format(**locals()))
+                                #outfile.write("\t\tRDF" + str(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf]) + '\n')
+                                if match > best_match:
+                                    best_match = match
+                                    best_match_rdf = reference_rdf
+                        else:
+                            outfile.write('\nCould not determine RDF from kMC\n')
+                        outfile.write('\n\nBest Match RDF: {best_match_rdf} {best_match}\n'.format(**locals()))
                     else:
-                        outfile.write('\nCould not determine RDF from kMC\n')
-                    outfile.write('\n\nBest Match RDF: {best_match_rdf} {best_match}\n'.format(**locals()))
-
-
-
-
-
+                        outfile.write('\nRDF: Cannot detect adsorbates, won\'t determine overlayers.\n\n')
 
 
                     # update coverages history if we have obtained meaningful sampling
@@ -1333,7 +1381,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     ####################################################################
                     # 4. If necessary adjust rate constants
                     ####################################################################
-                    if least_sampled_pair < options.freezing_fraction * SAMPLE_MIN:
+
+                    if positive_loops > 0:
+                            outfile.write("\nJust collecting more good batches, will not adapt non-diff rate-constants.\n")
+                    elif least_sampled_pair < options.freezing_fraction * SAMPLE_MIN:
 
                         ####################################################################
                         # 4.b  ... of diff events
@@ -1466,6 +1517,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                         touched_non_diff_events = False
                         if touched_diff_events == True:
                             outfile.write('\nJust adapted diffusion rate constant. Will skip non-diff adaption for the rest of this round.\n')
+                        elif positive_loops > 0:
+                            outfile.write("\nJust collecting more good batches, will not adapt diff rate-constants.\n")
                         else:
                             for ratio, pn1, left_right_sum, pair, _, _ in equilibration_data:
                                 # Minimum number of events, to produce statistically meaningful results
@@ -1718,13 +1771,25 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 outfile.write('\t- MFT process {mft_tof} undersampled: {count}\n'.format(**locals()))
                                 fast_processes = True
 
-
-
                     if not fast_processes:
-                        if fast_processes_adaption <= 0:
-                            outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
+                        min_positive_loops = options.min_positive_loops
+                        if positive_loops < options.min_positive_loops:
+                            outfile.write('\t- We seem to be in the money, but we want to see it {min_positive_loops} times in a row\n'.format(**locals()))
+                            outfile.write('\t  only saw it {positive_loops} times\n'.format(**locals()))
+                            positive_loops += 1
                             fast_processes = True
                             update_outstring = False
+                    else:
+                        positive_loops = 0
+                        outfile.write("\t- resetting positive loops to 0.\n".format(**locals()))
+
+
+                    #if not fast_processes:
+                        #if fast_processes_adaption <= 0:
+                            #outfile.write("Not so fast. Let's do at least two rounds.\n".format(**locals()))
+                            #fast_processes = True
+                            #update_outstring = False
+
 
                     if False:
                         diff_events = 0.
