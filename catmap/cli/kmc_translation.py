@@ -120,21 +120,11 @@ def catmap2kmos(cm_model,
     # test for more more than one identical site per unit cell (e.g. bridge in
     # Pd(1000) cell)
 
-    # def find_nth_neighbor_sites(central_site, site, neighbor_site, n):
-    # distance_dict = {}
-    # neighbor_sites = []
-    #
-    # for site in:
-    # if site.name == neighbor_site:
-    # print(site)
-    # distance_list.append(np.linalg.norm(
-    # CONTINUE HERE
-
     import pprint
 
     import numpy as np
 
-    from kmos.types import Project, Site, Condition, Action
+    from kmos.types import Project, Site, Condition, Action, Process
     import kmos.utils
 
     # initialize model
@@ -242,12 +232,15 @@ def catmap2kmos(cm_model,
     print('SITE NAMES {site_names}'.format(**locals()))
     # WARNING: Even though usually a good idea do not sort this
     # or the rate constants and processes will get garbled !!!
-    if options.interaction > 0:
-        pt.add_parameter(
-                name='alpha',
-                value=1.,
-                adjustable=True,
-                )
+    if options.interaction > 0 and options.interactions_surface == 'generic':
+        pt.add_parameter( name='alpha', value=1., adjustable=True,)
+    if options.interaction > 0 and options.interactions_surface == 'generic+':
+        for species_A in pt.species_list:
+            for site_A in pt.layer_list[0].sites:
+                for species_B in pt.species_list:
+                    for site_B in pt.layer_list[0].sites:
+                        pt.add_parameter(name='alpha_{species_A.name}_{site_A.name}_{species_B.name}_{site_B.name}'.format(**locals()), value=1., adjustable=False,)
+
     for ri, elementary_rxn in enumerate((cm_model.elementary_rxns)):
         step = {}
         surface_intermediates = {}
@@ -365,21 +358,25 @@ def catmap2kmos(cm_model,
                             diff_prefix = ''
 
 
-                    process = pt.add_process(name='{forward_name_root}_{s_i}'.format(**locals()),
-                                             conditions=conditions,
-                                             actions=actions,
+                    process = Process(name='{forward_name_root}_{s_i}'.format(**locals()),
+                                             condition_list=conditions,
+                                             action_list=actions,
                                              rate_constant='{diff_prefix}forward_{ri}'.format(
                                                  **locals()),
                                              tof_count={forward_name_root: 1},
                                              )
 
-                    reverse_process = pt.add_process(name='{reverse_name_root}_{s_i}'.format(**locals()),
-                                                     conditions=actions,
-                                                     actions=conditions,
+                    reverse_process = Process(name='{reverse_name_root}_{s_i}'.format(**locals()),
+                                                     condition_list=actions,
+                                                     action_list=conditions,
                                                      rate_constant='{diff_prefix}reverse_{ri}'.format(
                                                          **locals()),
                                                      tof_count={reverse_name_root: 1},
                                                      )
+
+                    process = pt.add_process(process)
+                    reverse_process = pt.add_process(reverse_process)
+
                     if not options.geometry_factors:
                         ## DEBUGGING try with overcounting
                         process.rate_constant += '/' + str(float(len(sites_list)))
@@ -399,147 +396,262 @@ def catmap2kmos(cm_model,
                             reverse_process.rate_constant += '/2.'
 
                     if options.interaction > 0:
-                        import dbmi
-
-                        INTERACTION_CUTOFF = 10
-
-                        interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
-                        interaction_energy = dbmi.calculate_interaction_energy
-
-                        INTERACTIONS_FILENAME = options.interactions_filename
                         INTERACTIONS_SURFACE = options.interactions_surface
-                        SITE_NAME = {'s_0': 'fcc', 's_1': 'hcp'}
-                        PBC = (INTERACTION_CUTOFF, INTERACTION_CUTOFF)
-                        INTERACTION = 'auto'  # automatically decide is transition or coinage metal
+                        if INTERACTIONS_SURFACE == 'generic+':
 
-                        with open(INTERACTIONS_FILENAME) as infile:
-                            interaction_data = eval(infile.read())
+                            bystander_list = []
+                            otf_rate = ""
+                            otf_rate += "delta_E_initial = 0.\n"
+                            otf_rate += "delta_E_final = 0.\n"
 
-                        base_initial_adsorbates = [[INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
-                                                   for condition in conditions if condition.species != pt.species_list.default_species]
 
-                        base_final_adsorbates = [[INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
-                                                 for condition in actions if condition.species != pt.species_list.default_species]
+                            base_initial_adsorbates = [condition for condition in conditions if condition.species != pt.species_list.default_species]
+                            base_final_adsorbates = [condition for condition in actions if condition.species != pt.species_list.default_species]
 
-                        if base_initial_adsorbates:
-                            base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                            r = 1 * options.interaction + 4
+
+
+
+                            #curr_dist = 0.
+                            #neighbor_shell = 0
+                            #n_neighbors = {}
+                            #for dist, coord in coordinate_set:
+                                #if abs(curr_dist - dist) > dist_tol:
+                                    #curr_dist = dist
+                                    #neighbor_shell += 1
+                                #n_neighbors.setdefault(neighbor_shell, []).append(coord)
+
+                            for state, base_adsorbates in [
+                                    ('initial', base_initial_adsorbates),
+                                    ('final', base_final_adsorbates)
+                                    ]:
+                                for base_adsorbate in base_adsorbates:
+                                    curr_dist = 0.
+                                    neighbor_shell = 0
+                                    n_neighbors = {}
+
+                                    # Collect the nearest-neighbor sites up to a certain cut-off
+                                    coordinate_set = pt.layer_list.generate_coord_set([r, r, 1])
+
+                                    # determine needed nearest neighbor shells of sites
+                                    action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in [base_adsorbate]]
+                                    print("ACTION COORDS {action_coords}".format(**locals()))
+                                    print("TYPE ACTION_COORD[0] " + str(type(action_coords[0])))
+                                    print("TYPE COORDINATE SET[0] " + str(type(coordinate_set[0])))
+                                    min_dists = [min(map(lambda x: np.linalg.norm(x.pos - c.pos), action_coords)) for c in coordinate_set]
+                                    coordinate_set = sorted(zip(min_dists, coordinate_set))
+
+                                    for dist, coord in coordinate_set:
+                                        if coord not in [x.coord for x in base_initial_adsorbates] + [x.coord for x in base_final_adsorbates]:
+                                            if abs(curr_dist - dist) > dist_tol:
+                                                curr_dist = dist
+                                                neighbor_shell += 1
+                                            n_neighbors.setdefault(neighbor_shell, []).append(coord)
+
+                                    interacting_coords = []
+                                    for i in range(1):
+                                        interacting_coords.extend(n_neighbors[i + 1])
+
+                                        species_options = []
+                                        for interacting_coord in interacting_coords:
+                                            site_name = coord.name.split('_')[0]
+                                            species_options.append(site_species[site_name])
+                                        print(species_options)
+
+                                    for c_i, (allowed_species, interacting_coord) in enumerate(zip(species_options, interacting_coords)):
+                                        _X, _Y, _ = interacting_coord.offset
+                                        flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
+                                        flag = flag.replace('-', 'm')
+
+
+                                        for sp_i, species in enumerate(allowed_species):
+                                            parameter_name = '_'.join(sorted([
+                                                '{base_adsorbate.species}_{base_adsorbate.coord.name}'.format(**locals()),
+                                                '{species}_{interacting_coord.name}'.format(**locals())
+                                                ]))
+                                            if species == pt.species_list.default_species:
+                                                continue
+                                            otf_rate += 'delta_E_{state} = delta_E_{state} + nr_{species}_{flag} * alpha_{parameter_name}\n'.format(**locals())
+                                        bystander = (kmos.types.Bystander(
+                                            coord=interacting_coord,
+                                            allowed_species=allowed_species + (['MFT_'] if options.mft_processes else []), # UGLY HACK
+                                            flag=flag
+                                        ))
+                                        if bystander.coord not in [x.coord for x in bystander_list]:
+                                            bystander_list.append(bystander)
+
+                            otf_rate += 'delta_E = delta_E_final - delta_E_initial\n'
+                            process.bystander_list = bystander_list
+                            reverse_process.bystander_list = bystander_list
+
+                            process.otf_rate = """
+                            {otf_rate}
+                            otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV)
+                            """.format(**locals())
+                            reverse_process.otf_rate = """
+                            {otf_rate}
+                            otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
+                            """.format(**locals())
+
+
                         else:
-                            base_initial_energy = 0
+                            import dbmi
 
-                        if base_final_adsorbates:
-                            base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
-                        else:
-                            base_final_energy = 0
+                            INTERACTION_CUTOFF = 10
 
-                        r = 1 * options.interaction + 4
-                        # Collect the nearest-neighbor sites up to a certain cut-off
-                        coordinate_set = pt.layer_list.generate_coord_set([r, r, 1])
-                        # regenerate all action coordinates via generation string to set the
-                        # absolute position of the coord correctly
+                            interaction_energy = MemoizeMutable(dbmi.calculate_interaction_energy)
+                            interaction_energy = dbmi.calculate_interaction_energy
 
-                        action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
-                        min_dists = [min(map(lambda x: np.linalg.norm(x.pos - c.pos), action_coords)) for c in coordinate_set]
+                            INTERACTIONS_FILENAME = options.interactions_filename
+                            TEST_INTERACTIONS_SURFACE = 'Rh(111)' if INTERACTIONS_SURFACE == 'generic' else INTERACTIONS_SURFACE
+                            SITE_NAME = {'s_0': 'fcc', 's_1': 'hcp'}
+                            PBC = (INTERACTION_CUTOFF, INTERACTION_CUTOFF)
+                            INTERACTION = 'auto'  # automatically decide is transition or coinage metal
 
-                        coordinate_set = sorted(zip(min_dists, coordinate_set))
+                            with open(INTERACTIONS_FILENAME) as infile:
+                                interaction_data = eval(infile.read())
+                            #if INTERACTIONS_SURFACE != 'generic':
+                                #with open(INTERACTIONS_FILENAME) as infile:
+                                    #interaction_data = eval(infile.read())
+                            #else:
+                                #interaction_data = {}
 
-                        curr_dist = 0.
-                        neighbor_shell = 0
-                        n_neighbors = {}
-                        for dist, coord in coordinate_set:
-                            if abs(curr_dist - dist) > dist_tol:
-                                curr_dist = dist
-                                neighbor_shell += 1
-                            n_neighbors.setdefault(neighbor_shell, []).append(coord)
-                        print('\n\n')
-                        print(process.name)
-                        print("==========> Neighbor Shells <=============")
-                        pprint.pprint(n_neighbors)
+                            base_initial_adsorbates = [[TEST_INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
+                                                       for condition in conditions if condition.species != pt.species_list.default_species]
 
-                        interacting_coords = []
-                        for i in range(options.interaction):
-                            interacting_coords.extend(n_neighbors[i + 1])
+                            base_final_adsorbates = [[TEST_INTERACTIONS_SURFACE, condition.species, SITE_NAME[condition.coord.name], condition.coord.offset[0], condition.coord.offset[1]]
+                                                     for condition in actions if condition.species != pt.species_list.default_species]
 
-                        pprint.pprint(interacting_coords)
+                            if base_initial_adsorbates:
+                                base_initial_energy = interaction_energy(interaction_data, base_initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                            else:
+                                base_initial_energy = 0
 
-                        species_options = []
-                        for interacting_coord in interacting_coords:
-                            site_name = coord.name.split('_')[0]
-                            species_options.append(site_species[site_name])
-                        print(species_options)
+                            if base_final_adsorbates:
+                                base_final_energy = interaction_energy(interaction_data, base_final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0]
+                            else:
+                                base_final_energy = 0
 
-                        bystander_list = []
-                        otf_rate = ""
-                        otf_rate += "delta_E_initial = 0.\n"
-                        otf_rate += "delta_E_final = 0.\n"
+                            r = 1 * options.interaction + 4
+                            # Collect the nearest-neighbor sites up to a certain cut-off
+                            coordinate_set = pt.layer_list.generate_coord_set([r, r, 1])
+                            # regenerate all action coordinates via generation string to set the
+                            # absolute position of the coord correctly
+
+                            action_coords = [pt.layer_list.generate_coord(action.coord._get_genstring()) for action in process.action_list]
+                            min_dists = [min(map(lambda x: np.linalg.norm(x.pos - c.pos), action_coords)) for c in coordinate_set]
+
+                            coordinate_set = sorted(zip(min_dists, coordinate_set))
+
+                            curr_dist = 0.
+                            neighbor_shell = 0
+                            n_neighbors = {}
+                            for dist, coord in coordinate_set:
+                                if abs(curr_dist - dist) > dist_tol:
+                                    curr_dist = dist
+                                    neighbor_shell += 1
+                                n_neighbors.setdefault(neighbor_shell, []).append(coord)
+                            print('\n\n')
+                            print(process.name)
+                            print("==========> Neighbor Shells <=============")
+                            pprint.pprint(n_neighbors)
+
+                            interacting_coords = []
+                            for i in range(options.interaction):
+                                interacting_coords.extend(n_neighbors[i + 1])
+
+                            pprint.pprint(interacting_coords)
+
+                            species_options = []
+                            for interacting_coord in interacting_coords:
+                                site_name = coord.name.split('_')[0]
+                                species_options.append(site_species[site_name])
+                            print(species_options)
+
+                            bystander_list = []
+                            otf_rate = ""
+                            otf_rate += "delta_E_initial = 0.\n"
+                            otf_rate += "delta_E_final = 0.\n"
 
 
-                        for c_i, (allowed_species, interacting_coord) in enumerate(zip(species_options, interacting_coords)):
-                            _X, _Y, _ = interacting_coord.offset
-                            flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
-                            flag = flag.replace('-', 'm')
-                            # DEBUGGING: TODO: Put accurate interaction energy here
-                            for sp_i, species in enumerate(allowed_species):
-                                if species == pt.species_list.default_species:
-                                    continue
-                                # DEBUGGING
-                                # only print those terms that contribute and fill in correct energy parameters from dbmi
-                                initial_adsorbates = base_initial_adsorbates + [[INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
-                                final_adsorbates = base_final_adsorbates + [[INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
+                            for c_i, (allowed_species, interacting_coord) in enumerate(zip(species_options, interacting_coords)):
+                                _X, _Y, _ = interacting_coord.offset
+                                flag = '{interacting_coord.name}_{_X}_{_Y}'.format(**locals())
+                                flag = flag.replace('-', 'm')
+                                # DEBUGGING: TODO: Put accurate interaction energy here
+                                for sp_i, species in enumerate(allowed_species):
+                                    if species == pt.species_list.default_species:
+                                        continue
+                                    #if INTERACTIONS_SURFACE == 'generic':
+                                        ## TODO: FIXME
+                                        #if len(base_initial_adsorbates) > 0:
+                                            #otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * alpha\n'.format(**locals())
+                                        #if len(base_final_adsorbates) > 0:
+                                            #otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * alpha\n'.format(**locals())
+                                        #continue
 
-                                print("----------------------------")
+                                    # DEBUGGING
+                                    # only print those terms that contribute and fill in correct energy parameters from dbmi
+                                    initial_adsorbates = base_initial_adsorbates + [[TEST_INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
+                                    final_adsorbates = base_final_adsorbates + [[TEST_INTERACTIONS_SURFACE, species, SITE_NAME[interacting_coord.name], interacting_coord.offset[0], interacting_coord.offset[1]]]
 
-                                print(initial_adsorbates)
-                                print(final_adsorbates)
+                                    print("----------------------------")
 
-                                print("----------------------------")
+                                    print("Initial adsorbates {initial_adsorbates}".format(**locals()))
+                                    print("Final adsorbates {final_adsorbates}").format(**locals())
 
-                                pinitial_name = 'pi_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
-                                deltaE_initial = interaction_energy(interaction_data, initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_initial_energy
+                                    print("----------------------------")
 
-                                pfinal_name = 'pf_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
-                                deltaE_final = interaction_energy(interaction_data, final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_final_energy
+                                    pinitial_name = 'pi_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
+                                    deltaE_initial = interaction_energy(interaction_data, initial_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_initial_energy
 
+                                    pfinal_name = 'pf_{ri}_{s_i}_{c_i}_{sp_i}'.format(**locals())
+                                    deltaE_final = interaction_energy(interaction_data, final_adsorbates, pbc=PBC, DR=INTERACTION_CUTOFF, ER1=50, ER2=5, interaction=INTERACTION)[0] - base_final_energy
 
+                                    if deltaE_initial != 0.:
+                                        pt.add_parameter(name=pinitial_name,
+                                                        value=deltaE_initial,
+                                                        adjustable=False,)
 
-                                if deltaE_initial != 0.:
-                                    pt.add_parameter(name=pinitial_name,
-                                                    value=deltaE_initial,
-                                                    adjustable=False,)
+                                        if INTERACTIONS_SURFACE != 'generic':
+                                            otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * pi_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
+                                        else:
+                                            otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * alpha\n'.format(**locals())
 
-                                    otf_rate += 'delta_E_initial = delta_E_initial + nr_{species}_{flag} * pi_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
+                                    if deltaE_final != 0.:
+                                        pt.add_parameter(name=pfinal_name,
+                                                        value=deltaE_final,
+                                                        adjustable=False,)
 
-                                if deltaE_final != 0.:
-                                    pt.add_parameter(name=pfinal_name,
-                                                    value=deltaE_final,
-                                                    adjustable=False,)
+                                        if INTERACTIONS_SURFACE != 'generic':
+                                            otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * pf_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
+                                        else:
+                                            otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * alpha\n'.format(**locals())
+                                try:
+                                    bystander_list.append(kmos.types.Bystander(
+                                        coord=interacting_coord,
+                                        allowed_species=allowed_species + (['MFT_'] if options.mft_processes else []), # UGLY HACK
+                                        flag=flag
+                                    ))
+                                except AttributeError as e:
+                                    raise type(e)(('{e.message}: adsorbate-adsorbate interaction using bystanders not support in this kmos version.'
+                                                   'Please try a again from a branch that supported the otf backend ("kmos export -botf ....").'
+                                                   ).format(**locals()))
 
-                                    otf_rate += 'delta_E_final = delta_E_final + nr_{species}_{flag} * pf_{ri}_{s_i}_{c_i}_{sp_i}\n'.format(**locals())
-                            try:
-                                bystander_list.append(kmos.types.Bystander(
-                                    coord=interacting_coord,
-                                    allowed_species=allowed_species + (['MFT_'] if options.mft_processes else []), # UGLY HACK
-                                    flag=flag
-                                ))
-                            except AttributeError as e:
-                                raise type(e)(('{e.message}: adsorbate-adsorbate interaction using bystanders not support in this kmos version.'
-                                               'Please try a again from a branch that supported the otf backend ("kmos export -botf ....").'
-                                               ).format(**locals()))
+                            print('Process {process} Bystanders {bystander_list}'.format(**locals()))
 
-                        print('Process {process} Bystanders {bystander_list}'.format(**locals()))
+                            otf_rate += 'delta_E = delta_E_final - delta_E_initial\n'
 
-                        otf_rate += 'delta_E = alpha * (delta_E_final - delta_E_initial)\n'
+                            process.bystander_list = bystander_list
+                            reverse_process.bystander_list = bystander_list
 
-                        process.bystander_list = bystander_list
-                        reverse_process.bystander_list = bystander_list
-
-                        process.otf_rate = """
-                        {otf_rate}
-                        otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV)
-                        """.format(**locals())
-                        reverse_process.otf_rate = """
-                        {otf_rate}
-                        otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
-                        """.format(**locals())
+                            process.otf_rate = """
+                            {otf_rate}
+                            otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV)
+                            """.format(**locals())
+                            reverse_process.otf_rate = """
+                            {otf_rate}
+                            otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV) """.format(**locals())
 
             pt.add_parameter(name='{diff_prefix}forward_{ri}'.format(**locals()), value=1.e3, adjustable=True)
             pt.add_parameter(name='{diff_prefix}reverse_{ri}'.format(**locals()), value=1.e3, adjustable=True)
