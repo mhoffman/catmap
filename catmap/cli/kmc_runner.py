@@ -1104,7 +1104,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 print("\nInfo: abbreviations file has been detected. Will do best to unabbreviate process names\n\n")
             else:
                 abbreviations = None
-                print("\nWarning: no abbreviations file found. Proceed with caution. If abbreviations filename was generated copy it into this directory.\n\n")
+                print("\nWarning: abbreviations file {abbreviations_filename} not found. Proceed with caution. If abbreviations filename was generated copy it into this directory.\n\n".format(**locals()))
 
             start_batch = 0
             fast_processes = True
@@ -1121,6 +1121,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
             old_nondiff = float('-inf')
             setup_edged_model_at_datapoint(kmos_model, data_point, reset_configuration=True)
+            kmos_model.parameters.alpha = options.alpha
             start_time = datetime.datetime.now()
             with open(log_filename, 'a') as procstat_file:
                 if log_target is None:
@@ -1169,7 +1170,9 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                                       seed='EWMA_{data_point:04d}'.format(**locals()),
                                                                       renormalizations=numeric_renormalizations,
                                                                       log_filename=log_filename,
-                                                                      sub_batches=1,
+                                                                      #sub_batches=1,
+                                                                      sub_batches=10,
+                                                                      #sub_batches=int(options.batch_size/100.),
                                                                       )
 
                 #data_dict, data = full_data['integ']
