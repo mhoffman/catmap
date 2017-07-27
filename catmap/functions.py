@@ -599,6 +599,18 @@ def offset_smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25, smoothing=0.05
     c_0 += offset
     return c_0, dC, d2C
 
+def stepped_response(theta, fractions, energies):
+    if not (fractions == np.sorted(fractions)).all():
+        raise UserWarning("Stepped response function expects ")
+    if len(fractions) != len(energies):
+        l_fractions = len(fractions)
+        l_energies = len(energies)
+        raise UserWarning('Fractions {fractions} and Energies {energies} ought to be of same length,\n\tbut they are {l_fractions} vs. {l_energies}.'.format(**locals()))
+    return energies[
+
+            ]
+
+
 def add_dict_in_place(dict1, dict2):
     """
     Updates dict1 with elements in dict2 if they do not exist.  otherwise,
