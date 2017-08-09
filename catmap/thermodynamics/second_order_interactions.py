@@ -2,7 +2,7 @@ import catmap
 from catmap import ReactionModelWrapper
 from catmap.model import ReactionModel
 from catmap.functions import smooth_piecewise_linear
-from catmap.functions import offset_smooth_piecewise_linear
+from catmap.functions import offset_smooth_piecewise_linear, stepped_response
 from catmap.functions import parse_constraint
 from catmap.thermodynamics import FirstOrderInteractions
 import pylab as plt
@@ -39,3 +39,7 @@ class SecondOrderInteractions(FirstOrderInteractions,ReactionModelWrapper):
         kwargs['smoothing'] = 0
         kwargs['cutoff'] = 0
         return smooth_piecewise_linear(*args,**kwargs)
+
+    @staticmethod
+    def stepped_response(*args,**kwargs):
+        return stepped_response(*args,**kwargs)
