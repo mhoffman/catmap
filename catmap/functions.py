@@ -599,7 +599,7 @@ def offset_smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25, smoothing=0.05
     c_0 += offset
     return c_0, dC, d2C
 
-def stepped_response(theta_tot, alphas=None, fractions=None, slope=1,cutoff=0.25,smoothing=0.05, gamma=0.01):
+def stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.01):
     # convergence parameter for delta function gamma -> 0
     import mpmath as mp
 
