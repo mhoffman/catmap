@@ -599,16 +599,35 @@ def offset_smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25, smoothing=0.05
     c_0 += offset
     return c_0, dC, d2C
 
-def stepped_response(theta, fractions, energies):
-    if not (fractions == np.sorted(fractions)).all():
-        raise UserWarning("Stepped response function expects ")
-    if len(fractions) != len(energies):
-        l_fractions = len(fractions)
-        l_energies = len(energies)
-        raise UserWarning('Fractions {fractions} and Energies {energies} ought to be of same length,\n\tbut they are {l_fractions} vs. {l_energies}.'.format(**locals()))
-    return energies[
+def stepped_response(theta_tot, alphas=None, fractions=None, slope=1,cutoff=0.25,smoothing=0.05, gamma=0.01):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
 
-            ]
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+
+
+    def heaviside(x, gamma):
+        return (mp.erf(x / gamma) + 1.)/2.
+
+    def delta(x, gamma):
+        return (1. / gamma / np.sqrt(np.pi)) * mp.exp(- ( x / gamma) ** 2)
+
+    def ddelta(x, gamma):
+        return (-2 * (x) / gamma**3 / np.sqrt(np.pi) ) * mp.exp(-(x/gamma)**2)
+
+    c_0, dC, d2C = 0., 0., 0.
+    for alpha, fraction in zip(alphas, fractions):
+        c_0 += (alpha / theta_tot) * heaviside(theta_tot - fraction, gamma=gamma)
+
+        dC +=  (- alpha / theta_tot**2 ) * heaviside(theta_tot - fraction, gamma=gamma) \
+                + (alpha / theta_tot) * delta(theta_tot - fraction, gamma=gamma)
+
+        d2C += ( 2 * alpha / theta_tot**3 ) * heaviside(theta_tot - fraction, gamma=gamma) \
+                + 2 * ( - alpha / theta_tot**2 ) * delta(theta_tot - fraction, gamma=gamma)  \
+                + ( alpha / theta_tot**1 ) * ddelta(theta_tot - fraction, gamma=gamma)
+
+    return c_0, dC, d2C
 
 
 def add_dict_in_place(dict1, dict2):
