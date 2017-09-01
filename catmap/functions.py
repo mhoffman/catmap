@@ -599,7 +599,7 @@ def offset_smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25, smoothing=0.05
     c_0 += offset
     return c_0, dC, d2C
 
-def stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.01):
+def stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
     # convergence parameter for delta function gamma -> 0
     import mpmath as mp
 
@@ -617,17 +617,102 @@ def stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.01):
         return (-2 * (x) / gamma**3 / np.sqrt(np.pi) ) * mp.exp(-(x/gamma)**2)
 
     c_0, dC, d2C = 0., 0., 0.
-    for alpha, fraction in zip(alphas, fractions):
-        c_0 += (alpha / theta_tot) * heaviside(theta_tot - fraction, gamma=gamma)
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += (alpha / theta_tot) * heaviside(theta_tot - fraction, gamma=gamma)
 
-        dC +=  (- alpha / theta_tot**2 ) * heaviside(theta_tot - fraction, gamma=gamma) \
-                + (alpha / theta_tot) * delta(theta_tot - fraction, gamma=gamma)
+            dC +=  0 \
+                    + (- alpha / theta_tot**2 ) * heaviside(theta_tot - fraction, gamma=gamma) \
+                    + (alpha / theta_tot) * delta(theta_tot - fraction, gamma=gamma)
 
-        d2C += ( 2 * alpha / theta_tot**3 ) * heaviside(theta_tot - fraction, gamma=gamma) \
-                + 2 * ( - alpha / theta_tot**2 ) * delta(theta_tot - fraction, gamma=gamma)  \
-                + ( alpha / theta_tot**1 ) * ddelta(theta_tot - fraction, gamma=gamma)
+            d2C += ( 2 * alpha / theta_tot**3 ) * heaviside(theta_tot - fraction, gamma=gamma) \
+                    + 2 * ( - alpha / theta_tot**2 ) * delta(theta_tot - fraction, gamma=gamma)  \
+                    + ( alpha / theta_tot**1 ) * ddelta(theta_tot - fraction, gamma=gamma)
 
     return c_0, dC, d2C
+
+def stepped_fermi_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+
+    def heaviside(x, beta):
+        return (1 + mp.exp(-beta*x))**(-1)
+
+    def delta(x, beta):
+        return beta * mp.exp( - beta * x ) * (1 + mp.exp( - beta * x ) ) ** ( - 2)
+
+    def ddelta(x, beta):
+        return beta**2 * ( 2 * mp.exp(- 2 * beta * x) * (1 + mp.exp( - beta * x )) ** ( - 3)
+                           - ( mp.exp(- beta * x) ) * (1 + mp.exp( - beta * x )) ** ( - 2))
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += (alpha / theta_tot) * heaviside(theta_tot - fraction, beta=beta)
+
+            dC +=  0 \
+                    + (- alpha / theta_tot**2 ) * heaviside(theta_tot - fraction, beta=beta) \
+                    + (alpha / theta_tot) * delta(theta_tot - fraction, beta=beta)
+
+            d2C += ( 2 * alpha / theta_tot**3 ) * heaviside(theta_tot - fraction, beta=beta) \
+                    + 2 * ( - alpha / theta_tot**2 ) * delta(theta_tot - fraction, beta=beta)  \
+                    + ( alpha / theta_tot**1 ) * ddelta(theta_tot - fraction, beta=beta)
+
+    return c_0, dC, d2C
+
+
+def stepped_simple_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+
+    def heaviside(x, beta):
+        return (1 + mp.exp(-beta*x))**(-1) / x 
+
+    def delta(x, beta):
+        return (1 + mp.exp(-beta*x))**(-1)
+
+    def ddelta(x, beta):
+        return beta * mp.exp( - beta * x ) * (1 + mp.exp( - beta * x ) ) ** ( - 2)
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += (alpha / theta_tot) * heaviside(theta_tot - fraction, beta=beta)
+
+            dC +=  0 \
+                    + (- alpha / theta_tot**2 ) * heaviside(theta_tot - fraction, beta=beta) \
+                    + (alpha / theta_tot) * delta(theta_tot - fraction, beta=beta)
+
+            d2C += ( 2 * alpha / theta_tot**3 ) * heaviside(theta_tot - fraction, beta=beta) \
+                    + 2 * ( - alpha / theta_tot**2 ) * delta(theta_tot - fraction, beta=beta)  \
+                    + ( alpha / theta_tot**1 ) * ddelta(theta_tot - fraction, beta=beta)
+
+
+    return c_0, dC, d2C
+
+
+
+
+
+def stepped_linear_mixed_response(theta_tot, alphas=None, fractions=None, slope=1., gamma=0.02, mix=0.5):
+    cutoff = fractions[0]
+    E_max = sum(alphas)
+
+    stepped = stepped_fermi_response(theta_tot, alphas=alphas, fractions=fractions, gamma=gamma)
+    linear = smooth_piecewise_linear(theta_tot, slope=slope, cutoff=cutoff, smoothing=0.)
+
+    return tuple((1 - mix) * np.array(linear) + mix * np.array(stepped))
+
 
 
 def add_dict_in_place(dict1, dict2):
