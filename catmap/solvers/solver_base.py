@@ -4,6 +4,9 @@ from catmap import ReactionModelWrapper
 import numpy as np
 import mpmath as mp
 from ase.atoms import string2symbols
+import time
+
+import nelder_mead
 
 class SolverBase(ReactionModelWrapper):
     def __init__(self,reaction_model=None):
@@ -180,41 +183,40 @@ class NewtonRoot:
         self.f = f
         self.x0 = x0
         if 'J' in kwargs:
-            self.J = kwargs['J']
+            #self.J = kwargs['J']
 
             #the following is useful for debugging/benchmarking
             #analytical derivatives, and should be commented out
             #for any production code.
-#            import time
-#            def J(x): #Use this to confirm the analytical jacobian is correct
-#                t0 = time.time()
-#                analytical = kwargs['J'](x)
-#                t_a = time.time() - t0
-#                t0 = time.time()
-#                numerical = catmap.functions.numerical_jacobian(f,x,matrix,1e-300)
-#                t_n = time.time() - t0
-#                error = analytical - numerical
-#                error = error.tolist()
-#                max_error = -1
-#                max_pos = None
-#                for i,ei in enumerate(error):
-#                    for j,ej in enumerate(ei):
-#                        if abs(ej) > 1e-10:
-#                            print 'big error', ej, [i,j]
-#                            pass
-#                        if abs(ej) > max_error:
-#                            max_error = abs(ej)
-#                            max_pos = [i,j]
-#                print 'max_error', max_error, max_pos
-#                print 't_analytic/t_numerical', t_a/t_n
-#                return numerical
-#            self.J = J
+            import time
+            def J(x): #Use this to confirm the analytical jacobian is correct
+                t0 = time.time()
+                analytical = kwargs['J'](x)
+                t_a = time.time() - t0
+                t0 = time.time()
+                numerical = catmap.functions.numerical_jacobian(f,x,matrix,1e-300)
+                t_n = time.time() - t0
+                error = analytical - numerical
+                error = error.tolist()
+                max_error = -1
+                max_pos = None
+                for i,ei in enumerate(error):
+                    for j,ej in enumerate(ei):
+                        if abs(ej) > 1e-10:
+                            print 'big error', ej, [i,j]
+                            pass
+                        if abs(ej) > max_error:
+                            max_error = abs(ej)
+                            max_pos = [i,j]
+                print 'max_error', max_error, max_pos
+                print 't_analytic/t_numerical', t_a/t_n
+                return numerical
+            self.J = J
 
-#            def J_numerical(x): #Use this to confirm the analytical jacobian is correct
-#                numerical = catmap.functions.numerical_jacobian(f,x,matrix,1e-50)
-#                return numerical
-#            self.J = J_numerical
-
+            def J_numerical(x): #Use this to confirm the analytical jacobian is correct
+                numerical = catmap.functions.numerical_jacobian(f,x,matrix,1e-50)
+                return numerical
+            self.J = J_numerical
 
         else:
             raise ValueError('No method for estimating Jacobian.')
@@ -269,3 +271,249 @@ class NewtonRoot:
                 x1 = x0 + l*s
             yield (x0, fxnorm)
 
+
+class Simplex:
+    """
+    Thin wrapper for Nelder-Mead solver
+    from: https://github.com/fchollet/nelder-mead
+    """
+
+    maxsteps = 10
+
+    def __init__(self, f, x0, matrix, mpfloat, Axb_solver, **kwargs):
+        self._matrix = matrix
+        self._mpfloat = mpfloat
+        self._Axb = Axb_solver
+        self.f = f
+        self.x0 = x0
+        if 'J' in kwargs:
+            self.J = kwargs['J']
+
+        else:
+            raise ValueError('No method for estimating Jacobian.')
+        if 'constraint' in kwargs:
+            self.constraint = kwargs['constraint']
+        else:
+            def constraint(x):
+                return x
+            self.constraint = constraint
+        self.norm = kwargs['norm']
+        self.verbose = kwargs['verbose']
+        self.max_damping = 10
+
+    def __iter__(self):
+        f = self.f
+        x0 = self.constraint(self.x0)
+        norm = self.norm
+        J = self.J
+        fx = self._matrix(f(x0))
+        fxnorm = norm(fx)
+        cancel = False
+        x0 = self._matrix(x0)
+
+        tol = 1.e-3
+
+        def residual(x):
+            fx = f(x)
+            return mp.sqrt(sum([mp.power(r, 2.) for r in fx]))
+
+        x1, f_value = nelder_mead.nelder_mead(
+                f=residual,
+                x_start=x0,
+                step=mp.mpf(.2),
+                no_improve_thr=mp.mpf(tol),
+                no_improv_break=200,
+                constraint=self.constraint
+               ) 
+
+        fxnorm = norm(f(x1))
+        yield x1, f_value
+
+
+class OdeInt:
+    """
+    """
+
+    maxsteps = 10
+
+    def __init__(self, f, x0, matrix, mpfloat, Axb_solver, **kwargs):
+        try:
+            import scipy.integrate
+        except:
+            print(""" 
+            Could not find scipy. You might try to install it with
+
+            pip install [--user ] scipy
+            """
+            )
+            raise
+
+
+        self._matrix = matrix
+        self._mpfloat = mpfloat
+        self._Axb = Axb_solver
+        self.f = f
+        self.x0 = x0
+        if 'J' in kwargs:
+            self.J = kwargs['J']
+            J = self.J
+
+        else:
+            raise ValueError('No method for estimating Jacobian.')
+
+        if 'constraint' in kwargs:
+            self.constraint = kwargs['constraint']
+        else:
+            def constraint(x):
+                return x
+            self.constraint = constraint
+        self.norm = kwargs['norm']
+        self.verbose = kwargs['verbose']
+        self.max_damping = 10
+
+        def ft(t, X):
+            return self.f(X)
+
+        def Jt(t, X):
+            Jm = self.J(X)
+            rows, cols = Jm.rows, Jm. cols
+            return np.array(Jm.tolist()).reshape(rows, cols)
+
+        self.t0 = mp.mpf(0.)
+        self.dt = mp.mpf(1.e-13)
+        self.r = scipy.integrate.ode(ft, jac=Jt) \
+                .set_integrator('vode',
+                                method='bdf',
+                                order=5,
+                                rtol=1e-15,
+                                atol=1e-15,
+                                max_step=500000000,
+                                nsteps=500000000) \
+                .set_initial_value(y=x0, t=self.t0)
+
+
+    def __iter__(self):
+        f = self.f
+        x0 = self.constraint(self.x0)
+        norm = self.norm
+        J = self.J
+        fx = self._matrix(f(x0))
+        fxnorm = norm(fx)
+        cancel = False
+        x0 = self._matrix(x0)
+
+        #while self.r.successful():
+        fxnorm = 1e+10
+        ftol = 5e-4
+        while fxnorm > ftol:
+            t0 = time.time()
+            x1 = self.r.integrate(self.r.t + self.dt)
+            x1 = self.constraint(x1)
+            if not self.r.successful():
+                raise UserWarning("ODE Integration failed.")
+            fxnorm = float(norm(self.f(x1)))
+            _fx = map(lambda _x: '%.6e' % _x, self.f(x1))
+            _fdt = float(self.dt)
+            t1 = time.time()
+            _sample_time = t1 - t0
+            print('{_sample_time:.1f} s | {self.r.t:.3e} + {_fdt:.3e} {x1}, residual {fxnorm:.5e}, {self.r.t}, fx {_fx}'.format(**locals()))
+            #self.r.t = 0.
+            if t1 - t0 < .1:
+                self.dt *= 1.2
+            if t1 - t0 > .3 :
+                self.dt /= 200.
+        yield x1, fxnorm
+
+
+
+class OdeFun:
+    """
+    """
+
+
+    def __init__(self, f, x0, matrix, mpfloat, Axb_solver, **kwargs):
+        try:
+            from mpmath import mp
+        except:
+            print(""" 
+            Could not find mpmath. You might try to install it with
+
+            pip install [--user ] mpmath
+            """
+            )
+            raise
+
+        self._matrix = matrix
+        self._mpfloat = mpfloat
+        self._Axb = Axb_solver
+        self.f = f
+        self.x0 = x0
+        if 'J' in kwargs:
+            self.J = kwargs['J']
+            J = self.J
+
+        else:
+            raise ValueError('No method for estimating Jacobian.')
+        if 'constraint' in kwargs:
+            self.constraint = kwargs['constraint']
+        else:
+            def constraint(x):
+                return x
+            self.constraint = constraint
+        self.norm = kwargs['norm']
+        self.verbose = kwargs['verbose']
+        self.max_damping = 10
+
+        def ft(t, X):
+            return self.f(X)
+
+        def Jt(t, X):
+            Jm = self.J(X)
+            rows, cols = Jm.rows, Jm. cols
+            return np.array(Jm.tolist()).reshape(rows, cols)
+
+        self.t0 = mp.mpf(0.)
+        self.dt = mp.mpf(1e-19)
+        self.F = mp.odefun(
+                F=ft,
+                x0=self.t0,
+                y0=x0,
+                degree=18,
+                verbose=True,
+                )
+
+
+    def __iter__(self):
+        old_pres = mp.mp.dps
+        mp.mp.dps = 50
+        f = self.f
+        x0 = self.constraint(self.x0)
+        norm = self.norm
+        J = self.J
+        fx = self._matrix(f(x0))
+        fxnorm = norm(fx)
+        cancel = False
+        x0 = self._matrix(x0)
+
+        fxnorm = 10.
+        t1 = self.t0
+        while fxnorm > 5.e-4:
+            _t0 = time.time()
+            t1 += self.dt
+            x1 = self.F(t1)
+            fxnorm = float(norm(self.f(x1)))
+            _t1 = time.time()
+
+            _fx = map(lambda _x: '%.6e' % _x, self.f(x1))
+            _fdt = float(self.dt)
+
+            _sample_time = _t1 - _t0
+            print('{_sample_time:.1f} s | {self.dt:.3e} + {_fdt:.3e} {x1}, residual {fxnorm:.5e}, {self.r.t}, fx {_fx}'.format(**locals()))
+
+            if _t1 - _t0 < 10.:
+                self.dt *= 1.2
+            if _t1 - _t0 > 20. :
+                self.dt /= 200.
+
+        mp.mp.dps = old_pres
+        yield x1, fxnorm

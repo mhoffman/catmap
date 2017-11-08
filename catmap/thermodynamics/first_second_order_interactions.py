@@ -12,12 +12,13 @@ try:
 except ImportError:
     integrate = None
 
-class SecondOrderInteractions(FirstOrderInteractions,ReactionModelWrapper):
+class FirstSecondOrderInteractions(FirstOrderInteractions,ReactionModelWrapper):
     """Class for implementing 'first-order adsorbate interaction model. 
     Should be sub-classed by scaler."""
 
     def __init__(self,reaction_model=None):
         FirstOrderInteractions.__init__(self,reaction_model)
+        #pass
 
     @staticmethod
     def smooth_piecewise_linear_response(*args,**kwargs):

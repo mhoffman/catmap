@@ -4,6 +4,7 @@ import re
 from copy import copy
 from ase.atoms import string2symbols
 import warnings
+from mpmath import mp
 
 def get_composition(species_string):
     """
@@ -51,7 +52,7 @@ def convert_formation_energies(energy_dict,atomic_references,composition_dict):
     :param energy_dict: Dictionary of energies for all species.
                         Keys should be species names and values
                         should be energies.
-                        
+
     :type energy_dict: dict
 
     :param atomic_references: Dictionary of atomic reference energies (?)
@@ -59,8 +60,7 @@ def convert_formation_energies(energy_dict,atomic_references,composition_dict):
     :type atomic_references: dict
 
     :param composition_dict: Dictionary of compositions
-
-    :type composition_dict: dict
+:type composition_dict: dict
 
     .. todo:: Explain the keys and values for energy_dict, atomic_references, and composition_dict
     """
@@ -136,9 +136,9 @@ def parse_constraint(minmaxlist,name):
 def constrained_relaxation(
         A,b,x0,x_min,x_max,max_iter = 100000,tolerance = 1e-10):
     """
-    Solve Ax=b subject to the constraints that 
+    Solve Ax=b subject to the constraints that
     x_i > x_min_i and x_i < x_max_i. Algorithm is from Axelson 1996.
-    
+
     Note that x_min/Max are both lists/arrays of length equal to x
 
     :param A: A matrix.
@@ -175,9 +175,9 @@ def constrained_relaxation(
     #define functional corresponding to Ax=b
     def J(x,A,b):
         """
-        Functional of x which corresponds to Ax=b for 
+        Functional of x which corresponds to Ax=b for
         the relaxation method used.
-        
+
         :param x: x vector.
 
         :type x: array_like
@@ -241,36 +241,36 @@ def constrained_relaxation(
                 'Residual was '+str(np.linalg.norm(fDiff)))
 
 def scaling_coefficient_matrix(
-        parameter_dict, descriptor_dict, surface_names, 
-        parameter_names=None, coeff_mins = 0, coeff_maxs = 1e99, 
+        parameter_dict, descriptor_dict, surface_names,
+        parameter_names=None, coeff_mins = 0, coeff_maxs = 1e99,
         return_error_dict = False):
     """Class for determining adsorption and transition-state energies
-    as a linear function of descriptors. 
+    as a linear function of descriptors.
 
-    :param parameter_dict: Dictionary where the key is adsorbate name 
-                           and the value is a list of adsorption energies for each surface. 
+    :param parameter_dict: Dictionary where the key is adsorbate name
+                           and the value is a list of adsorption energies for each surface.
                            If some surfaces do not have an adsorption energy use None
                            as a placeholder.
 
     :type parameter_dict: dict
-    
-    :param descriptor_dict: Dictionary where the key is surface name and the 
+
+    :param descriptor_dict: Dictionary where the key is surface name and the
                             value is a list of descriptor values for each surface.
-    
+
     :type descriptor_dict: dict
 
-    :param surface_names: List of surfaces which defines the order of 
+    :param surface_names: List of surfaces which defines the order of
                           surface adsorption energies in parameter_dict.
 
     :type surface_names: list
-    
-    :param parameter_names: List of adsorbates which defines the order 
-                            of adsorption coefficients in the output. Default is the 
+
+    :param parameter_names: List of adsorbates which defines the order
+                            of adsorption coefficients in the output. Default is the
                             order of parameter_dict.keys().
 
     :type parameter_names: list, optional
 
-    :param coeff_mins: Defines the minimum value of the coefficient 
+    :param coeff_mins: Defines the minimum value of the coefficient
                        for each descriptor. Should be a matrix/array/list of lists
                        which matches the shape of the expected output.
 
@@ -303,7 +303,7 @@ def scaling_coefficient_matrix(
         """
         for val in dictionary.values():
             if len(val) != len(dictionary.values()[0]):
-                key_len = '\n'.join([key+':'+str(len(dictionary[key])) 
+                key_len = '\n'.join([key+':'+str(len(dictionary[key]))
                     for key in dictionary])
                 raise ValueError('All values must be lists of same length.'+
                          'Use None as placeholder. \nKey:Length\n'+key_len)
@@ -314,20 +314,20 @@ def scaling_coefficient_matrix(
                     raise ValueError('All values must be numeric. '+
                             'Error when parsing ' + str(val))
 
-    check_lengths(parameter_dict,False) 
-    check_lengths(descriptor_dict,True) 
+    check_lengths(parameter_dict,False)
+    check_lengths(descriptor_dict,True)
 
     #initialize coefficient matrix that will be returned.
     C = np.zeros(
             (len(descriptor_dict.values()[0])+1,len(parameter_dict.keys())))
 
-    #initialize error dictionary that will be returned 
+    #initialize error dictionary that will be returned
     #(if return_error_dict=True)
     error_dict = {}
     for key in parameter_dict:
         error_dict[key] = [None]*len(surface_names)
 
-    #initialize descriptor matrix that will be used if 
+    #initialize descriptor matrix that will be used if
     #all surfaces are present for a given adsorbate
     Dtotal = np.zeros((len(surface_names),len(descriptor_dict.values()[0])+1))
     for i,Dsurf in enumerate(surface_names):
@@ -341,7 +341,7 @@ def scaling_coefficient_matrix(
         A = []
 
         #if mins and maxs are equal then the system is fully constrained and
-        #there is no reason to solve for the parameters. However, in order to 
+        #there is no reason to solve for the parameters. However, in order to
         #preserve ordering we use the known coeffs to put in "scaled" parameter
         #energy values and solve for the coefficients which, by definition, will
         #come out to be the same as the constraints.
@@ -350,7 +350,7 @@ def scaling_coefficient_matrix(
             surfs = surface_names
             for surf in surfs:
                 descriptors_i = descriptor_dict[surf]
-                ads_i = sum([ci*di 
+                ads_i = sum([ci*di
                     for ci,di in zip(coeffs,descriptors_i)]) + coeffs[-1]
                 A.append(ads_i)
 
@@ -358,9 +358,9 @@ def scaling_coefficient_matrix(
         #if coefficients are not totally constrained
         if not A:
             A = [val for val in parameter_dict[ads] if val is not None]
-            surfs = [surface_names[i] 
-                    for i,val in enumerate(parameter_dict[ads]) 
-                    if val is not None] #determine the surfaces which have 
+            surfs = [surface_names[i]
+                    for i,val in enumerate(parameter_dict[ads])
+                    if val is not None] #determine the surfaces which have
                           #parameter energy values for this adsorbate
 
         try:
@@ -369,8 +369,8 @@ def scaling_coefficient_matrix(
             raise ValueError('Non-numeric value for the '
                     'parameters of '+ads+'.')
 
-        #construct "descriptor" matrix (note that this is done inside the 
-        #for loop to allow different parameters to have different number 
+        #construct "descriptor" matrix (note that this is done inside the
+        #for loop to allow different parameters to have different number
         #of surfaces)
 
         if len(surfs) <= len(descriptor_dict.values()[0])+1:
@@ -388,9 +388,9 @@ def scaling_coefficient_matrix(
                 for j,DE in enumerate(descriptor_dict[Dsurf]):
                     D[i,j] = float(DE)
 
-        #find initial guess for the "coefficient" matrix by solving the 
-        #unconstrained least-squares problem Dc=A using psuedo-inverse 
-        #of D (note that this is not efficient, but it doesn't matter 
+        #find initial guess for the "coefficient" matrix by solving the
+        #unconstrained least-squares problem Dc=A using psuedo-inverse
+        #of D (note that this is not efficient, but it doesn't matter
         #for such small matrices)
         D = np.array(D)
         A = np.array(A)
@@ -398,7 +398,7 @@ def scaling_coefficient_matrix(
             Dinv = np.linalg.pinv(D)
             c0 = np.dot(Dinv,A)
 
-            #use relaxation method to solve the problem subject to the 
+            #use relaxation method to solve the problem subject to the
             #constraints specified by coeff_mins/Maxs.
 
             cMin = coeff_mins[Nads]
@@ -481,7 +481,7 @@ def match_regex(string,regex,group_names):
         return match_dict
     else:
         return None
-            
+
 def numerical_jacobian(f, x, matrix, h = 1e-10,diff_idxs=None):
     """
     Calculate the Jacobian matrix of a function at the point x0.
@@ -502,7 +502,7 @@ def numerical_jacobian(f, x, matrix, h = 1e-10,diff_idxs=None):
 
     :param matrix:
 
-    :type matrix: 
+    :type matrix:
 
     :param h:
 
@@ -529,7 +529,7 @@ def numerical_jacobian(f, x, matrix, h = 1e-10,diff_idxs=None):
             J[i,j] = Jj[i]
     return J
 
-def smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25,smoothing=0.05):
+def smooth_piecewise_linear(theta_tot,slope=1,cutoff=0.25,smoothing=0.05, **kwargs):
     """
     Smooth piecewise linear function.
 
@@ -606,6 +606,8 @@ def stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
     alphas = alphas if alphas is not None else []
     fractions = fractions if fractions is not None else []
 
+    theta_tot /= 2.
+
 
     def heaviside(x, gamma):
         return (mp.erf(x / gamma) + 1.)/2.
@@ -673,10 +675,11 @@ def stepped_simple_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
     alphas = alphas if alphas is not None else []
     fractions = fractions if fractions is not None else []
     beta = 1./gamma
+    theta_tot /= 2.
 
 
     def heaviside(x, beta):
-        return (1 + mp.exp(-beta*x))**(-1) / x 
+        return (1 + mp.exp(-beta*x))**(-1) / x
 
     def delta(x, beta):
         return (1 + mp.exp(-beta*x))**(-1)
@@ -702,16 +705,193 @@ def stepped_simple_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
 
 
 
+def stepped_simple2_response(theta_tot, alphas=None, fractions=None, gamma=0.02):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+    theta_tot /= 2.
+
+    def heaviside(x, beta):
+        return (1 + mp.exp(-beta*x))**(-1)
+
+    def delta(x, beta):
+        return beta * mp.exp( - beta * x ) * (1 + mp.exp( - beta * x ) ) ** ( - 2)
+
+    def ddelta(x, beta):
+        return beta**2 * ( 2 * mp.exp(- 2 * beta * x) * (1 + mp.exp( - beta * x )) ** ( - 3)
+                           - ( mp.exp(- beta * x) ) * (1 + mp.exp( - beta * x )) ** ( - 2))
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += alpha *  heaviside(theta_tot - fraction, beta=beta)
+
+            dC += alpha * delta(theta_tot - fraction, beta=beta)
+
+            d2C += alpha * ddelta(theta_tot - fraction, beta=beta)
+
+    return c_0, dC, d2C
+
+def stepped_simple_gaussian_response(theta_tot, alphas=None, fractions=None, gamma=0.01):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+    theta_tot /= 2.
+
+    def heaviside(x, gamma):
+        return (mp.erf(x / gamma) + 1.)/2.
+
+    def delta(x, gamma):
+        return (1. / gamma / np.sqrt(np.pi)) * mp.exp(- ( x / gamma) ** 2)
+
+    def ddelta(x, gamma):
+        return (-2 * (x) / gamma**3 / np.sqrt(np.pi) ) * mp.exp(-(x/gamma)**2)
+
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += alpha *  heaviside(theta_tot - fraction, gamma=gamma)
+
+            dC += alpha * delta(theta_tot - fraction, gamma=gamma)
+
+            d2C += alpha * ddelta(theta_tot - fraction, gamma=gamma)
+
+    return c_0, dC, d2C
+
+
+def _smooth_interpolation():
+    """
+    Helper function to avoid doing RBF interpolation in every call
+    """
+    import mpmath as mp
+    import scipy.interpolate
+
+    #alphas = alphas if alphas is not None else []
+    #fractions = fractions if fractions is not None else []
+    #beta = 1./gamma
+
+    #theta_tot /= 2.
+
+    #d = -1./1000
+    d = -0.5
+    d_min = .01
+    s = 1.
+    #x = theta_tot
+    s = 1.5
+    dx = 2.5
+    s2 = 1.5
+    d2 = 1.5
+
+    def F(x):
+        if x > .66:
+            return s2*s*mp.power(x + d2*dx, d), s2*s*(d) * mp.power(x + d2*dx, d - 1.), s2*s*(3./4) * mp.power(x + d2*dx, d - 2.)
+        elif x > .33:
+            return s*mp.power(x + dx, d), s*(d) * mp.power(x + dx, d - 1.), s*(3./4) * mp.power(x + dx, d - 2.)
+        else:
+            return 0., 0., 0.
+
+
+    grid = list(np.linspace(0, 1, 21))
+    f, df, d2f = zip(*[
+        F(_x) for _x in grid
+        ])
+
+    #x = float(x)
+    f = map(float, f)
+    df = map(float, df)
+    d2f = map(float, d2f)
+
+    smooth = .5
+    print("GRID {grid} F {f}".format(**locals()))
+    f_interp = scipy.interpolate.Rbf(grid, f, kind='linear', smooth=smooth)
+    df_interp = scipy.interpolate.Rbf(grid, df, kind='linear', smooth=smooth)
+    d2f_interp = scipy.interpolate.Rbf(grid, d2f, kind='linear', smooth=smooth)
+
+    return f_interp, df_interp, d2f_interp
+
+F_INTERP, DF_INTERP, D2F_INTERP = _smooth_interpolation()
+
+def smooth_stepped_response(theta_tot, alphas=None, fractions=None, gamma=0.01, **kwargs):
+    # convergence parameter for delta function gamma -> 0
+
+    x = theta_tot
+    return F_INTERP(x), DF_INTERP(x), D2F_INTERP(x)
+
+
+def stepped_simple_gaussian_frozen_response(theta_tot, alphas=None, fractions=None, gamma=0.02, m=2):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+    theta_tot /= 2.
+
+    def f(x, m=m, d=.01):
+        return int(x * m) / m + d
+
+    #theta_tot = f(theta_tot)
+    #theta_tot =  .8
+
+    def heaviside(x, gamma):
+        return (mp.erf(x / gamma) + 1.)/2.
+
+    def delta(x, gamma):
+        return (1. / gamma / np.sqrt(np.pi)) * mp.exp(- ( x / gamma) ** 2)
+
+    def ddelta(x, gamma):
+        return (-2 * (x) / gamma**3 / np.sqrt(np.pi) ) * mp.exp(-(x/gamma)**2)
+
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += alpha *  heaviside(theta_tot - fraction, gamma=gamma)
+
+            dC += alpha * delta(theta_tot - fraction, gamma=gamma)
+
+            d2C += alpha * ddelta(theta_tot - fraction, gamma=gamma)
+
+    return c_0, dC, d2C
+
+
+
+
+
+
+def stepped_simple_linear_mixed_response(theta_tot, alphas=None, fractions=None, gamma=0.01, mix=0.90):
+    cutoff = fractions[0]
+    slope = (2. - cutoff) / 2.
+    E_max = sum(alphas)
+
+    stepped = stepped_simple_gaussian_response(theta_tot, alphas=alphas, fractions=fractions, gamma=gamma)
+    linear = smooth_piecewise_linear(.5 * theta_tot, slope=slope, cutoff=cutoff, smoothing=0.)
+
+    return tuple((1 - mix) * np.array(linear) + mix * np.array(stepped))
+
+
+
 
 
 def stepped_linear_mixed_response(theta_tot, alphas=None, fractions=None, slope=1., gamma=0.02, mix=0.5):
     cutoff = fractions[0]
     E_max = sum(alphas)
 
-    stepped = stepped_fermi_response(theta_tot, alphas=alphas, fractions=fractions, gamma=gamma)
+    stepped = smooth_stepped_response(theta_tot, alphas=alphas, fractions=fractions, gamma=gamma)
     linear = smooth_piecewise_linear(theta_tot, slope=slope, cutoff=cutoff, smoothing=0.)
 
     return tuple((1 - mix) * np.array(linear) + mix * np.array(stepped))
+
 
 
 
@@ -802,3 +982,20 @@ def fetch_all_output_variables():
         IfLister().visit(f)
 
     return keywords
+
+def stepped_jake_response(theta, alpha=1.0/6, E_bind=1):
+    Na = 0
+    E_diff = 0.
+    if theta > 1./3:
+        Na += 6 * min(theta - 1./3, 1./3)
+        E_diff = 6 * alpha
+
+    if theta > 2./3:
+        Na += 12 * (theta - 2./3)
+        E_diff = 12 * alpha
+
+    fit = alpha * Na
+    E_avg = (alpha * Na) / theta + E_bind
+    E_int = theta * E_avg
+
+    return E_avg, E_diff, 0.

@@ -17,7 +17,7 @@ class MeanFieldSolver(SolverBase):
         self._rxm.update(defaults)
         self._log_strings = {
                             'jacobian_fail':
-                            "stagnated or diverging (residual = ${resid})."+\
+                            "Jacobian: stagnated or diverging (residual = ${resid})."+\
                             " Assuming Jacobian is 0.",
                             }
 
@@ -444,11 +444,20 @@ class MeanFieldSolver(SolverBase):
         rate_strings.append('s = [0]*'+str(len(self.site_names)))
         for i,s in enumerate(site_strings):
             rate_strings.append('s['+str(i)+'] = '+site_strings[i])
+            ## DEBUGGING
+            #rate_strings.append("print('s + " + str(i) + " '  + str(s[" + str(i) +"]))")
         for i,rxn in enumerate(self.elementary_rxns):
+            ## DEBUGGING
+            #rate_strings.append("print('kf + " + str(i) + " '  + str(kf[" + '%.10g' % float(i) +"]))")
+            #rate_strings.append("print('kr + " + str(i) + " '  + str(kr[" + '%.10g' % float(i) +"]))")
+
             fRate_string = self.rate_equation_term(rxn[0],'kf['+str(i)+']')
             rRate_string = self.rate_equation_term(rxn[-1],'kr['+str(i)+']')
             rateString = 'r['+str(i)+'] = '+fRate_string + ' - ' + rRate_string
             rate_strings.append(rateString)
+            ## DEBUGGING
+            #rate_strings.append("print('r " + str(i) + "  = " + fRate_string + " - " + rRate_string + " ')")
+            #rate_strings.append("print('r " + str(i) + " ' + str(r[" + str(i) + "]) + ' = +  ' + str(" + str(fRate_string) +") + '-' +  str(" + str(rRate_string) + "))")
 
         dcdt_strings = []
         for i,ads in enumerate(self.adsorbate_names):
@@ -462,6 +471,9 @@ class MeanFieldSolver(SolverBase):
             if dcdt_str.endswith('= '):
                 dcdt_str += '0'
             dcdt_strings.append(dcdt_str)
+            ## DEBUGGING
+            #dcdt_strings.append("print('DTHETA_DT " + str(i) + " '  + str(dtheta_dt[" + str(i) + "]))")
+            #dcdt_strings.append("print('THETA " + str(i) + " '  + str(theta[" + str(i) + "]))")
 
         all_strings = rate_strings + dcdt_strings
         return all_strings

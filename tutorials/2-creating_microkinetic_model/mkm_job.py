@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from catmap import ReactionModel
 
 mkm_file = 'CO_oxidation.mkm'
@@ -36,5 +38,5 @@ vm.plot(save='coverage.pdf')
 vm.include_labels = ['CO_s']
 vm.plot(save='CO_coverage.pdf')
 
-sa = analyze.ScalingAnalysis(model)
-sa.plot(save='scaling.pdf')
+#sa = analyze.ScalingAnalysis(model)
+#sa.plot(save='scaling.pdf')

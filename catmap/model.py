@@ -221,6 +221,17 @@ class ReactionModel:
 
         elif self.adsorbate_interaction_model in ['ideal',None]:
             self.thermodynamics.adsorbate_interactions = None
+        elif self.adsorbate_interaction_model == 'first_second_order':
+            #raise UserWarning("WORKIGN ON IT");
+            interaction_model = catmap.thermodynamics.FirstSecondOrderInteractions(self)
+            interaction_model.get_interaction_info()
+            response_func = interaction_model.interaction_response_function
+            if not callable(response_func):
+                int_function = getattr(interaction_model,
+                        response_func+'_response')
+                interaction_model.interaction_response_function = int_function
+            self.thermodynamics.__dict__['adsorbate_interactions'] = interaction_model
+
         else:
             raise AttributeError(
                     'Invalid adsorbate_interaction_model specified.')
@@ -343,6 +354,7 @@ class ReactionModel:
                 self._function_strings[func_name] = func_string
                 locs = {}
                 exec func_string in globals(), locs
+                print('Generating {func_name}'.format(**locals()))
                 setattr(self,func_name,locs[func_name])
 
     #File IO functions

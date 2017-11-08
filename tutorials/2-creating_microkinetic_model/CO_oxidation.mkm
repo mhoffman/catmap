@@ -33,6 +33,12 @@ species_definitions['s'] = {'site_names': ['111'], 'total':1} #define the sites
 
 data_file = 'CO_oxidation.pkl'
 
+# DEBUGGING
+interaction_strength = 1.0
+adsorbate_interaction_model = 'second_order' #use "first order" interaction model
+
+species_definitions.setdefault('CO_s', {}).setdefault('self_interaction_parameter', [1.206505217187] * 8)
+species_definitions.setdefault('O_s', {}).setdefault('self_interaction_parameter', [1.206505217187] * 8)
 #
 #Parser parameters
 #
