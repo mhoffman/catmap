@@ -1,6 +1,7 @@
 from solver_base import *
 from mean_field_solver import *
 from catmap import string2symbols
+import mpmath as mp
 try:
     from scipy.optimize import fmin_powell as fmin
 except ImportError:
@@ -19,7 +20,7 @@ class SteadyStateSolver(MeanFieldSolver):
         defaults = dict(
                 max_rootfinding_iterations = 50,
                 internally_constrain_coverages = True,
-                residual_threshold = 0.9,
+                residual_threshold = 0.95,
                 analytical_jacobian = True,
                 optimize_analytical_expressions = False,
                 )
@@ -126,7 +127,20 @@ class SteadyStateSolver(MeanFieldSolver):
             constraint = self.constrain_coverages
         else:
             constraint = lambda x: x
-        solver = NewtonRoot
+
+
+        if self.solver_mode == 'Euler':
+            solver = TimeIntegrator
+        elif self.solver_mode == 'OdeFun':
+            solver = OdeFun
+        elif self.solver_mode == 'OdeInt':
+            solver = OdeInt
+        elif self.solver_mode == 'Simplex':
+            solver = Simplex
+        elif self.solver_mode in ['NewtonRoot', None]:
+            solver = NewtonRoot
+        else:
+            raise UserWarning("Unknown solver = {self.solver_mode}".format(**locals()))
 
         if f_resid(c0) <= self.tolerance:
             self._coverage = c0
@@ -171,7 +185,7 @@ class SteadyStateSolver(MeanFieldSolver):
                     x = self.constrain_coverages(x)
                     error = f_resid(x)
 
-            elif error >= self.residual_threshold*old_error:
+            elif error > self.residual_threshold*old_error:
                 self.log('rootfinding_fail',
                         n_iter=i,
                         resid = float(f_resid(x)),
@@ -301,8 +315,13 @@ class SteadyStateSolver(MeanFieldSolver):
                     self._descriptors)
             self.get_rate_constants(self._rxn_parameters,coverages)
 #        cvg_rates = self.steady_state_function(None)
-        cvg_rates = self.steady_state_function(coverages)
-        residual = max([abs(r) for r in cvg_rates])
+        cvg_rates = self.interacting_steady_state_function(coverages)
+        #residual = max([abs(r) for r in cvg_rates])
+        residual = mp.sqrt(mp.fsum([r**2 for r in cvg_rates]))
+        print("RESIDUAL {residual}".format(**locals()))
+        #for _i, r in enumerate(cvg_rates):
+            #print(r)
+            #print(" - r {_i} {r}".format(**locals()))
         return residual
 
 
@@ -313,7 +332,8 @@ class SteadyStateSolver(MeanFieldSolver):
 
         memo = tuple(self._rxn_parameters) + tuple(self._gas_energies) + \
                 tuple(self._site_energies) + tuple(coverages) + tuple(self.gas_pressures+[self.temperature])
-        if memo in self._steady_state_memoize:
+        #if memo in self._steady_state_memoize:
+        if False:
             return self._steady_state_memoize[memo]
         else:
             c = self.interacting_mean_field_steady_state(

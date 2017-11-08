@@ -236,13 +236,14 @@ class MapPlot:
             descriptor_ranges = [[min(x),max(x)]]
             if not self.plot_function:
                 if self.log_scale == True:
-                    self.plot_function = 'semilogy'
+                    self.plot_function = 'plot'
                 else:
                     self.plot_function = 'plot'
         elif dim == 2:
             x,y = zip(*xy)
             descriptor_ranges = [[min(x),max(x)],[min(y),max(y)]]
             if not self.plot_function:
+                self.plot_function = 'contour'
                 self.plot_function = 'contourf'
             if 'cmap' not in plot_args:
                 plot_args['cmap'] = self.colormap
@@ -320,7 +321,12 @@ class MapPlot:
                     levels = np.linspace(
                             int(min_val),int(max_val),3*self.n_ticks)
             else:
-                levels = np.linspace(min_val,max_val,min(eff_res,25))
+                if hasattr(self, 'levels'):
+                    #print("LEVELS {self.levels}".format(**locals()))
+                    #levels = np.linspace(min_val,max_val,self.levels)
+                    levels = self.levels
+                else:
+                    levels = np.linspace(min_val,max_val,min(eff_res,25))
 
             plot_in = [np.linspace(*x_range+[eff_res[0]]),
                     np.linspace(*y_range+[eff_res[1]]),z,levels]

@@ -1,3 +1,6 @@
+import time
+
+from copy import deepcopy
 import catmap
 from catmap import ReactionModelWrapper
 from catmap.model import ReactionModel
@@ -734,11 +737,15 @@ class ThermoCorrections(ReactionModelWrapper):
 
         return thermo_dict
 
-    def boltzmann_coverages(self,energy_dict):
+    def boltzmann_coverages(self,energy_dict, cvg_dependent=False):
         """
         Return coverages based on Boltzmann distribution
         """
         #change the reference
+        #return [.9, .1]
+        #return [.1, .9]
+        #return [.1, .1]
+
         reservoirs = getattr(self,'atomic_reservoir_dict',None)
         if reservoirs:
             comp_dict = {}
@@ -749,21 +756,65 @@ class ThermoCorrections(ReactionModelWrapper):
 
         #calculate coverages
         cvgs = [0]*len(self.adsorbate_names)
-        for site in self.site_names:
-            if site not in energy_dict:
-                energy_dict[site] = 0
-            relevant_ads = [a for a in self.adsorbate_names if 
-                    self.species_definitions[a]['site'] == site]
-            free_energies = [energy_dict[a] for a in relevant_ads]+[energy_dict[site]]
-            boltz_sum = sum([self._math.exp(-G/(self._kB*self.temperature)) 
-                for G in free_energies])
-            for ads in relevant_ads:
-                if ads in self.adsorbate_names:
-                    i_overall = self.adsorbate_names.index(ads)
-                    i_rel = relevant_ads.index(ads)
-                    if self.species_definitions[site]['type'] not in ['gas']:
-                        cvgs[i_overall] = self._math.exp(-free_energies[i_rel]/(
-                            self._kB*self.temperature))/boltz_sum
+        if not cvg_dependent:
+            for site in self.site_names:
+                if site not in energy_dict:
+                    energy_dict[site] = 0
+                relevant_ads = [a for a in self.adsorbate_names if
+                        self.species_definitions[a]['site'] == site]
+                free_energies = [energy_dict[a] for a in relevant_ads]+[energy_dict[site]]
+                boltz_sum = sum([self._math.exp(-G/(self._kB*self.temperature))
+                    for G in free_energies])
+                for ads in relevant_ads:
+                    if ads in self.adsorbate_names:
+                        i_overall = self.adsorbate_names.index(ads)
+                        i_rel = relevant_ads.index(ads)
+                        if self.species_definitions[site]['type'] not in ['gas']:
+                            cvgs[i_overall] = self._math.exp(-free_energies[i_rel]/(
+                                self._kB*self.temperature))/boltz_sum
+        else:
+            original_free_energies = None
+            for site in self.site_names:
+                iter_steps = 50
+                g = 1./iter_steps
+                old_free_energies = None
+                #for iter_step in range(int(.04 * iter_steps)):
+                #for iter_step in range(5):
+                for iter_step in range(int(5 * iter_steps)):
+                    if site not in energy_dict:
+                        energy_dict[site] = 0
+                    relevant_ads = [a for a in self.adsorbate_names if 
+                            self.species_definitions[a]['site'] == site]
+                    free_energies = [energy_dict[a] for a in relevant_ads]+[energy_dict[site]]
+                    if original_free_energies is None and 's' in site:
+                        original_free_energies = [energy_dict[a] for a in relevant_ads]+[energy_dict[site]]
+
+                    for i, (cvg, free_energy) in enumerate(zip(cvgs, free_energies)):
+                        if cvg > 0.:
+                            free_energies[i] = free_energy + float(self.adsorbate_interactions.stepped_simple_gaussian_response(2 * cvg, fractions=[1./3, 2./3], alphas=[.5, .5], gamma=.001)[0]) * cvg * 1.2
+
+                    if old_free_energies is not None:
+                        free_energies = [E_o + g * (E_f - E_o) for (E_f, E_o) in zip(free_energies, old_free_energies)]
+                    old_free_energies = deepcopy(free_energies)
+
+                    boltz_sum = sum([self._math.exp(-G/(self._kB*self.temperature)) 
+                        for G in free_energies])
+                    for ads in relevant_ads:
+                        if ads in self.adsorbate_names:
+                            i_overall = self.adsorbate_names.index(ads)
+                            i_rel = relevant_ads.index(ads)
+                            if self.species_definitions[site]['type'] not in ['gas']:
+                                cvgs[i_overall] = self._math.exp(-free_energies[i_rel]/(
+                                    self._kB*self.temperature))/boltz_sum
+                                #FE = map(float, free_energies)
+                                #CVGS = map(float,cvgs)
+                                #print("STEP {iter_step} {FE} {CVGS}".format(**locals()))
+        cvgs_0 = float(cvgs[0])
+        cvgs_1 = float(cvgs[1])
+        #of = original_free_energies
+        #FE =  [energy_dict[a] for a in relevant_ads]+[energy_dict[site]]
+        #print("CVGS {of[0]} {of[1]} {cvgs_0} {cvgs_1}".format(**locals()))
+        #time.sleep(2)
         return cvgs
 
     def static_pressure(self):
