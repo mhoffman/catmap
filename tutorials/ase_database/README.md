@@ -65,7 +65,7 @@ Your data is now stored in dictionaries that are attached to your db2catmap obje
 
 Formation energies are calculated like so:
 
-    references = (('H', 'H2_gas'), ('O', 'H2O_gas'), ('C', 'CO_gas'),))
+    references = (('H', 'H2_gas'), ('O', 'H2O_gas'), ('C', 'CO_gas'),)
     project.calc_formation_energies(references=references)
 
 If you dont specify any references, the defaults will use H2 (g), H2O (g) and CH4 (g) and assume you have the potential energies of those molecules. 
