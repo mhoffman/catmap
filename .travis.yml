@@ -1,14 +1,11 @@
 language: python
 python:
-  - 2.7
-
-cache:
-    pip: true
-    custom_install: true
+  - "2.7"
+  - "3.6"
   
-#notifications:
-  #email: false
-  #slack: slac-suncat:uMRwgQgYaSJFNr48PlZ1vtuf
+notifications:
+  email: false
+  slack: slac-suncat:uMRwgQgYaSJFNr48PlZ1vtuf
 
 env:
     matrix:
@@ -31,10 +28,9 @@ before_install:
 # Install packages
 install:
   - if [ "x${WITH_SCIPY}" == "xtrue" ]; then conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib nose; else conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy matplotlib nose; fi
-  - pip install mpmath
-  - pip install ase coverage
+  - pip install -r requirements.txt
+  - pip install coverage
   - python setup.py install #install catmap
-  - pip install git+https://github.com/mhoffman/kmos.git@backend-otf # install kmos for kmc integration testing
  
 # Run tests; this is a very crude way of testing things
 # We should move to a more elegant strategy in the future

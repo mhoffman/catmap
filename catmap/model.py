@@ -5,9 +5,9 @@ from copy import copy
 import numpy as np
 import catmap
 from string import Template
-import functions
+from . import functions
 import re
-from data import regular_expressions
+from .data import regular_expressions
 string2symbols = catmap.string2symbols
 pickle = catmap.pickle
 plt = catmap.plt
@@ -70,7 +70,10 @@ class ReactionModel:
                              'could not save ${save_txt}'}
         #modules to import in the log file to allow opening with python -i
         self._log_imports = "from numpy import array\n\n"+\
-                            "import cPickle as pickle\n\n"
+                            "try:\n" + \
+                            "    import cPickle as pickle\n\n" + \
+                            "except: #workaround for python3.X\n" + \
+                            "    import _pickle as pickle\n\n"
         #attrs taking up more space than this will be dumpted to self.data_file
         self._max_log_line_length = 8000 #100 lines at 80 cols
         #Character used for loop depth in std out
@@ -192,12 +195,8 @@ class ReactionModel:
             'Numerical representation must be mpmath, numpy, or python.')
 
         #set up interaction model
-        if self.adsorbate_interaction_model in ['first_order', 'stepped']:
-
-            if self.adsorbate_interaction_model == 'first_order':
-                interaction_model = catmap.thermodynamics.FirstOrderInteractions(self)
-            elif self.adsorbate_interaction_model == 'stepped':
-                interaction_model = catmap.thermodynamics.SteppedInteractions(self)
+        if self.adsorbate_interaction_model == 'first_order':
+            interaction_model = catmap.thermodynamics.FirstOrderInteractions(self)
             interaction_model.get_interaction_info()
             response_func = interaction_model.interaction_response_function
             if not callable(response_func):
@@ -206,7 +205,7 @@ class ReactionModel:
                 interaction_model.interaction_response_function = int_function
             self.thermodynamics.__dict__['adsorbate_interactions'] = interaction_model
 
-        elif self.adsorbate_interaction_model in ['second_order', 'multisite']:
+        elif self.adsorbate_interaction_model in ['second_order','multisite']:
             if self.adsorbate_interaction_model == 'second_order':
                 interaction_model = catmap.thermodynamics.SecondOrderInteractions(self)
             elif self.adsorbate_interaction_model == 'multisite':
@@ -221,17 +220,6 @@ class ReactionModel:
 
         elif self.adsorbate_interaction_model in ['ideal',None]:
             self.thermodynamics.adsorbate_interactions = None
-        elif self.adsorbate_interaction_model == 'first_second_order':
-            #raise UserWarning("WORKIGN ON IT");
-            interaction_model = catmap.thermodynamics.FirstSecondOrderInteractions(self)
-            interaction_model.get_interaction_info()
-            response_func = interaction_model.interaction_response_function
-            if not callable(response_func):
-                int_function = getattr(interaction_model,
-                        response_func+'_response')
-                interaction_model.interaction_response_function = int_function
-            self.thermodynamics.__dict__['adsorbate_interactions'] = interaction_model
-
         else:
             raise AttributeError(
                     'Invalid adsorbate_interaction_model specified.')
@@ -285,15 +273,14 @@ class ReactionModel:
                     if (len(repr(getattr(self,attr))) >
                             self._max_log_line_length):
                         #line is too long for logfile -> put into pickle
-                        #self._pickle_attrs.append(attr)
-                        # let's disable pickling for now to avoid pickle compatibility issues
-                        # on arcane clusters.
-                        pass
+                        self._pickle_attrs.append(attr)
             pickled_data = {}
             for attr in self._pickle_attrs:
                 pickled_data[attr] = getattr(self,attr)
-            with open(self.data_file,'wb') as pickle_outfile:
-                pickle.dump(pickled_data, pickle_outfile)
+            try:
+                pickle.dump(pickled_data,open(self.data_file,'w'))
+            except:  # Fallback workaround for Py3
+                pickle.dump(pickled_data,open(self.data_file,'wb'))
 
             #Make logfile
             log_txt = self._log_imports
@@ -357,8 +344,7 @@ class ReactionModel:
                 func_string = template.substitute(self._function_substitutions)
                 self._function_strings[func_name] = func_string
                 locs = {}
-                exec func_string in globals(), locs
-                print('Generating {func_name}'.format(**locals()))
+                exec(func_string, globals(), locs)
                 setattr(self,func_name,locs[func_name])
 
     #File IO functions
@@ -376,6 +362,7 @@ class ReactionModel:
                 numerical_representation = 'mpmath',
                 adsorbate_interaction_model = 'ideal',
                 prefactor_list=None,
+                A_uc=None,
                 interaction_fitting_mode=None,
                 decimal_precision = 75,
                 verbose = 1,
@@ -384,7 +371,7 @@ class ReactionModel:
         globs = {}
         locs = defaults
 
-        execfile(setup_file,globs,locs)
+        exec(compile(open(setup_file, 'r').read(), '<string>', 'exec'), globs, locs)
         for var in locs.keys():
             if var in self._classes:
                 #black magic to auto-import classes
@@ -439,8 +426,10 @@ class ReactionModel:
         Load in output data from external files.
         """
         if os.path.exists(self.data_file):
-            with open(self.data_file,'rb') as pickle_infile:
-                pickled_data = pickle.load(pickle_infile)
+            try:
+                pickled_data = pickle.load(open(self.data_file,'r'))
+            except:
+                pickled_data = pickle.load(open(self.data_file,'rb'))
             for attr in pickled_data:
                 if not overwrite:
                     if getattr(self,attr,None) is None: #don't over-write
@@ -714,7 +703,7 @@ class ReactionModel:
                     name,site = sp.rsplit('_',1)
                 new_list.append([site,sp])
             new_list.sort()
-            return zip(*new_list)[-1]
+            return list(zip(*new_list))[-1]
 
         self.gas_names = sort_list(gas_names)
         self.adsorbate_names = sort_list(adsorbate_names)
@@ -1054,9 +1043,48 @@ class ReactionModel:
             self.prefactor_list = default_prefactor_list
         elif isinstance(self.prefactor_list, list) and len(self.prefactor_list) == len(self.elementary_rxns):
             prefactor_list = []
-            for prefactor in self.prefactor_list:
+            for prefactor,rxn in zip(self.prefactor_list,self.elementary_rxns):
                 if prefactor == None:
                     prefactor_list.append(default_prefactor)
+                elif isinstance(prefactor,dict):
+                    A_site = prefactor["A_site"]
+                    if prefactor["type"] == "non-activated":
+                        from ase.atoms import string2symbols
+                        from ase.data import atomic_masses
+                        from ase.data import atomic_numbers
+                        assert len(rxn) == 2 #if not, rxn is not non-activated
+                        all_species = []
+                        for state in rxn:
+                            for species in state:
+                                all_species.append(species)
+                        gas_species = []
+                        for species in all_species:
+                            if self.species_definitions[species]['type'] == 'gas':
+                                gas_species.append(species)
+                        if len(gas_species) != 1:
+                            raise ValueError('Prefactor of type non-activated can ' + \
+                                'only handle exactly one gas phase species per reaction') 
+                        species_name = gas_species[0].split('_')[0]
+                        symbols = string2symbols(species_name)
+                        m = sum([atomic_masses[atomic_numbers[symbol]]
+                                               for symbol in symbols])
+                        _bar2Pa = 1.e5
+                        _angstrom2m = 1.E-10
+                        _u2kg = 1.660538921e-27
+                        _eV2J = 1.602176565e-19
+                        pf = '%s/mpsqrt(kB*T)'%(_bar2Pa*A_site*_angstrom2m**2/np.sqrt(2.*np.pi*m*_u2kg*_eV2J))
+                        prefactor_list.append(pf)
+
+                        #sanity check
+
+                        #kB = 8.613e-5
+                        #T=573.
+                        #pf = _bar2Pa*A_site*_angstrom2m**2/np.sqrt(2.*np.pi*m*_u2kg*_eV2J*kB*T)
+                        #print species_name,pf
+
+                    elif prefactor["type"] == "activated":
+                        pf = '%s*%s'%((A_site/self.A_uc),default_prefactor)
+                        prefactor_list.append(pf)
                 else:
                     prefactor_list.append(str(prefactor))
             self.prefactor_list = prefactor_list
@@ -1180,7 +1208,7 @@ class ReactionModel:
 
     def nearest_mapped_point(self,mapp,point):
         """Get the point in the map nearest to the point supplied"""
-        pts,outs = zip(*mapp)
+        pts,outs = list(zip(*list(mapp)))
         deltas = []
         for pt in pts:
             dist = sum([(xi-xo)**2 for xi,xo in zip(point,pt)])
@@ -1217,15 +1245,15 @@ class ReactionModel:
         :type maxval: float
         """
         desc_rngs = copy(descriptor_ranges)
-        pts,datas = zip(*mapp)
-        cols = zip(*datas)
+        pts,datas = list(zip(*list(mapp)))
+        cols = list(zip(*list(datas)))
         if len(pts[0]) == 1:
-            xData = np.array(zip(*pts)[0])
+            xData = np.array(list(zip(*list(pts)))[0])
             sorted_order = xData.argsort()
             maparray = np.zeros((resolution[0],len(datas[0])))  # resolution assumed to be [x, 1]
             x_range = desc_rngs[0]
             xi = np.linspace(x_range[0],x_range[1],resolution[0])
-            datas = zip(*datas)
+            datas = list(zip(*list(datas)))
             for i,yData in enumerate(datas):
                 yData = np.array(yData)
                 y_sp = catmap.spline(xData[sorted_order],yData[sorted_order],k=1)
@@ -1233,9 +1261,9 @@ class ReactionModel:
                 maparray[:,i] = yi
 
         elif len(pts[0]) == 2:
-            xData,yData = zip(*pts)
+            xData,yData = list(zip(*list(pts)))
             maparray = np.zeros((resolution[1],resolution[0],len(datas[0])))
-            datas = zip(*datas)
+            datas = list(zip(*list(datas)))
             x_range,y_range = desc_rngs
             xi = np.linspace(*x_range+[resolution[0]])
             yi = np.linspace(*y_range+[resolution[1]])
@@ -1312,7 +1340,7 @@ class ReactionModel:
             data = get_next_dim(array,list(ij))
             datas.append(data)
 
-        mapp = zip(*[pts,datas])
+        mapp = list(zip(*[pts,datas]))
         return mapp
 
     #Commonly used convenience functions
@@ -1489,23 +1517,6 @@ class ReactionModel:
         # add echem TSs to regular TSes - this might be more trouble than it's worth
         self.transition_state_names += tuple(self.echem_transition_state_names)
 
-    def get_rate_constants(self, descriptor_values, coverages=None):
-        """
-            Return the list of rate constants for a given tuple of descriptor_values.
-            If no coverages are supplied an empty surface is assumed which results
-            in no adsorbate-adsorbate interaction.
-
-            :param descriptor_values: Sequence of descriptor values of length `len(model.descriptor_names)`
-            :type descriptor_values: [float]
-            :params coverages: Sequence of coverages of length `len(model.adsorbate_names)`
-            :type coverages: (optional: [flaot)
-
-        """
-
-        rxn_params = self.scaler.get_rxn_parameters(descriptor_values)
-        rate_constants = self.solver.get_rate_constants(rxn_params, coverages)
-        return rate_constants
-
     def generate_echem_species_definitions(self):
         """Generates proper species_definitions entries for ele_g, H_g, or OH_g.
         """
@@ -1526,7 +1537,7 @@ class ReactionModel:
         if self.rxn_options_dict['prefactor']:
             if not self.prefactor_list:
                 self.prefactor_list = [None] * len(self.elementary_rxns)
-            for key, value in self.rxn_options_dict['prefactor'].iteritems():
+            for key, value in self.rxn_options_dict['prefactor'].items():
                 if value == "None":
                     value = None
                 else:

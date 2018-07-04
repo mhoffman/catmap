@@ -1,7 +1,9 @@
-from analysis_base import *
+from .analysis_base import *
 import numpy as np
 from math import log
 from catmap.functions import convert_formation_energies
+from graphviz import Digraph
+from itertools import chain, product
 
 class MechanismAnalysis(MechanismPlot,ReactionModelWrapper,MapPlot):
     """
@@ -209,7 +211,7 @@ class MechanismAnalysis(MechanismPlot,ReactionModelWrapper,MapPlot):
                             rxn = rxn*-1
                         else:
                             reverse = False
-                    self.data_dict[self.rxn_mechanisms.keys()[n]] = [self.energies,
+                    self.data_dict[list(self.rxn_mechanisms.keys())[n]] = [self.energies,
                             self.barriers]
 
                     kwargs = self.kwarg_list[n]
@@ -254,3 +256,53 @@ class MechanismAnalysis(MechanismPlot,ReactionModelWrapper,MapPlot):
 
         L = '+'.join(species)
         return ' '+L
+
+    def create_graph(self, mechanism=None, filename=None,
+                     exclude_sites = True, exclude_ts = False):
+        """
+        Creates a directed acyclic graph corresponding
+        to the reaction nework.  Leaves out the surface
+        states.
+        
+        :param mechanism: mechanism to select for the graph
+
+        :param filename: filename for output
+
+        :param exclude_sites: boolean for whether to exclude
+                              sites from graph
+
+        :param exclude_ts: boolean for whether to exclude
+                           transition states from graph
+        """
+        if mechanism is not None:
+            el_rxns = [self.elementary_rxns[i] for i in 
+                       set(self.rxn_mechanisms.get(mechanism))]
+        else:
+            el_rxns = self.elementary_rxns
+
+        # Create the dag
+        dot = Digraph(comment=mechanism)
+
+        # Create set of species
+        species = chain.from_iterable(chain.from_iterable(el_rxns))
+        if exclude_sites:
+            species = {s for s in species if len(s) > 1}
+        if exclude_ts:
+            species = {s for s in species if not '-' in s}
+
+        for specie in species:
+            dot.node(specie)
+
+        # Add rxn steps
+        for el_rxn in el_rxns:
+            if exclude_ts:
+                el_rxn.pop(1)
+            for n in range(len(el_rxn) - 1):
+                for path in product(el_rxn[n], el_rxn[n+1]):
+                    if set(path) < set(species):
+                        dot.edge(*path)
+
+        if filename is not None:
+            dot.render(filename)
+
+        return dot

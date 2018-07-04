@@ -1,5 +1,4 @@
-from mapper_base import *
-import numpy as np
+from .mapper_base import *
 
 class MinResidMapper(MapperBase):
     """Mapper which uses initial guesses with minimum residual."""
@@ -126,7 +125,7 @@ class MinResidMapper(MapperBase):
                     cvgs = self.solver.get_coverage(params,*args,**kwargs)
                     self.log('single_point_success',new_pt=descriptors,i=i)
                     break
-                except ValueError,strerror:
+                except ValueError as strerror:
                     self.log('single_point_fail',new_pt=descriptors,i=i)
         else:
             cvgs = self.solver.get_coverage(params,*args,**kwargs)
@@ -373,7 +372,7 @@ class MinResidMapper(MapperBase):
                                     old_pt=sol_pt)
                         return None
 
-                    except ValueError,strerror:
+                    except ValueError as strerror:
                         strerror = str(strerror)
                         resid = strerror.split('resid=')[-1]
                         resid = resid.split(')')[0]
@@ -408,10 +407,8 @@ class MinResidMapper(MapperBase):
             """Go through all points and check the local solutions in
             order of minimum to maximum residual"""
             m,n = isMapped.shape
-            #for i in reversed(range(0,m)):
-                #for j in reversed(range(0,n)):
-            for i in (range(0,m)):
-                for j in (range(0,n)):
+            for i in range(0,m):
+                for j in range(0,n):
                     possibilities = []
                     this_pt = [d1Vals[i],d2Vals[j]]
                     self._descriptors = this_pt
@@ -509,7 +506,6 @@ class MinResidMapper(MapperBase):
                             binstring = ''.join(
                                     [str(bi) for bi in checked_dirs])
                             isMapped[i,j] = int(binstring,2)
-                        #print(np.fliplr(isMapped.T))
 
             return isMapped
 
@@ -522,16 +518,8 @@ class MinResidMapper(MapperBase):
         while norm_new > norm_old: #Iterate thorough until  no new information.
             m,n = isMapped.shape
             n_unmapped = 0 #Count how many points remain unmapped
-            # DEBUGGING
-            np.set_printoptions(
-                    edgeitems=100,
-                    linewidth=400,
-                    )
-            #print(np.fliplr(isMapped.T))
-
             for i in range(0,m):
                 for j in range(0,n):
-
                     if isMapped[i,j] <= maxNum:
                         n_unmapped+=1
             self.log('mapper_status',
@@ -540,11 +528,7 @@ class MinResidMapper(MapperBase):
                     pt = 'mapper')
             minresiditer +=1
             norm_old = np.linalg.norm(isMapped)
-            try:
-                isMapped = minresid_iteration(isMapped)
-            except TypeError:
-                pass
-                raise
+            isMapped = minresid_iteration(isMapped)
             norm_new = np.linalg.norm(isMapped)
 
         if n_unmapped == 0:
@@ -556,7 +540,6 @@ class MinResidMapper(MapperBase):
                     n_unmapped=n_unmapped,
                     n_iter = minresiditer,
                     pt = 'mapper')
-            raise Exception("Could not map all points.")
 
         nodups = []
         pts = []
