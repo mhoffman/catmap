@@ -20,6 +20,7 @@ import matplotlib.ticker
 import matplotlib.colors
 
 import catmap.cli.overlayers_rdf_111
+from scipy.interpolate import griddata
 
 INIT_STEPS = int(1e6)
 SAMPLE_STEPS = INIT_STEPS
@@ -30,7 +31,17 @@ ROUND_DIGITS = 5
 ZMIN = -20
 ZMAX = 5
 
-PLOT_SUFFIX = 'png'
+PLOT_SUFFIX = 'pdf'
+
+def weighted_choice(choices, weights):
+   total = sum(weights)
+   r = random.uniform(0, total)
+   upto = 0
+   for c, w in zip(choices, weights):
+      if upto + w >= r:
+         return c
+      upto += w
+   assert False, "Shouldn't get here"
 
 def takeClosest(myList, myNumber):
     """
@@ -213,9 +224,32 @@ def contour_plot_data(x, y, z, filename,
     fig = plt.figure(figsize=fig_size)
 
     # x, y = np.linspace(x.min(), x.max(), m_gp), np.linspace(y.min(), y.max(), m_gp)
+    #x /= 100.
+
+    xmin, xmax = x.min(), x.max()
+    ymin, ymax = y.min(), y.max()
+
+    x /= (xmax - xmin)
+    y /= (ymax - ymin)
+
+    try:
+        import sklearn.preprocessing
+    except:
+        sklearn = None
+
+    #print(sklearn)
+    #exit()
+
+
+
 
     xi, yi = np.linspace(x.min(), x.max(), n_gp), np.linspace(y.min(), y.max(), n_gp)
     xi, yi = np.meshgrid(xi, yi)
+
+    #if sklearn is not None:
+        #scaler = sklearn.preprocessing.StandardScaler()
+        #xi = scaler.fit_transform(xi)
+        #yi = scaler.fit_transform(yi)
 
     # print(z)
     try:
@@ -228,7 +262,10 @@ def contour_plot_data(x, y, z, filename,
         traceback.print_stack()
         return
     zi = rbf(xi, yi)
-    # zi = griddata(x, y, z, xi, yi, interp='linear')
+    #zi = griddata(x, y, z, xi, yi, method='linear')
+    x *= (xmax - xmin)
+    y *= (ymax - ymin)
+
     if normalized:
         zi = np.clip(zi, 0, 1)
 
@@ -259,18 +296,22 @@ def contour_plot_data(x, y, z, filename,
 
             levels = np.linspace(round(zmin), round(zmax), max(round(zmax - zmin + 1), 2))[::divider]
             print(divider, levels)
-            if 0 in levels:
-                levels = list(levels)
-                levels.remove(0)
-                levels = np.array(levels)
-            if (max(levels) - min(levels)) < 6:
-                levels = range(-3, 4, 2)
+            #if 0 in levels:
+                #levels = list(levels)
                 #levels.remove(0)
+                #levels = np.array(levels)
+            #if np.abs(max(levels) - min(levels)) < 6:
+                #levels = range(-3, 4, 2)
+                ##levels.remove(0)
 
+        levels = np.linspace(-12, 1, 14)
+        levels = np.linspace(-5, 1, 7)
+        levels = np.linspace(-9, 1, 11)
     print("Levels {levels}".format(**locals()))
     if levels[0] == levels[-1]:
         print("Somehow levels, are not increasing, nothing to plot.")
         return
+
 
     if centered_norm:
         norm = MidpointNormalize(midpoint=0.)
@@ -292,7 +333,7 @@ def contour_plot_data(x, y, z, filename,
 
     if show_evaluated_points:
         # plot the data point which we actually evaluated
-        plt.scatter(x, y, c=z, s=.2)
+        plt.scatter(x, y, c=z, s=1.2)
 
     def cbar_fmt(x, pos):
         return '{:.3g}'.format(x)
@@ -303,16 +344,17 @@ def contour_plot_data(x, y, z, filename,
         cbar.set_label(colorbar_label)
 
     if catmap_model is not None:
-        for substrate, (xi, yi) in catmap_model.descriptor_dict.items():
-            _z = rbf(xi, yi)
-            print(substrate, _z)
-            plt.scatter(xi, yi, c=_z, s=35, vmin=_z.min(), vmax=_z.max(), cmap=cbar.cmap)
-            plt.annotate(substrate, xy=(xi + .05, yi + .05), size='small',
-                         bbox={'facecolor': 'white',
-                               'alpha': 0.5,
-                               'ec': 'white',
-                               'pad': 1,
-                               'lw': 0})
+        if hasattr(catmap_model, 'descriptor_items'):
+            for substrate, (xi, yi) in catmap_model.descriptor_dict.items():
+                _z = rbf(xi, yi)
+                print(substrate, _z)
+                plt.scatter(xi, yi, c=_z, s=35, vmin=_z.min(), vmax=_z.max(), cmap=cbar.cmap)
+                plt.annotate(substrate, xy=(xi + .05, yi + .05), size='small',
+                             bbox={'facecolor': 'white',
+                                   'alpha': 0.5,
+                                   'ec': 'white',
+                                   'pad': 1,
+                                   'lw': 0})
         if seed is None:
             seed = catmap_model.model_name
 
@@ -324,8 +366,8 @@ def contour_plot_data(x, y, z, filename,
             plt.xlabel(model.descriptor_labels[0])
             plt.ylabel(model.descriptor_labels[1])
         else:
-            plt.xlabel(r'${{\rm {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
-            plt.ylabel(r'${{\rm {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
+            plt.xlabel(r'${{ {} }}$ [{xlabel_unit}]'.format(model.descriptor_names[0], **locals()))
+            plt.ylabel(r'${{ {} }}$ [{ylabel_unit}]'.format(model.descriptor_names[1], **locals()))
 
         print("Setting title {title}".format(**locals()))
         plt.title(title)
@@ -344,6 +386,7 @@ def contour_plot_data(x, y, z, filename,
         for _x, _y, _label in zip(x, y, z):
             plt.annotate(_label, xy=(_x, _y), size='small',)
 
+    plt.savefig(filename, bbox_inches='tight')
     try:
         plt.savefig(filename, bbox_inches='tight')
     except:
@@ -489,6 +532,8 @@ def plot_mft_coverages(catmap_model, kmos_data, seed=None):
                           title=log_title,
                           normalized=False,
                           catmap_model=catmap_model,
+                          #zmin=1e-10,
+                          #zmax=1
                           )
         if not plotted_empty:
             plotted_empty = True
@@ -526,14 +571,23 @@ def plot_kmc_coverages(catmap_model, data, seed=None):
         elif 'kmc_steps' in name:  # kmc_steps or kmc_time
             continue
         else:  # we are plotting a coverage
+            if (data[name] <= 0.).any():
+                data[name] -= data[name].min() - 1e-20
+# DEBUGGING
             plot_data = np.log10(data[name])
+            #plot_data = (data[name])
+            print(plot_data)
             plot_data[np.logical_not(np.isfinite(plot_data))] = 0.
             name = 'log_{name}'.format(**locals())
             species = name.split('_')[1]
             title = r'\log(\Theta^{{\rm {{kMC }} }}_{{\rm {species} }})'.format(**locals())
             normalized = False
-            zmin = min(plot_data)
-            zmax = max(plot_data)
+            zmin = 1e-10
+            zmax = 1
+            #if 'log' not in name:
+                #zmin = min(plot_data)
+                #zmax = max(plot_data)
+            #else:
             contour_plot_data(data['descriptor0'],
                               data['descriptor1'],
                               plot_data,
@@ -542,8 +596,8 @@ def plot_kmc_coverages(catmap_model, data, seed=None):
                               catmap_model=catmap_model,
                               normalized=normalized,
                               title=title,
-                              zmin=zmin,
-                              zmax=zmax,
+                              #zmin=zmin,
+                              #zmax=zmax,
                               #ticks=ticks,
                               xlabel_unit='eV',
                               ylabel_unit='eV',
@@ -895,6 +949,21 @@ def main(options, call_path=None):
                     zmax = 2
                     ticks = range(zmin, zmax + 1, 6)
 
+                if 'pressure' in ylabel:
+                    ylabel_unit = 'bar'
+                elif 'temperature' in ylabel:
+                    ylabel_unit = 'K'
+                else:
+                    ylabel_unit = 'eV'
+
+                if 'pressure' in xlabel:
+                    xlabel_unit = 'bar'
+                elif 'temperature' in xlabel:
+                    xlabel_unit = 'K'
+                else:
+                    xlabel_unit = 'eV'
+
+
                 contour_plot_data(data['descriptor0'],
                                   data['descriptor1'],
                                   plot_data,
@@ -906,8 +975,8 @@ def main(options, call_path=None):
                                   zmin=ZMIN,
                                   zmax=ZMAX,
                                   ticks=ticks,
-                                  xlabel_unit='eV',
-                                  ylabel_unit='eV',
+                                  xlabel_unit=xlabel_unit,
+                                  ylabel_unit=ylabel_unit,
                                   xlabel=xlabel,
                                   ylabel=ylabel,
                                   colorbar_label=colorbar_label,
@@ -1035,6 +1104,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                 coverage_tolerance=0.1,
                                 tof_method='procrates',
                                 log_overlayers=True,
+                                catmap_model=None,
                                 ):
         """
             Evaluate a kMC model at a given data-point using initial bias detection and
@@ -1088,6 +1158,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
         with kmos.run.KMC_Model(print_rates=False, banner=False) as kmos_model:
             # -1 is needed to go form 1 based Fortran to 0 based C.
+            kmos_model.catmap_model = catmap_model
 
             abridged = {}
             unabridged = {}
@@ -1121,7 +1192,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
 
             old_nondiff = float('-inf')
             setup_edged_model_at_datapoint(kmos_model, data_point, reset_configuration=True)
-            kmos_model.parameters.alpha = options.alpha
+            if hasattr(options, 'alpha'):
+                kmos_model.parameters.alpha = options.alpha
             start_time = datetime.datetime.now()
             with open(log_filename, 'a') as procstat_file:
                 if log_target is None:
@@ -1132,6 +1204,10 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                 mft_rates = ('\n'.join(map(lambda x: str(float(x)), sorted(catmap_data['rate_map'])[data_point][1])))
                 outfile.write('\nMFT Rates Benchmark\n{mft_rates}\n\n'.format(**locals()))
                 outfile.write("\n\nInitial coverages, lattice-size {kmos_model.lattice.system_size}\n".format(**locals()))
+                for i in range(10):
+                    outfile.write('\n\nInitial Lattice Snapshot\n')
+                    outfile.write(kmos_model.print_configuration(to_stdout=False))
+                    kmos_model.do_steps(1)
                 outfile.write("Sampling started at {}.\n\n".format(start_time.isoformat()))
                 outfile.write(kmos_model.print_coverages(to_stdout=False))
 
@@ -1171,7 +1247,12 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                                                       renormalizations=numeric_renormalizations,
                                                                       log_filename=log_filename,
                                                                       #sub_batches=1,
-                                                                      sub_batches=10,
+                                                                      #sub_batches=10,
+                                                                      #sub_batches=100,
+                                                                      #sub_batches=1000,
+                                                                      #sub_batches=10000,
+                                                                      sub_batches=100000,
+                                                                      #sub_batches=10000000,
                                                                       #sub_batches=int(options.batch_size/100.),
                                                                       )
 
@@ -1216,7 +1297,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write("\n\nProcstat (number of sampled processes)\n")
                     outfile.write(kmos_model.print_procstat(to_stdout=False, integ=True))
                     outfile.write('\n\nRate Constants\n')
-                    outfile.write(kmos_model.rate_constants())
+                    outfile.write(str(kmos_model.rate_constants))
                     outfile.write('\n\nParameters\n')
                     outfile.write(kmos_model.parameters())
                     outfile.write('\n\nLattice Snapshot\n')
@@ -1227,8 +1308,8 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     outfile.write("\n\nNumpy Renormalizations\n{numeric_renormalizations}\n\n".format(**locals()))
                     outfile.write("\nSampled rates and coverages\n")
                     outfile.write(pprint.pformat(data_dict))
-                    #outfile.write("\nProcrates Sampled rates and coverages\n")
-                    #outfile.write(pprint.pformat(full_data['procrates'][0]))
+                    outfile.write("\nProcrates Sampled rates and coverages\n")
+                    outfile.write(pprint.pformat(full_data))
                     outfile.write("\n\nStatistically best sampled rates\n")
                     outfile.write(pprint.pformat(sampled_rates))
                     outfile.write("\n\nRelative rate differences between reversing processes\n")
@@ -1236,41 +1317,41 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                     #outfile.write("\n\nDEBUG\n\n")
                     #outfile.write(pprint.pformat(equilibration_data))
 
-                    outfile.write("\n\nMatching w/ reference overlayers:\n")
-                    atoms = kmos_model.get_atoms()
-                    outfile.write("evaluate crystallographic overlayer\n")
-                    outfile.write(atoms.get_chemical_formula() + '\n\n')
-                    import asap3.analysis.rdf
+                    #outfile.write("\n\nMatching w/ reference overlayers:\n")
+                    #atoms = kmos_model.get_atoms()
+                    #outfile.write("evaluate crystallographic overlayer\n")
+                    #outfile.write(atoms.get_chemical_formula() + '\n\n')
+                    #import asap3.analysis.rdf
 
-                    unit_cell = atoms.cell / kmos_model.lattice.system_size
-                    atoms.cell *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
-                    atoms.positions *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
+                    #unit_cell = atoms.cell / kmos_model.lattice.system_size
+                    #atoms.cell *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
+                    #atoms.positions *= catmap.cli.overlayers_rdf_111.lattice_constant / np.sqrt(2.) /  np.linalg.norm(unit_cell[0])
 
-                    del atoms[[a.index for a in atoms if a.symbol == 'Rh' ]]
-                    del atoms[[a.index for a in atoms if a.symbol == 'Si' ]]
-                    del atoms[[a.index for a in atoms if a.symbol == 'C' ]]
-                    if len(atoms) > 0:
-                        rdf = asap3.analysis.rdf.RadialDistributionFunction(atoms,
-                                                                            rMax=catmap.cli.overlayers_rdf_111.rMax,
-                                                                            nBins=catmap.cli.overlayers_rdf_111.nBins,
-                                                                            ).get_rdf()
-                        n_rdf = rdf / np.sqrt((rdf**2).sum())
-                        outfile.write("N_RDF" + str(n_rdf) + '\n')
-                        best_match = 0
-                        best_match_rdf = 'None'
-                        if not np.any(np.isnan(n_rdf)):
-                            for reference_rdf in catmap.cli.overlayers_rdf_111.rdfs:
-                                match = np.dot(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf], n_rdf)
-                                outfile.write('\t- {reference_rdf} :\t{match}\n'.format(**locals()))
-                                #outfile.write("\t\tRDF" + str(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf]) + '\n')
-                                if match > best_match:
-                                    best_match = match
-                                    best_match_rdf = reference_rdf
-                        else:
-                            outfile.write('\nCould not determine RDF from kMC\n')
-                        outfile.write('\n\nBest Match RDF: {best_match_rdf} {best_match}\n'.format(**locals()))
-                    else:
-                        outfile.write('\nRDF: Cannot detect adsorbates, won\'t determine overlayers.\n\n')
+                    #del atoms[[a.index for a in atoms if a.symbol == 'Rh' ]]
+                    #del atoms[[a.index for a in atoms if a.symbol == 'Si' ]]
+                    #del atoms[[a.index for a in atoms if a.symbol == 'C' ]]
+                    #if len(atoms) > 0:
+                        #rdf = asap3.analysis.rdf.RadialDistributionFunction(atoms,
+                                                                            #rMax=catmap.cli.overlayers_rdf_111.rMax,
+                                                                            #nBins=catmap.cli.overlayers_rdf_111.nBins,
+                                                                            #).get_rdf()
+                        #n_rdf = rdf / np.sqrt((rdf**2).sum())
+                        #outfile.write("N_RDF" + str(n_rdf) + '\n')
+                        #best_match = 0
+                        #best_match_rdf = 'None'
+                        #if not np.any(np.isnan(n_rdf)):
+                            #for reference_rdf in catmap.cli.overlayers_rdf_111.rdfs:
+                                #match = np.dot(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf], n_rdf)
+                                #outfile.write('\t- {reference_rdf} :\t{match}\n'.format(**locals()))
+                                ##outfile.write("\t\tRDF" + str(catmap.cli.overlayers_rdf_111.rdfs[reference_rdf]) + '\n')
+                                #if match > best_match:
+                                    #best_match = match
+                                    #best_match_rdf = reference_rdf
+                        #else:
+                            #outfile.write('\nCould not determine RDF from kMC\n')
+                        #outfile.write('\n\nBest Match RDF: {best_match_rdf} {best_match}\n'.format(**locals()))
+                    #else:
+                        #outfile.write('\nRDF: Cannot detect adsorbates, won\'t determine overlayers.\n\n')
 
 
                     # update coverages history if we have obtained meaningful sampling
@@ -1458,7 +1539,7 @@ def run_kmc_model_at_data_point(catmap_data, options, data_point,
                                             #and left_right_sum >= most_sampled_pair
                                             # EXPERIMENTAL
                                             #and ((left_right_sum >= most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
-                                            and ((left_right_sum >= 1. * most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
+                                            and ((left_right_sum >= 10000. * most_sampled_pair and left_right_sum > 0)  or fast_processes_adaption < 1)
                                             and not '_1p_' in pn_long
                                             and not 'mft' in pn_long
                                             ):
@@ -1956,7 +2037,7 @@ def run_model(seed, call_path=None, options=None):
             lockfile.write('{descriptor_string}'.format(**locals()))
             lockfile.flush()
 
-        outstring = run_kmc_model_at_data_point(catmap_data, options, data_point)
+        outstring = run_kmc_model_at_data_point(catmap_data, options, data_point, catmap_model=catmap_model)
 
         if outstring is not None:
             with open(data_filename, 'a') as outfile:
@@ -2071,7 +2152,7 @@ def setup_model_probabilistic(model, data_point=0, majority=False):
         for x in range(X):
             for y in range(Y):
                 for z in range(Z):
-                    choice = numpy.random.choice(choices, p=choices_weights,)
+                    choice = weighted_choice(choices, choices_weights,)
                     config[x, y, z, model_sitename_index - 1] = choice
 
     model._set_configuration(config)
@@ -2137,12 +2218,21 @@ def set_rate_constants(kmos_model, data_point, catmap_data=None, options=None):
         catmap_data = merge_catmap_output(seed=seed)
         sort_catmap_maps_inplace(catmap_data)
 
+    pressure_factor = []
+    for i, eq in enumerate([eq.split() for eq in kmos_model.catmap_model.solver.rate_equations() if eq.startswith('r[')]):
+            _, _, forward, _, reverse = eq
+            pressure_factor.append(('p[' in forward, 'p[' in reverse))
+
     # set rate constant of kMC according to current descriptor tuple
     max_rate_constant = float('-inf')
 
     for i in range(len(catmap_data['forward_rate_constant_map'][data_point][1])):
         forward_rate_constant = float(catmap_data['forward_rate_constant_map'][data_point][1][i])
         reverse_rate_constant = float(catmap_data['reverse_rate_constant_map'][data_point][1][i])
+        if pressure_factor[i][0]:
+            forward_rate_constant *= 10**(catmap_data['forward_rate_constant_map'][data_point][0][0])
+        if pressure_factor[i][1]:
+            reverse_rate_constant *= 10**(catmap_data['reverse_rate_constant_map'][data_point][0][0])
 
         print('{i} Forward {forward_rate_constant:.3e} Reverse {reverse_rate_constant:.3e}'.format(**locals()))
 

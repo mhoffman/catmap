@@ -86,7 +86,7 @@ def rate_constants(rxn_parameters,theta,gas_energies,site_energies,T,F,mpf,matri
     else:
         raise ValueError('Length of reaction parameters is not correct. '+ str(rxn_parameters))
 
-    G_int, Gf,dGs =  interaction_function(theta,energies,interaction_vector,F,include_derivatives=include_derivatives, include_integral=False)
+    G_int, Gf,dGs =  interaction_function(theta,energies,interaction_vector,T,F,include_derivatives=include_derivatives, include_integral=False)
 
     ${kB}
     ${h}
@@ -211,7 +211,7 @@ def ideal_mean_field_jacobian(kf,kr,theta,p,mpf,matrix):
 """
 
 templates['first_order_interaction_function'] = r"""
-def interaction_function(coverages,energies,interaction_vector,F,include_derivatives=True,include_integral=False):
+def interaction_function(coverages,energies,interaction_vector,T,F,include_derivatives=True,include_integral=False):
 
 #    Function for evaluating coverage-dependent intearction energies.
 #
@@ -301,7 +301,7 @@ def interaction_function(coverages,energies,interaction_vector,F,include_derivat
     """
 
 templates['second_order_interaction_function'] = r"""
-def interaction_function(coverages,energies,epsilon,F,include_derivatives=True,include_integral=False):
+def interaction_function(coverages,energies,epsilon,T,F,include_derivatives=True,include_integral=False):
 
     ##this dictionary is passed in via the "template" so that it can be compiled
     ${site_info_dict}
@@ -423,7 +423,7 @@ def interaction_function(coverages,energies,epsilon,F,include_derivatives=True,i
 """
 
 templates['first_second_order_interaction_function'] = r"""
-def interaction_function(coverages,energies,epsilon,F,include_derivatives=False,include_integral=False, first_second_check=True):
+def interaction_function(coverages,energies,epsilon,T,F,include_derivatives=False,include_integral=False, first_second_check=True):
     import mpmath as mp
 
     ##this dictionary is passed in via the "template" so that it can be compiled
@@ -603,7 +603,7 @@ def interaction_function(coverages,energies,epsilon,F,include_derivatives=False,
 """
 
 templates['stepped_interaction_function'] = r"""
-def interaction_function(coverages,energies,interaction_vector,F,include_derivatives=True,include_integral=False):
+def interaction_function(coverages,energies,interaction_vector,T,F,include_derivatives=True,include_integral=False):
     import numpy as np
     E_nn = .05
     def delta(x, m, a=5e-2):
@@ -633,7 +633,7 @@ def interaction_function(coverages,energies,interaction_vector,F,include_derivat
 
 
 templates['stepped_interaction_function'] = r"""
-def interaction_function(coverages,energies,interaction_vector,F,include_derivatives=True,include_integral=False):
+def interaction_function(coverages,energies,interaction_vector,T,F,include_derivatives=True,include_integral=False):
 
 #    Function for evaluating coverage-dependent intearction energies.
 #
@@ -745,7 +745,7 @@ def interaction_function(coverages,energies,interaction_vector,F,include_derivat
 
 
 templates['ideal_interaction_function'] = r"""
-def interaction_function(coverages,energies,interaction_vector,F,include_derivatives=True,include_integral=False):
+def interaction_function(coverages,energies,interaction_vector,T,F,include_derivatives=True,include_integral=False):
     #Dummy function for non-interacting
     derivs = [[0]*len(coverages)]
     derivs = derivs*len(coverages)

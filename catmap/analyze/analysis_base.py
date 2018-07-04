@@ -558,7 +558,7 @@ class MapPlot:
             ax.apply_aspect()
         return fig
 
-    def save(self, fig, save=True, default_name='map_plot.pdf'):
+    def save(self, fig, save=True, tight_layout=False, default_name='map_plot.pdf'):
         """
         :param fig: figure object
 
@@ -568,6 +568,9 @@ class MapPlot:
         :param default_name: default name for the saved figure.
         :type default: str
         """
+        if tight_layout:
+            plt.tight_layout()
+
         if save == True:
             if not hasattr(self,'output_file'):
                 save = default_name

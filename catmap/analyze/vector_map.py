@@ -100,7 +100,7 @@ class VectorMap(MapPlot, ReactionModelWrapper):
             labels = [str(li) for li in labels]
         return labels
 
-    def plot(self,ax=None,ax_list=None,save=True):
+    def plot(self,ax=None,ax_list=None,save=True, tight_layout=False):
         """
         .. todo:: __doc__
         """
@@ -121,7 +121,7 @@ class VectorMap(MapPlot, ReactionModelWrapper):
                 ax = None
             fig = self.plot_weighted(mapp,ax=ax,indices=idxs)
 
-        self.save(fig,save=save,
+        self.save(fig,save=save,tight_layout=tight_layout,
                 default_name = self.model_name+'_'+self.plot_variable+'.pdf')
 
         self._ax = ax

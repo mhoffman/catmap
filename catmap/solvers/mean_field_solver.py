@@ -1,6 +1,6 @@
 from solver_base import *
 from catmap.data import templates
-from copy import copy
+from copy import copy, deepcopy
 import mpmath as mp
 from catmap.functions import numerical_jacobian
 
@@ -424,6 +424,17 @@ class MeanFieldSolver(SolverBase):
                             idx_dict[key] = [idxs,max_cvg,F_params]
 
         subdict['site_info_dict'] =  'site_info_dict = ' + repr(idx_dict)
+        tmp_idx_dict = deepcopy(idx_dict)
+        for site in tmp_idx_dict:
+            a, b, params = tmp_idx_dict[site]
+            for key, value in params.items():
+                params[key] = '@eval(str({value}))@'.format(**locals())
+            tmp_idx_dict[site] = [a, b, params]
+        repr_idx_dict = repr(tmp_idx_dict).replace("'@", '').replace("@'", '')
+        subdict['site_info_dict'] =  'site_info_dict = ' + repr_idx_dict
+        #raise UserWarning(repr_idx_dict)
+        #print(idx_dict)
+        #exit()
         return subdict
 
     def rate_equations(self):

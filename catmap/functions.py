@@ -768,6 +768,56 @@ def stepped_simple_gaussian_response(theta_tot, alphas=None, fractions=None, gam
     return c_0, dC, d2C
 
 
+def td_stepped_simple_gaussian_response(theta_tot, alphas=None, fractions=None, gamma=0.01, T_param='eval("")'):
+    # convergence parameter for delta function gamma -> 0
+    import mpmath as mp
+
+    alphas = alphas if alphas is not None else []
+    fractions = fractions if fractions is not None else []
+    beta = 1./gamma
+
+    theta_tot /= 2.
+
+    def heaviside(x, gamma):
+        return (mp.erf(x / gamma) + 1.)/2.
+
+    def delta(x, gamma):
+        return (1. / gamma / np.sqrt(np.pi)) * mp.exp(- ( x / gamma) ** 2)
+
+    def ddelta(x, gamma):
+        return (-2 * (x) / gamma**3 / np.sqrt(np.pi) ) * mp.exp(-(x/gamma)**2)
+
+    def damping(T_param):
+        #print(T_param)
+        #print(type(T_param))
+        #print(locals().keys())
+        #print(globals().keys())
+        return 1 - heaviside(T_param - 400, 100)
+
+    def anti_damping(T_param):
+        return 1 - damping(T_param)
+
+
+    c_0, dC, d2C = 0., 0., 0.
+    if theta_tot > 0.:
+        for alpha, fraction in zip(alphas, fractions):
+            c_0 += alpha *  heaviside(theta_tot - fraction, gamma=gamma) * damping(T_param)
+
+            dC += alpha * delta(theta_tot - fraction, gamma=gamma) * damping(T_param)
+
+            d2C += alpha * ddelta(theta_tot - fraction, gamma=gamma) * damping(T_param)
+
+        Faktor = 1.30
+        Cs = smooth_piecewise_linear(theta_tot)
+        c_0 += Cs[0]  * anti_damping(T_param) * Faktor
+        dC += Cs[1] * anti_damping(T_param) * Faktor
+        d2C += Cs[2] * anti_damping(T_param) * Faktor
+
+
+
+    return c_0, dC, d2C
+
+
 def _smooth_interpolation():
     """
     Helper function to avoid doing RBF interpolation in every call

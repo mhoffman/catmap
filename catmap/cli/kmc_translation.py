@@ -401,8 +401,8 @@ def catmap2kmos(cm_model,
 
                             bystander_list = []
                             otf_rate = ""
-                            otf_rate += "delta_E_initial = 0.\n"
-                            otf_rate += "delta_E_final = 0.\n"
+                            otf_rate += "delta_E_initial = 0.;\n"
+                            otf_rate += "delta_E_final = 0.;\n"
 
 
                             base_initial_adsorbates = [condition for condition in conditions if condition.species != pt.species_list.default_species]
@@ -471,7 +471,7 @@ def catmap2kmos(cm_model,
                                                 ]))
                                             if species == pt.species_list.default_species:
                                                 continue
-                                            otf_rate += 'delta_E_{state} = delta_E_{state} + nr_{species}_{flag} * alpha_{parameter_name}\n'.format(**locals())
+                                            otf_rate += 'delta_E_{state} = delta_E_{state} + nr_{species}_{flag} * alpha_{parameter_name};\n'.format(**locals())
                                         bystander = (kmos.types.Bystander(
                                             coord=interacting_coord,
                                             allowed_species=allowed_species + (['MFT_'] if options.mft_processes else []), # UGLY HACK
@@ -480,17 +480,17 @@ def catmap2kmos(cm_model,
                                         if bystander.coord not in [x.coord for x in bystander_list]:
                                             bystander_list.append(bystander)
 
-                            otf_rate += 'delta_E = delta_E_final - delta_E_initial\n'
+                            otf_rate += 'delta_E = delta_E_final - delta_E_initial;\n'
                             process.bystander_list = bystander_list
                             reverse_process.bystander_list = bystander_list
 
                             process.otf_rate = """
                             {otf_rate}
-                            otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV)
+                            otf_rate = base_rate * exp(-beta*min(0., delta_E)*eV);
                             """.format(**locals())
                             reverse_process.otf_rate = """
                             {otf_rate}
-                            otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV)
+                            otf_rate = base_rate * exp(-beta*min(0., - delta_E)*eV);
                             """.format(**locals())
 
 

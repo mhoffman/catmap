@@ -509,7 +509,7 @@ class MinResidMapper(MapperBase):
                             binstring = ''.join(
                                     [str(bi) for bi in checked_dirs])
                             isMapped[i,j] = int(binstring,2)
-                        print(np.fliplr(isMapped.T))
+                        #print(np.fliplr(isMapped.T))
 
             return isMapped
 
@@ -527,7 +527,7 @@ class MinResidMapper(MapperBase):
                     edgeitems=100,
                     linewidth=400,
                     )
-            print(np.fliplr(isMapped.T))
+            #print(np.fliplr(isMapped.T))
 
             for i in range(0,m):
                 for j in range(0,n):
@@ -544,6 +544,7 @@ class MinResidMapper(MapperBase):
                 isMapped = minresid_iteration(isMapped)
             except TypeError:
                 pass
+                raise
             norm_new = np.linalg.norm(isMapped)
 
         if n_unmapped == 0:
